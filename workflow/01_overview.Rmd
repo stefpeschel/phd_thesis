@@ -1,0 +1,400 @@
+---
+title: "Data overview"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output: 
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+always_allow_html: true
+params:
+  name: "01_overview" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "939f7706-3574-435a-aaeb-5ae9ac700dc9")
+```
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params, "/overview_"),
+  echo = FALSE)
+```
+
+
+```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
+library(phyloseq)
+library(tidyverse)
+library(kableExtra)
+library(ggtext)
+library(patchwork)
+
+conflicts_prefer(dplyr::filter)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+#projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Load data
+
+```{r load-data}
+phylo_asv   <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_asv.rds"))
+phylo_genus <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_genus.rds"))
+```
+
+```{r derive-tables}
+sampdata     <- sample_data(phylo_asv) %>% as("data.frame")
+otutab_asv   <- as(otu_table(phylo_asv),   "matrix")
+otutab_genus <- as(otu_table(phylo_genus), "matrix")
+```
+
+### ASV level
+
+```{r}
+phylo_asv
+```
+
+### Genus level
+
+```{r}
+phylo_genus
+```
+
+
+## Sample characteristics
+
+```{r sample-characteristics}
+tbl_sample_characteristics <- sampdata %>%
+  mutate(
+    Sex              = factor(Sex, levels = c("f", "m"), labels = c("Female", "Male")),
+    cesarean         = factor(cesarean, levels = c(0, 1), labels = c("No", "Yes")),
+    pregsmoke        = factor(pregsmoke, levels = c(0, 1), labels = c("No", "Yes"))
+  ) %>%
+  select(Country, Sex, cesarean, breast_dur_cat1, breast_excl_cat1, pregsmoke, sibs_numb_cat) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Value") %>%
+  group_by(Variable, Value) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  mutate(
+    Variable = recode(Variable,
+      Country          = "Country",
+      Sex              = "Sex",
+      cesarean         = "Cesarean delivery",
+      breast_dur_cat1  = "Breastfeeding duration (months)",
+      breast_excl_cat1 = "Exclusive breastfeeding (months)",
+      pregsmoke        = "Prenatal smoking",
+      sibs_numb_cat    = "Number of siblings"
+    ),
+    `n (%)` = ifelse(
+      is.na(Value),
+      paste0(n, " (missing)"),
+      paste0(n, " (", round(100 * n / 592, 1), "%)")
+    )
+  ) %>%
+  select(Variable, Value, `n (%)`)
+
+tbl_sample_characteristics %>%
+  kbl(caption = "Cohort characteristics (N = 592)") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE) %>%
+  collapse_rows(columns = 1, valign = "top")
+```
+
+```{r sample-characteristics-latex}
+tbl_sample_characteristics %>%
+  kbl(
+    format   = "latex",
+    booktabs = TRUE,
+    caption  = "Cohort characteristics (N = 592)",
+    label    = "sample-characteristics"
+  ) %>%
+  kable_styling(latex_options = "hold_position") %>%
+  collapse_rows(columns = 1, valign = "top", latex_hline = "major") %>%
+  save_kable(file = path_target("tbl_sample_characteristics.tex"))
+```
+
+## Metadata balance across groups
+
+```{r metadata-balance, fig.width=9, fig.height=5}
+cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00", 
+         "#CC79A7", "#F0E442", "#0072B2", "gray")
+
+sampdata %>%
+  mutate(
+    Sex      = factor(Sex, levels = c("f","m"), labels = c("Female","Male")),
+    cesarean = factor(cesarean, levels = c(0,1), labels = c("No","Yes")),
+    pregsmoke = factor(pregsmoke, levels = c(0,1), labels = c("No","Yes"))
+  ) %>%
+  select(Country, Sex, cesarean, breast_excl_cat1, pregsmoke, sibs_numb_cat) %>%
+  pivot_longer(-Country, names_to = "Variable", values_to = "Value") %>%
+  filter(!is.na(Value)) %>%
+  count(Country, Variable, Value) %>%
+  group_by(Country, Variable) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup() %>%
+  mutate(
+    Variable = recode(Variable,
+      Sex              = "Sex",
+      cesarean         = "Cesarean delivery",
+      breast_excl_cat1 = "Excl. breastfeeding (months)",
+      pregsmoke        = "Prenatal smoking",
+      sibs_numb_cat    = "Number of siblings"
+    )
+  ) %>%
+  ggplot(aes(x = Value, y = prop, fill = Country)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~ Variable, scales = "free_x") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cols[1:3]) +
+  labs(x = NULL, y = "Proportion", fill = "Country",
+       title = "Covariate distribution by country") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+## Sequencing depth
+
+```{r seq-depth_text, fig.width=7, fig.height=4}
+data.frame(depth = sample_sums(phylo_asv)) %>%
+  ggplot(aes(x = depth)) +
+  geom_histogram(bins = 40, fill = "gray", colour = "white") +
+  geom_vline(xintercept = median(sample_sums(phylo_asv)), linetype = "dashed", 
+             colour = "black", linewidth = 0.9) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    x     = "Read depth (counts)",
+    y     = "Number of samples",
+    title = "Per-sample sequencing depth",
+    subtitle = paste0("Median: ", scales::comma(median(sample_sums(phylo_asv))),
+                      "  |  Range: ", scales::comma(min(sample_sums(phylo_asv))),
+                      " – ", scales::comma(max(sample_sums(phylo_asv))))
+  ) +
+  theme(
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 11),
+    plot.title        = element_text(size = 14)
+  ) +
+  theme_bw()
+```
+
+```{r seq-depth, fig.width=7, fig.height=3}
+data.frame(depth = sample_sums(phylo_asv)) %>%
+  ggplot(aes(x = depth)) +
+  geom_histogram(bins = 40, fill = "gray", colour = "white") +
+  geom_vline(xintercept = median(sample_sums(phylo_asv)), linetype = "dashed", 
+             colour = "black", linewidth = 0.9) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    x     = "Read depth (counts)",
+    y     = "Number of samples"
+  ) +
+  theme(
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 11),
+    plot.title        = element_text(size = 14)
+  ) +
+  theme_bw()
+```
+
+## ASV prevalence and sparsity
+
+```{r prevalence_text, fig.width=7, fig.height=4}
+data.frame(
+  prevalence   = rowSums(otutab_asv > 0) / ncol(otutab_asv),
+  total_counts = rowSums(otutab_asv)
+) %>%
+  ggplot(aes(x = prevalence, y = total_counts)) +
+  geom_point(alpha = 0.3, size = 0.8) +
+  scale_y_log10(labels = scales::comma) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(
+    x        = "Prevalence (fraction of samples)",
+    y        = "Total counts",
+    title    = "ASV prevalence vs. total abundance",
+    subtitle = paste0(
+      sum(rowSums(otutab_asv > 0) != 0), " ASVs in total; ",
+      sum(rowSums(otutab_asv > 0) / ncol(otutab_asv) < 0.1),
+      " ASVs present in <10% of samples"
+    )
+  ) +
+  theme(
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 11),
+    plot.title        = element_text(size = 14)
+  ) +
+  theme_bw()
+```
+
+```{r prevalence, fig.width=7, fig.height=3}
+data.frame(
+  prevalence   = rowSums(otutab_asv > 0) / ncol(otutab_asv),
+  total_counts = rowSums(otutab_asv)
+) %>%
+  ggplot(aes(x = prevalence, y = total_counts)) +
+  geom_point(alpha = 0.3, size = 0.8) +
+  scale_y_log10(labels = scales::comma) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(
+    x        = "Prevalence (fraction of samples)",
+    y        = "Total counts (log scale)"
+  ) +
+  theme(
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 11),
+    plot.title        = element_text(size = 14)
+  ) +
+  theme_bw()
+```
+
+## Taxonomic composition
+
+### Phylum-level relative abundance by covariate
+
+```{r phylum-data-prep}
+# Melt phylum-level phyloseq, keep top 5 phyla, lump rest as "Other"
+phylum_melt <- phylo_asv %>%
+  tax_glom("Phylum") %>%
+  transform_sample_counts(function(x) x / sum(x)) %>%
+  psmelt() %>%
+  mutate(Phylum = str_remove(Phylum, "^p__"))
+
+top5_phyla <- phylum_melt %>%
+  group_by(Phylum) %>%
+  summarise(m = mean(Abundance), .groups = "drop") %>%
+  slice_max(m, n = 5) %>%
+  pull(Phylum)
+
+# Merge with nicely-labelled metadata
+phylum_meta <- phylum_melt %>%
+  mutate(Phylum = if_else(Phylum %in% top5_phyla, Phylum, "Other")) %>%
+  group_by(Sample, Phylum) %>%
+  summarise(Abundance = sum(Abundance), .groups = "drop") %>%
+  left_join(
+    sampdata %>%
+      rownames_to_column("Sample") %>%
+      mutate(
+        Sex       = factor(Sex,       levels = c("f", "m"), labels = c("female", "male")),
+        cesarean  = factor(cesarean,  levels = c(0, 1),     labels = c("No", "Yes")),
+        pregsmoke = factor(pregsmoke, levels = c(0, 1),     labels = c("No", "Yes"))
+      ),
+    by = "Sample"
+  )
+```
+
+```{r phylum-plot-function}
+phylum_colors <- c(
+  Actinobacteriota  = "#44BFA3",
+  Bacteroidota      = "#F28E2B",
+  Firmicutes        = "#7B9FC7",
+  Proteobacteria    = "#F1959B",
+  Verrucomicrobiota = "#8DB86B",
+  Other             = "#F2E750"
+)
+
+# Stack order: Actinobacteriota on top, matching reference style
+phylum_stack_levels <- c("Firmicutes", "Proteobacteria", "Bacteroidota",
+                         "Verrucomicrobiota", "Other", "Actinobacteriota")
+
+phylum_labels <- c(
+  Actinobacteriota  = "*Actinobacteriota*",
+  Bacteroidota      = "*Bacteroidota*",
+  Firmicutes        = "*Firmicutes*",
+  Proteobacteria    = "*Proteobacteria*",
+  Verrucomicrobiota = "*Verrucomicrobiota*",
+  Other             = "Other"
+)
+
+plot_phylum_by_group <- function(data, var, x_label) {
+  data %>%
+    dplyr::filter(!is.na(.data[[var]])) %>%
+    group_by(.data[[var]], Phylum) %>%
+    summarise(mean_abund = mean(Abundance), .groups = "drop") %>%
+    mutate(Phylum = factor(Phylum, levels = phylum_stack_levels)) %>%
+    ggplot(aes(x = .data[[var]], y = mean_abund, fill = Phylum)) +
+    geom_col(width = 0.6) +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+    scale_fill_manual(values = phylum_colors, labels = phylum_labels) +
+    labs(x = x_label, y = "Mean Relative Abundance (%)", fill = "Phylum",
+         title = x_label) +
+    theme(legend.text = element_markdown(),
+          legend.position = "bottom")
+}
+```
+
+```{r phylum-by-covariate, fig.width=12, fig.height=12}
+vars <- list(
+  list(var = "Country",          label = "Country"),
+  list(var = "Sex",              label = "Sex"),
+  list(var = "cesarean",         label = "Cesarean delivery"),
+  list(var = "breast_dur_cat1",  label = "Breastfeeding duration (months)"),
+  list(var = "breast_excl_cat1", label = "Exclusive breastfeeding (months)"),
+  list(var = "pregsmoke",        label = "Prenatal smoking"),
+  list(var = "sibs_numb_cat",    label = "Number of siblings")
+)
+
+plots <- lapply(vars, function(v) plot_phylum_by_group(phylum_meta, v$var, v$label))
+
+# Remove y-axis from all but the leftmost column (every 3rd plot starting at index 1)
+plots <- lapply(seq_along(plots), function(i) {
+  if (i %% 3 == 1) plots[[i]]
+  else plots[[i]] + theme(axis.title.y = element_blank(),
+                          axis.text.y  = element_blank(),
+                          axis.ticks.y = element_blank())
+})
+
+wrap_plots(plots, ncol = 3, guides = "collect") +
+  plot_annotation(
+    title = "Phylum-level composition by covariate",
+    theme = theme(plot.title = element_text(size = 16))
+  ) &
+  theme(
+    legend.position   = "right",
+    legend.title      = element_text(size = 14),
+    legend.text       = element_markdown(size = 14),
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 12),
+    plot.title        = element_text(size = 14)
+  )
+```
+
+### Top 15 genera
+
+```{r top-genera}
+phylo_genus %>%
+  transform_sample_counts(function(x) x / sum(x)) %>%
+  psmelt() %>%
+  group_by(OTU) %>%
+  summarise(
+    `Mean rel. abundance (%)` = round(mean(Abundance) * 100, 3),
+    `Median rel. abundance (%)` = round(median(Abundance) * 100, 3),
+    `Prevalence (%)` = round(mean(Abundance > 0) * 100, 1),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(`Mean rel. abundance (%)`)) %>%
+  slice_head(n = 15) %>%
+  rename(Genus = OTU) %>%
+  kbl(caption = "Top 15 genera by mean relative abundance") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+```
+
+
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
