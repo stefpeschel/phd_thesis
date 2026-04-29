@@ -1,0 +1,148 @@
+---
+title: "Build reduced data set"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output:
+  github_document: default
+  html_document:
+    toc: true
+    toc_float: true
+always_allow_html: true
+params:
+  name: "00_build_dataset" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "8ad93c89-8d43-4945-9813-3d10fac8034c")
+```
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 10, 
+  fig.height = 6, 
+  dpi = 200,
+  fig.path = paste0('figures/', params, "/app_dacomp_"),
+  echo = FALSE)
+
+refit_permApprox <- FALSE
+```
+
+In this script, we load the original PASTURE data (not published) and build the reduced data set, which is the basis for all analyses conducted in this project. 
+
+```{r packages}
+library(conflicted)
+library(phyloseq)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(kableExtra)
+library(pheatmap)
+library(ggrepel)
+library(patchwork)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Load data & set parameters
+
+```{r load_data}
+phylo_genus <- readRDS(path_source("PASTURE_data", paste0("bact_2m_genus.rds")))
+phylo_asv <- readRDS(path_source("PASTURE_data", paste0("bact_2m_asv.rds")))
+
+phylo_genus
+phylo_asv
+```
+
+## Select variables of interest
+
+```{r}
+keep_countries <- c("Germany", "Switzerland", "Austria")
+keep_vars      <- c("SampleID", "idx", "Country", "Sex", "cesarean",
+                    "breast_dur_cat1", "breast_excl_cat1", "pregsmoke",
+                    "sibs_numb_cat")
+
+# Filter samples (rows) by country and variables (columns)
+phylo_genus <- prune_samples(
+  sample_data(phylo_genus)$Country %in% keep_countries,
+  phylo_genus
+)
+sample_data(phylo_genus) <- sample_data(phylo_genus) |>
+  as("data.frame") |>
+  select(all_of(keep_vars))
+
+phylo_asv <- prune_samples(
+  sample_data(phylo_asv)$Country %in% keep_countries,
+  phylo_asv
+)
+sample_data(phylo_asv) <- sample_data(phylo_asv) |>
+  as("data.frame") |>
+  select(all_of(keep_vars))
+
+# Extract sampdata if needed downstream
+sampdata <- sample_data(phylo_genus) |> as("data.frame")
+```
+
+### ASV level
+
+```{r}
+phylo_asv
+```
+
+
+### Genus level
+
+```{r}
+phylo_genus
+```
+
+## Filter
+
+Remove taxa absent from all samples, then remove samples with zero total counts.
+
+```{r filter}
+# Remove taxa with zero counts across all samples
+phylo_asv   <- prune_taxa(taxa_sums(phylo_asv)   > 0, phylo_asv)
+phylo_genus <- prune_taxa(taxa_sums(phylo_genus) > 0, phylo_genus)
+
+# Remove samples with zero total counts
+phylo_asv   <- prune_samples(sample_sums(phylo_asv)   > 0, phylo_asv)
+phylo_genus <- prune_samples(sample_sums(phylo_genus) > 0, phylo_genus)
+```
+
+### ASV level
+
+```{r}
+phylo_asv
+```
+
+### Genus level
+
+```{r}
+phylo_genus
+```
+
+```{r}
+# Save data
+saveRDS(phylo_asv, path_target("bact_phylo_2m_asv.rds"))
+saveRDS(phylo_genus, path_target("bact_phylo_2m_genus.rds"))
+```
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
