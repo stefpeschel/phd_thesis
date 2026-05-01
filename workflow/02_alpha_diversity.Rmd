@@ -1,0 +1,1010 @@
+---
+title: "Alpha diversity analysis"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output: 
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+params:
+  name: "02_alpha_diversity" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "41b33e9b-a351-49eb-bdc8-cdeddd77796c")
+```
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params, "/alpha_"),
+  echo = FALSE)
+```
+
+## Load packages
+
+```{r packages, message=FALSE, warning=FALSE}
+library(phyloseq)
+library(tidyverse)
+library(ggtext)
+library(ggpubr)
+
+# Diversity packages
+library(breakaway)
+library(DivNet)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+#projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Load data
+
+```{r load-data}
+phylo_asv   <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_asv.rds"))
+phylo_genus <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_genus.rds"))
+sampdata <- sample_data(phylo_asv) %>% as("data.frame")
+otutab_asv   <- as(otu_table(phylo_asv), "matrix")
+otutab_genus <- as(otu_table(phylo_genus), "matrix")
+```
+
+### ASV level
+
+```{r}
+phylo_asv
+```
+
+### Genus level
+
+```{r}
+phylo_genus
+```
+
+
+## Colors
+
+```{r}
+cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00", 
+         "#CC79A7", "#F0E442", "#0072B2", "gray")
+```
+
+## Functions
+
+### Function for significance plot
+
+```{r}
+modify_div_plot <- function(strip_chart, xlab = "", breaks = NULL, labels = NULL,
+                            binwidth = 0.5, dotsize = 1, ylim = c(0, 75),
+                            ylab = "", ybreaks = NULL,
+                            textsize = 18, title = "") {
+  strip_chart <- strip_chart +
+    stat_summary(fun.data = median_hilow, fun.args=0.50, show.legend=FALSE,
+                 geom="crossbar", alpha=0.25, width=0.7) +
+    geom_dotplot(binaxis = "y", binwidth = binwidth, 
+                 stackdir = "center", width = 0.5, alpha = 0.7,
+                 show.legend = FALSE, dotsize = dotsize) +
+    labs(x=NULL,
+         y=ylab) +
+    scale_fill_manual(values = cols) +
+    scale_x_discrete(name = xlab,
+                     breaks = breaks, 
+                     labels = labels) +
+    theme_classic() +
+    theme(axis.text.x = element_markdown(),
+          axis.text.y = element_markdown(),
+          legend.text = element_markdown(),
+          text = element_text(size = textsize)) +
+    ggtitle(title)
+  
+  if (!is.null(ybreaks)) {
+    strip_chart <- strip_chart + 
+      scale_y_continuous(breaks=ybreaks, limits = ylim)
+  } else {
+    strip_chart <- strip_chart + 
+      scale_y_continuous(limits = ylim)
+  }
+  strip_chart
+}
+
+```
+
+### Function for significance line
+
+```{r}
+add_sig_line <- function(strip_chart, pval, diversity,
+                         space_line = 0.05, space_lab = 0.05, nfeat = nfeat, 
+                         linewidth = 0.8, size = 5) {
+  
+  if (nfeat == 2) {
+    pmat_x <- c(1)
+    pmat_y <- c(1)
+    line_left <- c(1)
+    line_right <- c(2)
+    lab_x <- c(1.5)
+  } else if (nfeat == 3) {
+    pmat_x <- c(1, 2, 2)
+    pmat_y <- c(1, 2, 1)
+    line_left <- c(1, 2, 1)
+    line_right <- c(2, 3, 3)
+    lab_x <- c(1.5, 2.5, 2)
+  } else {
+    pmat_x <- c(1, 2, 3, 2, 3, 3)
+    pmat_y <- c(1, 2, 3, 1, 2, 1)
+    line_left <- c(1, 2, 3, 1, 2, 1)
+    line_right <- c(2, 3, 4, 3, 4, 4)
+    lab_x <- c(1.5, 2.5, 3.5, 2, 3, 2.5)
+  }
+  
+  pos_line <- max(diversity) - space_line + 0.1 * space_line
+  pos_lab <- pos_line + space_lab
+  
+  for (i in seq_along(pmat_x)) {
+    if (is.null(dim(pval))) {
+      label <- pval
+    } else {
+      label <- pval[pmat_x[i], pmat_y[i]]
+    }
+    
+    if (label <= 0.05) {
+      pos_line <- pos_line + space_line
+      pos_lab <- pos_lab + space_line
+      
+      strip_chart <- strip_chart +
+        geom_line(data = tibble(x = c(line_left[i], line_right[i]), 
+                                y = c(pos_line, pos_line)), 
+                  aes(x=x, y=y),
+                  inherit.aes = FALSE, 
+                  linewidth = linewidth) +
+        #geom_text(x = lab_x[i], y = pos_lab, label = signif(label, digits = 3))
+        annotate("text", lab_x[i], y = pos_lab, 
+                 label = signif(label, digits = 3), size = size)
+    } 
+  }
+  strip_chart
+}
+```
+
+### Plot function for richness
+
+```{r}
+plot_richness <- function(div_dataframe, feature_name, 
+                          xlab = "", breaks = NULL, labels = NULL,
+                          binwidth = 0.4, dotsize = 1.2, 
+                          ylab = "Breakaway richness", 
+                          ybreaks = NULL, title = "",
+                          ylim = c(0, 75), textsize = 18,
+                          space_line = 2, space_lab = 5) {
+  
+  # Remove levels with zero observations
+  div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
+                                              names(which(table(div_dataframe$feature) > 0)), ])
+  nfeat <- nlevels(div_dataframe$feature)
+  
+  strip_chart <- div_dataframe %>%
+    ggplot(aes(x=feature, y=richness_genus, fill=feature)) 
+  
+  strip_chart <- modify_div_plot(strip_chart, 
+                                 xlab = xlab, breaks = breaks, labels = labels,
+                                 binwidth = binwidth, dotsize = dotsize, 
+                                 ylim = ylim, ylab = ylab, ybreaks = ybreaks,
+                                 textsize = textsize, title = title) 
+  
+  # Significance test
+  pval_kt <- pval <- kruskal.test(richness_genus ~ feature, 
+                                  data = div_dataframe)$p.value
+  pval_kt
+  
+  if (pval_kt <= 0.05 && nfeat > 2) {
+    pval <- pairwise.wilcox.test(div_dataframe$richness_genus,
+                                 g = div_dataframe$feature,
+                                 p.adjust.method = "BH")$p.value
+    pval
+  }
+  
+  if (pval_kt <= 0.05) {
+    strip_chart <- add_sig_line(strip_chart, pval = pval, nfeat = nfeat,
+                                diversity = div_dataframe$richness_genus,
+                                space_line = space_line, 
+                                space_lab = space_lab)
+  }
+  strip_chart
+}
+```
+
+### Plot function for Shannon
+
+```{r}
+plot_shannon <- function(div_dataframe, feature_name, 
+                         xlab = "", breaks = NULL, labels = NULL,
+                         binwidth = 0.04, dotsize = 1, ylim = c(0, 4), 
+                         space_line = 0.3, space_lab = 0.15,
+                         ylab = "Shannon index (DivNet)", 
+                         ybreaks = NULL, title = "", textsize = 18) {
+  # Remove levels with zero observations
+  div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
+                                              names(which(table(div_dataframe$feature) > 0)), ])
+  nfeat <- nlevels(div_dataframe$feature)
+  
+  strip_chart <- div_dataframe %>%
+    ggplot(aes(x=feature, y=shannon, fill=feature)) 
+  
+  strip_chart <- modify_div_plot(strip_chart, 
+                                 xlab = xlab, breaks = breaks, labels = labels,
+                                 binwidth = binwidth, dotsize = dotsize, 
+                                 ylim = ylim, ylab = ylab, ybreaks = ybreaks,
+                                 textsize = textsize, title = title) 
+  
+  # Significance test
+  pval_kt <- pval <- kruskal.test(shannon ~ feature, 
+                                  data = div_dataframe)$p.value
+  pval_kt
+  
+  if (pval_kt <= 0.05 && nfeat > 2) {
+    pval <- pairwise.wilcox.test(div_dataframe$shannon,
+                                 g = div_dataframe$feature,
+                                 p.adjust.method = "BH")$p.value
+    pval
+  }
+  
+  if (pval_kt <= 0.05) {
+    strip_chart <- add_sig_line(strip_chart, pval = pval, nfeat = nfeat,
+                                diversity = div_dataframe$shannon,
+                                space_line = space_line, 
+                                space_lab = space_lab)
+  }
+  strip_chart
+}
+```
+
+### Plot function for Gini-Simpson
+
+```{r}
+plot_gini <- function(div_dataframe, feature_name, 
+                      xlab = "", breaks = NULL, labels = NULL,
+                      binwidth = 0.01, dotsize = 1, ylim = c(0, 1.1), 
+                      space_line = 0.08, space_lab = 0.04,
+                      ylab = "Gini-Simpson index (DivNet)", 
+                      ybreaks = NULL, title = "", textsize = 18) {
+  
+  # Remove levels with zero observations
+  div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
+                                              names(which(table(div_dataframe$feature) > 0)), ])
+  nfeat <- nlevels(div_dataframe$feature)
+  
+  strip_chart <- div_dataframe %>%
+    ggplot(aes(x=feature, y=gini, fill=feature)) 
+  
+  strip_chart <- modify_div_plot(strip_chart, 
+                                 xlab = xlab, breaks = breaks, labels = labels,
+                                 binwidth = binwidth, dotsize = dotsize, 
+                                 ylim = ylim, ylab = ylab, ybreaks = ybreaks,
+                                 textsize = textsize, title = title) 
+  
+  # Significance test
+  pval_kt <- pval <- kruskal.test(gini ~ feature, 
+                                  data = div_dataframe)$p.value
+  pval_kt
+  
+  if (pval_kt <= 0.05 && nfeat > 2) {
+    pval <- pairwise.wilcox.test(div_dataframe$gini,
+                                 g = div_dataframe$feature,
+                                 p.adjust.method = "BH")$p.value
+    pval
+  }
+  
+  if (pval_kt <= 0.05) {
+    strip_chart <- add_sig_line(strip_chart, pval = pval, nfeat = nfeat,
+                                diversity = div_dataframe$gini,
+                                space_line = space_line, 
+                                space_lab = space_lab)
+  }
+  strip_chart
+}
+```
+
+
+## Compute alpha diversity
+
+### Alpha diversity on ASV level
+
+Computing alpha diversity the common way
+
+```{r}
+alpha_div_common <- estimate_richness(phylo_asv)
+head(alpha_div_common)
+```
+
+### Breakaway richness on ASV level
+
+```{r}
+frequencytablelist <- build_frequency_count_tables(otutab_asv)
+```
+
+```{r}
+rich_asv <- unlist(lapply(frequencytablelist, function(x) breakaway(x)$estimate))
+
+alpha_diversity_rich <- data.frame(SampleID = names(rich_asv),
+                                   age = "2 months",
+                                   richness_otu = rich_asv)
+head(alpha_diversity_rich)
+```
+
+### Alpha diversity on genus level
+
+Computing alpha diversity the common way
+
+```{r}
+alpha_div_common_genus <- estimate_richness(phylo_genus)
+head(alpha_div_common_genus)
+```
+
+### Breakaway  richness on genus level
+
+```{r}
+frequencytablelist <- build_frequency_count_tables(otutab_genus)
+```
+
+```{r}
+rich_genus <- 
+  data.frame(SampleID = names(frequencytablelist),
+             richness_genus = unlist(lapply(frequencytablelist, 
+                                            function(x) breakaway(x)$estimate))) 
+```
+
+
+```{r}
+alpha_diversity_rich <- inner_join(alpha_diversity_rich, 
+                                      rich_genus, by = "SampleID")
+head(alpha_diversity_rich)
+```
+
+## DivNet diversity measures
+
+Due to the long runtime only on genus level
+
+Find base taxon (with minimum number of non-zero counts)
+
+```{r}
+nonzero_elem <- apply(otutab_genus, 1, function(x) sum(x == 0))
+base_taxon <- which.min(nonzero_elem)
+nonzero_elem[base_taxon]
+```
+
+```{r}
+if (!file.exists(path_target("divnet_genus.rds"))) {
+  divnet_result <- phylo_genus %>%
+    DivNet::divnet(ncores = 8, 
+                   base = names(base_taxon),
+                   tuning = "fast")
+  
+  saveRDS(divnet_result, file = path_target("divnet_genus.rds"))
+} else {
+  divnet_result <- readRDS(path_target("divnet_genus.rds"))
+}
+```
+
+```{r}
+phylo_family <- tax_glom(phylo_genus, taxrank="Family")
+
+# Drop samples with NAs in any formula covariate
+cov_vars <- c("Country", "Sex", "cesarean", "breast_dur_cat1",
+              "breast_excl_cat1", "pregsmoke", "sibs_numb_cat")
+sdata <- data.frame(sample_data(phylo_family))
+complete_samples <- rownames(sdata)[complete.cases(sdata[, cov_vars])]
+phylo_family_cov <- prune_samples(complete_samples, phylo_family)
+
+if (!file.exists(path_target("divnet_family_cov.rds"))) {
+  divnet_result <- phylo_family_cov %>%
+    DivNet::divnet(formula = ~ Country + Sex + cesarean + breast_dur_cat1 + 
+                     breast_excl_cat1 + pregsmoke + sibs_numb_cat,
+                   ncores = 8, 
+                   tuning = "fast")
+  
+  saveRDS(divnet_result, file = path_target("divnet_family_cov.rds"))
+} else {
+  divnet_result <- readRDS(path_target("divnet_family_cov.rds"))
+}
+```
+
+```{r}
+names(divnet_result)
+```
+
+```{r}
+alpha_diversity_div <- 
+  data.frame(SampleID = names(divnet_result$shannon),
+             shannon = unlist(lapply(divnet_result$shannon, function(x) x$estimate)),
+             simpson = unlist(lapply(divnet_result$simpson, function(x) x$estimate)))
+
+alpha_diversity_div <- alpha_diversity_div %>%
+  mutate(inv_simpson = 1 / simpson,
+         gini = 1 - simpson)
+```
+
+### Regression on Shannon diversity (betta)
+
+Using `breakaway::betta` to regress DivNet Shannon estimates on the covariates.
+The design matrix is taken directly from the fitted DivNet model (`divnet_result$X`),
+which encodes the same formula used above.
+
+```{r}
+betta_estimates <- divnet_result$shannon %>% summary() %$% estimate
+betta_ses       <- sqrt(divnet_result$`shannon-variance`)
+
+betta_result <- breakaway::betta(betta_estimates, betta_ses, divnet_result$X)
+betta_result$table
+```
+
+**Interpretation** (reference group: Austria, female, vaginal birth, breastfeeding duration < 1 month,
+not exclusively breastfed, no prenatal smoking, no siblings):
+
+- **Country:** Swiss infants show substantially lower Shannon diversity than Austrian infants
+  (β = −0.156, p < 0.001); German infants do not differ significantly (p = 0.226).
+- **Sex:** Male infants have slightly but significantly lower Shannon diversity than females
+  (β = −0.024, p < 0.001).
+- **Caesarean delivery:** Associated with higher Shannon diversity (β = +0.050, p < 0.001).
+  This is somewhat counterintuitive — caesarean birth typically disrupts vertical transmission
+  of vaginal/gut microbiota — and may reflect confounding with feeding mode or other factors.
+- **Breastfeeding duration:** The largest effect in the model. Compared to very short/no
+  breastfeeding (< 1 month), one month of breastfeeding is associated with higher diversity
+  (β = +0.117, p < 0.001), while ≥ 2 months is associated with substantially lower diversity
+  (β = −0.382, p < 0.001). This non-monotone pattern likely reflects the well-documented
+  HMO-driven enrichment of *Bifidobacterium* in longer-breastfed infants, which reduces
+  overall evenness (Shannon diversity).
+- **Exclusive breastfeeding:** The 1-month exclusive breastfeeding category is not
+  significant (p = 0.708; n = 2, very sparse). Duration ≥ 2 months is associated with
+  slightly lower diversity (β = −0.046, p < 0.001), consistent with the duration effect above.
+- **Prenatal smoking:** Associated with higher infant Shannon diversity (β = +0.116, p < 0.001).
+  The direction is unexpected and warrants cautious interpretation; residual confounding
+  cannot be excluded.
+- **Number of siblings:** Having siblings is associated with slightly lower Shannon diversity
+  (1 sibling: β = −0.013, p = 0.011; > 1 sibling: β = −0.033, p < 0.001). This direction
+  is counterintuitive given the expected increase in microbial exposure from older siblings,
+  and may interact with breastfeeding duration or other covariates in the model.
+
+Global test of whether any covariate is associated with Shannon diversity:
+
+```{r}
+betta_result$global
+```
+
+```{r}
+alpha_diversity <- inner_join(alpha_diversity_rich, 
+                              alpha_diversity_div, 
+                              by = "SampleID")
+```
+
+
+```{r}
+head(alpha_diversity)
+```
+
+## Study center
+
+```{r}
+feature_name <- "Country"
+```
+
+### 2 months
+
+```{r}
+metadata <- sampdata[, c("SampleID", "Country")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>%
+  mutate(feature = factor(feature)) %>%
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+# metadata_alpha[which.max(metadata_alpha$richness_genus), "richness_genus"] <-
+#   max(metadata_alpha$richness_genus) / 2
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+#### Richness
+
+```{r Country_richness_2m, fig.width=5, fig.height=5}
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.5, dotsize = 1.2, 
+              ylim = c(0, 90), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+```
+
+#### Shannon
+
+```{r Country_shannon_2m, fig.width=5, fig.height=5}
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature)) 
+```
+
+#### Gini-Simpson index
+
+```{r Country_simpson_2m, fig.width=5, fig.height=5}
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+```
+
+#### Plot all
+
+```{r Country_2m, fig.width=14, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+```{r}
+table(sampdata$Country, sampdata$Farmer)
+```
+
+
+## Sex
+
+```{r}
+feature_name <- "Sex"
+```
+
+### 2 months
+
+```{r}
+metadata <- sampdata[, c("SampleID", "Sex")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  mutate(feature = as.factor(feature)) %>%
+  mutate(feature = fct_recode(feature, female = "f", male = "m")) %>%
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+#### Richness
+
+```{r sex_richness_2m, fig.width=5, fig.height=5}
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+```
+
+#### Shannon
+
+```{r sex_shannon_2m, fig.width=5, fig.height=5}
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature)) 
+```
+
+#### Gini-Simpson index
+
+```{r sex_simpson_2m, fig.width=5, fig.height=5}
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+```
+
+#### Plot all
+
+```{r sex_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+## C-section
+
+```{r}
+feature_name <- "C-section"
+```
+
+### 2 months
+
+```{r}
+metadata <- sampdata[, c("SampleID", "cesarean")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  mutate(feature = as.factor(feature)) %>%
+  mutate(feature = fct_recode(feature, no = "0", yes = "1")) %>%
+  drop_na(feature) %>%
+  mutate(feature = factor(feature,
+                          levels=c("yes", 
+                                   "no")))
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+#### Richness
+
+```{r cesarean_richness_2m, fig.width=5, fig.height=5}
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+```
+
+#### Shannon
+
+```{r cesarean_shannon_2m, fig.width=5, fig.height=5}
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature)) 
+```
+
+#### Gini-Simpson index
+
+```{r cesarean_simpson_2m, fig.width=5, fig.height=5}
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+```
+
+#### Plot all
+
+```{r cesarean_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg, ncol = 3, nrow = 1)
+```
+
+
+## Breast feeding
+
+```{r}
+feature_name <- "Breast feeding"
+```
+
+### 2 months
+
+```{r}
+metadata <- sampdata[, c("SampleID", "breast_dur_cat1")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+#### Richness
+
+```{r breastfeed_richness_2m, fig.width=5, fig.height=5}
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = c("0", "1", "\u2265 2"))
+```
+
+#### Shannon
+
+```{r breastfeed_shannon_2m, fig.width=5, fig.height=5}
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = c("0", "1", "\u2265 2")) 
+```
+
+#### Gini-Simpson index
+
+```{r breastfeed_simpson_2m, fig.width=5, fig.height=5}
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = c("0", "1", "\u2265 2"))
+```
+
+#### Plot all
+```{r breastfeed_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+## Exclusive breast feeding
+
+```{r}
+feature_name <- "Exclusive breast feeding"
+```
+
+### 2 months
+
+```{r}
+metadata <- sampdata[, c("SampleID", "breast_excl_cat1")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+#### Richness
+
+```{r breast_excl_richness_2m, fig.width=5, fig.height=5}
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = c("0", "1", "\u2265 2"))
+```
+
+#### Shannon
+
+```{r breast_excl_shannon_2m, fig.width=5, fig.height=5}
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = c("0", "1", "\u2265 2")) 
+```
+
+#### Gini-Simpson index
+
+```{r breast_excl_simpson_2m, fig.width=5, fig.height=5}
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = c("0", "1", "\u2265 2"))
+```
+
+
+#### Plot all
+```{r breast_excl_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+## Smoke during pregnancy
+
+```{r}
+feature_name <- "Smoke during Pregnancy"
+```
+
+### 2 months
+
+```{r}
+metadata <- sampdata[, c("SampleID", "pregsmoke")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  drop_na(feature) %>%
+  mutate(feature = as.factor(feature)) %>%
+  mutate(feature = fct_recode(feature, no = "0", yes = "1")) %>%
+  mutate(feature = factor(feature,
+                          levels=c("yes", 
+                                   "no")))
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+#### Richness
+
+```{r pregsmoke_richness_2m, fig.width=5, fig.height=5}
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+```
+
+#### Shannon
+
+```{r pregsmoke_shannon_2m, fig.width=5, fig.height=5}
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature)) 
+```
+
+#### Gini-Simpson index
+
+```{r pregsmoke_simpson_2m, fig.width=5, fig.height=5}
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+```
+
+#### Plot all
+
+```{r pregsmoke_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+## BMI mother
+
+```{r}
+feature_name <- "BMI mother"
+```
+
+
+### 2 months
+
+```{r}
+metadata <- sampdata[, c("SampleID", "BMI_mum_fact")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>%
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+#### Richness
+
+```{r bmi_mother_richness_2m, fig.width=5, fig.height=5}
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+```
+
+#### Shannon
+
+```{r bmi_mother_shannon_2m, fig.width=5, fig.height=5}
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature)) 
+```
+
+#### Gini-Simpson index
+
+```{r bmi_mother_simpson_2m, fig.width=5, fig.height=5}
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+```
+
+#### Plot all
+
+```{r bmi_mother_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+## Number of siblings
+
+```{r}
+feature_name <- "Number of siblings"
+```
+
+### 2 months
+
+```{r}
+metadata <- sampdata[, c("SampleID", "sibs_numb_cat")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+#### Richness
+
+```{r sibsnumb_richness_2m, fig.width=5, fig.height=5}
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = c("0", "1", "&gt;1"))
+```
+
+#### Shannon
+
+```{r sibsnumb_shannon_2m, fig.width=5, fig.height=5}
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = c("0", "1", "&gt;1")) 
+```
+
+#### Gini-Simpson index
+
+```{r sibsnumb_simpson_2m, fig.width=5, fig.height=5}
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = c("0", "1", "&gt;1"))
+```
+
+#### Plot all
+
+```{r sibsnumb_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
