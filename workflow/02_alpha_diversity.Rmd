@@ -384,100 +384,32 @@ nonzero_elem[base_taxon]
 
 ```{r}
 if (!file.exists(path_target("divnet_genus.rds"))) {
-  divnet_result <- phylo_genus %>%
-    DivNet::divnet(ncores = 8, 
+  divnet_start <- proc.time()
+  divnet_genus <- phylo_genus %>%
+    DivNet::divnet(ncores = 1, 
                    base = names(base_taxon),
                    tuning = "fast")
+  divnet_runtime <- proc.time() - divnet_start
+  message("divnet runtime: ", round(divnet_runtime["elapsed"], 1), " seconds")
   
-  saveRDS(divnet_result, file = path_target("divnet_genus.rds"))
+  saveRDS(divnet_genus, file = path_target("divnet_genus.rds"))
+  saveRDS(divnet_runtime, file = path_target("divnet_genus_runtime.rds"))
 } else {
-  divnet_result <- readRDS(path_target("divnet_genus.rds"))
+  divnet_genus <- readRDS(path_target("divnet_genus.rds"))
+  divnet_runtime <- readRDS(path_target("divnet_genus_runtime.rds"))
 }
 ```
 
 ```{r}
-phylo_family <- tax_glom(phylo_genus, taxrank="Family")
-
-# Drop samples with NAs in any formula covariate
-cov_vars <- c("Country", "Sex", "cesarean", "breast_dur_cat1",
-              "breast_excl_cat1", "pregsmoke", "sibs_numb_cat")
-sdata <- data.frame(sample_data(phylo_family))
-complete_samples <- rownames(sdata)[complete.cases(sdata[, cov_vars])]
-phylo_family_cov <- prune_samples(complete_samples, phylo_family)
-
-if (!file.exists(path_target("divnet_family_cov.rds"))) {
-  divnet_result <- phylo_family_cov %>%
-    DivNet::divnet(formula = ~ Country + Sex + cesarean + breast_dur_cat1 + 
-                     breast_excl_cat1 + pregsmoke + sibs_numb_cat,
-                   ncores = 8, 
-                   tuning = "fast")
-  
-  saveRDS(divnet_result, file = path_target("divnet_family_cov.rds"))
-} else {
-  divnet_result <- readRDS(path_target("divnet_family_cov.rds"))
-}
-```
-
-```{r}
-names(divnet_result)
-```
-
-```{r}
+# Use the no-formula genus-level model for per-sample estimates (used in strip charts)
 alpha_diversity_div <- 
-  data.frame(SampleID = names(divnet_result$shannon),
-             shannon = unlist(lapply(divnet_result$shannon, function(x) x$estimate)),
-             simpson = unlist(lapply(divnet_result$simpson, function(x) x$estimate)))
+  data.frame(SampleID = names(divnet_genus$shannon),
+             shannon = unlist(lapply(divnet_genus$shannon, function(x) x$estimate)),
+             simpson = unlist(lapply(divnet_genus$simpson, function(x) x$estimate)))
 
 alpha_diversity_div <- alpha_diversity_div %>%
   mutate(inv_simpson = 1 / simpson,
          gini = 1 - simpson)
-```
-
-### Regression on Shannon diversity (betta)
-
-Using `breakaway::betta` to regress DivNet Shannon estimates on the covariates.
-The design matrix is taken directly from the fitted DivNet model (`divnet_result$X`),
-which encodes the same formula used above.
-
-```{r}
-betta_estimates <- divnet_result$shannon %>% summary() %$% estimate
-betta_ses       <- sqrt(divnet_result$`shannon-variance`)
-
-betta_result <- breakaway::betta(betta_estimates, betta_ses, divnet_result$X)
-betta_result$table
-```
-
-**Interpretation** (reference group: Austria, female, vaginal birth, breastfeeding duration < 1 month,
-not exclusively breastfed, no prenatal smoking, no siblings):
-
-- **Country:** Swiss infants show substantially lower Shannon diversity than Austrian infants
-  (β = −0.156, p < 0.001); German infants do not differ significantly (p = 0.226).
-- **Sex:** Male infants have slightly but significantly lower Shannon diversity than females
-  (β = −0.024, p < 0.001).
-- **Caesarean delivery:** Associated with higher Shannon diversity (β = +0.050, p < 0.001).
-  This is somewhat counterintuitive — caesarean birth typically disrupts vertical transmission
-  of vaginal/gut microbiota — and may reflect confounding with feeding mode or other factors.
-- **Breastfeeding duration:** The largest effect in the model. Compared to very short/no
-  breastfeeding (< 1 month), one month of breastfeeding is associated with higher diversity
-  (β = +0.117, p < 0.001), while ≥ 2 months is associated with substantially lower diversity
-  (β = −0.382, p < 0.001). This non-monotone pattern likely reflects the well-documented
-  HMO-driven enrichment of *Bifidobacterium* in longer-breastfed infants, which reduces
-  overall evenness (Shannon diversity).
-- **Exclusive breastfeeding:** The 1-month exclusive breastfeeding category is not
-  significant (p = 0.708; n = 2, very sparse). Duration ≥ 2 months is associated with
-  slightly lower diversity (β = −0.046, p < 0.001), consistent with the duration effect above.
-- **Prenatal smoking:** Associated with higher infant Shannon diversity (β = +0.116, p < 0.001).
-  The direction is unexpected and warrants cautious interpretation; residual confounding
-  cannot be excluded.
-- **Number of siblings:** Having siblings is associated with slightly lower Shannon diversity
-  (1 sibling: β = −0.013, p = 0.011; > 1 sibling: β = −0.033, p < 0.001). This direction
-  is counterintuitive given the expected increase in microbial exposure from older siblings,
-  and may interact with breastfeeding duration or other covariates in the model.
-
-Global test of whether any covariate is associated with Shannon diversity:
-
-```{r}
-betta_result$global
 ```
 
 ```{r}
@@ -554,10 +486,6 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
 ```{r Country_2m, fig.width=14, fig.height=5}
 ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
-```
-
-```{r}
-table(sampdata$Country, sampdata$Farmer)
 ```
 
 
@@ -765,7 +693,8 @@ colnames(metadata) <- c("SampleID", "feature")
 rownames(metadata) <- NULL
 
 metadata <- metadata %>% 
-  drop_na(feature)
+  drop_na(feature) %>%
+  filter(feature != "1")
 
 metadata_alpha <- inner_join(metadata, alpha_diversity,
                              by = "SampleID")
@@ -877,68 +806,6 @@ ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
 ```
 
-## BMI mother
-
-```{r}
-feature_name <- "BMI mother"
-```
-
-
-### 2 months
-
-```{r}
-metadata <- sampdata[, c("SampleID", "BMI_mum_fact")]
-
-colnames(metadata) <- c("SampleID", "feature")
-rownames(metadata) <- NULL
-
-metadata <- metadata %>%
-  drop_na(feature)
-
-metadata_alpha <- inner_join(metadata, alpha_diversity,
-                             by = "SampleID")
-
-nfeat <- nlevels(metadata_alpha$feature)
-table(metadata$feature)
-```
-
-#### Richness
-
-```{r bmi_mother_richness_2m, fig.width=5, fig.height=5}
-pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
-              ylim = c(0, 80), space_line = 6, space_lab = 3,
-              xlab = feature_name, 
-              breaks = levels(metadata$feature),
-              labels = levels(metadata$feature))
-```
-
-#### Shannon
-
-```{r bmi_mother_shannon_2m, fig.width=5, fig.height=5}
-ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
-             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
-             xlab = feature_name, 
-             breaks = levels(metadata$feature),
-             labels = levels(metadata$feature)) 
-```
-
-#### Gini-Simpson index
-
-```{r bmi_mother_simpson_2m, fig.width=5, fig.height=5}
-pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
-          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
-          xlab = feature_name, 
-          breaks = levels(metadata$feature),
-          labels = levels(metadata$feature))
-```
-
-#### Plot all
-
-```{r bmi_mother_2m, fig.width=12, fig.height=5}
-ggarrange(pr, ps, pg,
-          ncol = 3, nrow = 1)
-```
-
 ## Number of siblings
 
 ```{r}
@@ -1000,6 +867,225 @@ ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
 ```
 
+
+## Model-based analysis: regression on Shannon diversity (betta)
+
+The strip charts above show unadjusted, per-sample DivNet estimates. Here we use
+the covariate model (`divnet_genus_cov`, family level) together with
+`breakaway::betta` to jointly estimate associations between all covariates and
+Shannon diversity, properly accounting for the uncertainty in the DivNet estimates.
+Note that this model uses only the `r nsamples(phylo_genus_cov)` samples with
+complete covariate data.
+
+```{r}
+# Drop samples with NAs in any formula covariate
+# Also exclude samples with 1-month exclusive breastfeeding (sparse category)
+cov_vars <- c("Country", "Sex", "cesarean", "breast_dur_cat1",
+              "breast_excl_cat1", "pregsmoke", "sibs_numb_cat")
+sdata <- data.frame(sample_data(phylo_genus))
+complete_samples <- rownames(sdata)[complete.cases(sdata[, cov_vars])]
+complete_samples <- complete_samples[sdata[complete_samples, "breast_excl_cat1"] != "1"]
+phylo_genus_cov <- prune_samples(complete_samples, phylo_genus)
+
+if (!file.exists(path_target("divnet_genus_cov.rds"))) {
+  set.seed(123456)
+  divnet_start <- proc.time()
+  divnet_genus_cov <- phylo_genus_cov %>%
+    DivNet::divnet(formula = ~ Country + Sex + cesarean + breast_dur_cat1 + 
+                     breast_excl_cat1 + pregsmoke + sibs_numb_cat,
+                   ncores = 1, 
+                   tuning = "fast")
+  
+  divnet_runtime <- proc.time() - divnet_start
+  
+  saveRDS(divnet_genus_cov, file = path_target("divnet_genus_cov.rds"))
+  saveRDS(divnet_runtime, file = path_target("divnet_genus_cov_runtime.rds"))
+} else {
+  divnet_genus_cov <- readRDS(path_target("divnet_genus_cov.rds"))
+  divnet_runtime <- readRDS(path_target("divnet_genus_cov_runtime.rds"))
+}
+```
+
+```{r}
+names(divnet_genus_cov)
+```
+
+```{r}
+betta_estimates <- divnet_genus_cov$shannon |> summary() |> dplyr::pull(estimate)
+betta_ses       <- sqrt(divnet_genus_cov$`shannon-variance`)
+
+betta_shannon <- breakaway::betta(betta_estimates, betta_ses, divnet_genus_cov$X)
+betta_shannon$table
+```
+
+```{r}
+gini_estimates <- 1 - (divnet_genus_cov$simpson |> summary() |> dplyr::pull(estimate))
+gini_ses       <- sqrt(divnet_genus_cov$`simpson-variance`)
+
+betta_gini <- breakaway::betta(gini_estimates, gini_ses, divnet_genus_cov$X)
+betta_gini$table
+```
+
+```{r}
+# Rerun breakaway only on the model samples (n = 486) to obtain aligned SEs.
+# One sample has a near-zero SE (~5e-95); this is floored at 0.5
+# (conservative relative to the estimate scale of ~6–54) to avoid
+# a singular covariance matrix in betta().
+model_samples  <- rownames(divnet_genus_cov$X)
+flist_cov      <- frequencytablelist[model_samples]
+rich_cov       <- lapply(flist_cov, breakaway::breakaway)
+rich_estimates <- sapply(rich_cov, function(x) x$estimate)
+rich_ses       <- pmax(sapply(rich_cov, function(x) x$error), 0.5)
+
+betta_rich <- breakaway::betta(rich_estimates, rich_ses, divnet_genus_cov$X)
+betta_rich$table
+```
+
+**Interpretation** (reference group: Austria, female, vaginal birth, breastfeeding duration < 1 month,
+not exclusively breastfed, no prenatal smoking, no siblings):
+
+- **Country:** Swiss infants show lower genus-level Shannon diversity than Austrian infants
+  (β = −0.113, p < 0.001); German infants do not differ significantly (β = +0.002, p = 0.800).
+- **Sex:** Male infants show marginally lower Shannon diversity than females (β = −0.008,
+  p = 0.059), a difference that does not reach conventional significance at the genus level.
+- **Caesarean delivery:** Associated with slightly higher Shannon diversity (β = +0.019, p = 0.016).
+  This is somewhat counterintuitive — caesarean birth typically disrupts vertical transmission
+  of vaginal/gut microbiota — and may reflect confounding with feeding mode or other factors.
+- **Breastfeeding duration:** The dominant effect in the model. Compared to very short/no
+  breastfeeding (< 1 month), one month of breastfeeding is associated with modestly higher
+  diversity (β = +0.039, p = 0.001), while ≥ 2 months is associated with substantially lower
+  diversity (β = −0.359, p < 0.001). This non-monotone pattern likely reflects the well-documented
+  HMO-driven enrichment of *Bifidobacterium* in longer-breastfed infants, which reduces
+  overall evenness (Shannon diversity) at the genus level.
+- **Exclusive breastfeeding:** Duration ≥ 2 months is associated with slightly lower
+  diversity (β = −0.058, p < 0.001), consistent with the breastfeeding duration effect above.
+- **Prenatal smoking:** Associated with higher infant Shannon diversity (β = +0.073, p < 0.001).
+  The direction is unexpected and warrants cautious interpretation; residual confounding
+  cannot be excluded.
+- **Number of siblings:** Having more than one sibling is associated with slightly lower Shannon
+  diversity (> 1 sibling: β = −0.022, p < 0.001); having exactly one sibling shows no significant
+  effect (β = −0.004, p = 0.391). The negative direction is counterintuitive given the expected
+  increase in microbial exposure from older siblings, and may interact with breastfeeding or
+  other covariates.
+
+Global test of whether any covariate is associated with Shannon diversity:
+
+```{r}
+betta_shannon$global
+```
+
+`betta_shannon$global` is a likelihood ratio test of the null hypothesis that all covariates
+jointly have no association with Shannon diversity (i.e., all βs except the intercept equal
+zero). The two returned values are the chi-squared test statistic and its p-value,
+respectively. A significant result indicates that the model as a whole fits better than an
+intercept-only model, meaning at least one covariate is meaningfully associated with Shannon
+diversity. It does not identify which covariates are responsible — that is addressed by the
+individual p-values in `betta_shannon$table` above.
+
+
+### Combined coefficient plot
+
+```{r betta_forest_combined, fig.width=10, fig.height=6}
+term_labels <- c(
+  "CountryGermany"      = "Country: Germany",
+  "CountrySwitzerland"  = "Country: Switzerland",
+  "Sexm"                = "Sex: male",
+  "cesarean"            = "Caesarean delivery",
+  "breast_dur_cat11"    = "Breastfeeding duration: 1 month",
+  "breast_dur_cat1>=2"  = "Breastfeeding duration: \u22652 months",
+  "breast_excl_cat11"   = "Exclusive BF: 1 month",
+  "breast_excl_cat1>=2" = "Exclusive BF: \u22652 months",
+  "pregsmoke"           = "Prenatal smoking",
+  "sibs_numb_cat1"      = "Siblings: 1",
+  "sibs_numb_cat>1"     = "Siblings: >1"
+)
+
+tidy_betta <- function(betta_res, measure_label) {
+  as.data.frame(betta_res$table) |>
+    tibble::rownames_to_column("term") |>
+    filter(term != "(Intercept)") |>
+    mutate(
+      lower   = Estimates - 1.96 * `Standard Errors`,
+      upper   = Estimates + 1.96 * `Standard Errors`,
+      sig     = `p-values` < 0.05,
+      measure = measure_label,
+      term    = dplyr::recode(term, !!!term_labels)
+    )
+}
+
+bind_rows(
+  tidy_betta(betta_shannon, "Shannon (DivNet)"),
+  tidy_betta(betta_gini,   "Gini-Simpson (DivNet)"),
+  tidy_betta(betta_rich,   "Breakaway richness")
+) |>
+  mutate(
+    measure = factor(measure, levels = c("Breakaway richness",
+                                         "Shannon (DivNet)",
+                                         "Gini-Simpson (DivNet)")),
+    term = factor(term, levels = rev(unique(term)))
+  ) |>
+  ggplot(aes(x = Estimates, y = term, color = sig)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey60") +
+  geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0.3) +
+  geom_point(size = 2.5) +
+  scale_color_manual(values = c("FALSE" = "grey55", "TRUE" = "#1B7837"),
+                     labels = c("FALSE" = "no", "TRUE"  = "yes")) +
+  facet_wrap(~measure, scales = "free_x", nrow = 1) +
+  labs(x = "Coefficient estimate (95% CI)", y = NULL, color = "p < 0.05") +
+  theme_bw() +
+  theme(strip.text = element_text(face = "bold"))
+```
+
+#### Investigating the C-section effect: confounding by breastfeeding duration
+
+The positive association of caesarean delivery with Shannon diversity is counterintuitive
+biologically. A likely explanation is confounding by breastfeeding: C-section delivery is
+associated with shorter breastfeeding duration, and shorter breastfeeding is associated with
+higher Shannon diversity (the dominant effect in the model). The following two plots
+investigate this.
+
+```{r cesarean_breastfeed_confounding, fig.width=9, fig.height=4}
+plot_dat <- alpha_diversity_div |>
+  left_join(
+    sdata |>
+      select(SampleID, cesarean, breast_dur_cat1),
+    by = "SampleID"
+  ) |>
+  filter(!is.na(cesarean), !is.na(breast_dur_cat1)) |>
+  mutate(
+    cesarean = factor(cesarean, levels = c(1, 0), labels = c("C-section", "Vaginal")),
+    breast_dur_cat1 = factor(breast_dur_cat1,
+                             levels = c("0", "1", ">=2"),
+                             labels = c("< 1 month", "1 month", "≥ 2 months"))
+  )
+
+# Panel 1: breastfeeding duration distribution by delivery mode
+p1 <- plot_dat |>
+  count(cesarean, breast_dur_cat1) |>
+  group_by(cesarean) |>
+  mutate(pct = n / sum(n)) |>
+  ggplot(aes(x = cesarean, y = pct, fill = breast_dur_cat1)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Delivery mode", y = "Proportion", fill = "Breastfeeding\nduration") +
+  theme_bw()
+
+# Panel 2: Shannon diversity by delivery mode, stratified by breastfeeding duration
+p2 <- ggplot(plot_dat, aes(x = cesarean, y = shannon)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.3, size = 0.8) +
+  facet_wrap(~breast_dur_cat1) +
+  labs(x = "Delivery mode", y = "Shannon index (DivNet)") +
+  theme_bw()
+
+cowplot::plot_grid(p1, p2, rel_widths = c(1, 1.8))
+```
+
+The left panel shows that C-section infants are less likely to be breastfed for ≥ 2 months
+compared to vaginally born infants. Since prolonged breastfeeding is the strongest single
+predictor of *lower* Shannon diversity in this cohort, C-section infants appear more diverse
+in the unadjusted comparison. The right panel confirms this: within each breastfeeding
+duration stratum, the delivery mode difference is substantially attenuated or absent.
 
 ## Files written
 
