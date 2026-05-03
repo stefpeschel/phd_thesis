@@ -200,7 +200,7 @@ perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL) {
   
   list(H       = unname(obs_H),
        p_asymp = obs$p.value,
-       p_perm  = mean(perm_H >= obs_H))
+       p_perm  = (sum(perm_H >= obs_H) + 1) / (n_perm + 1))
 }
 
 # Pairwise permutation Wilcoxon tests with BH correction.
@@ -226,7 +226,7 @@ perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH", seed = NULL) {
     n2     <- sum(gi == levels(gi)[2])
     EW     <- n1 * n2 / 2
     perm_W <- replicate(n_perm, wilcox.test(xi ~ sample(gi), exact = FALSE)$statistic)
-    mean(abs(perm_W - EW) >= abs(obs_W - EW))
+    (sum(abs(perm_W - EW) >= abs(obs_W - EW)) + 1) / (n_perm + 1)
   })
 
   p_adj <- p.adjust(p_vals, method = p_adjust)
@@ -586,14 +586,17 @@ measure_labels <- c(
   gini           = "Gini-Simpson (DivNet)"
 )
 
+fmt_p <- function(p) formatC(p, format = "e", digits = 2)
+
 perm_table <- purrr::imap_dfr(perm_results, function(res, key) {
-  parts <- strsplit(key, "_(?=[^_]+$)", perl = TRUE)[[1]]
+  measure_part <- stringr::str_extract(key, "richness_genus|shannon|gini")
+  var_part     <- sub(paste0("_", measure_part, "$"), "", key)
   tibble::tibble(
-    Variable = var_labels[parts[1]],
-    Measure  = measure_labels[parts[2]],
+    Variable = var_labels[var_part],
+    Measure  = measure_labels[measure_part],
     H        = round(res$H, 2),
-    p_asymp  = signif(res$p_asymp, 3),
-    p_perm   = signif(res$p_perm,  3)
+    p_asymp  = fmt_p(res$p_asymp),
+    p_perm   = fmt_p(res$p_perm)
   )
 })
 
