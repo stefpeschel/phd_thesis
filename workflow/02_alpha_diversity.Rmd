@@ -37,6 +37,7 @@ library(ggpubr)
 # Diversity packages
 library(breakaway)
 library(DivNet)
+library(progress)
 ```
 
 ```{r directories}
@@ -176,6 +177,73 @@ add_sig_line <- function(strip_chart, pval, diversity,
 }
 ```
 
+### Permutation test functions
+
+```{r}
+# Kruskal-Wallis test with permutation p-value.
+# Uses the KW H statistic on permuted group labels.
+perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+  g      <- droplevels(as.factor(g))
+  obs    <- kruskal.test(x ~ g)
+  obs_H  <- obs$statistic
+  
+  pb <- progress::progress_bar$new(
+    format = "  Permutations [:bar] :current/:total (:percent)",
+    total = n_perm, clear = FALSE, width = 60
+  )
+  
+  perm_H <- sapply(1:n_perm, function(i) {
+    pb$tick()
+    kruskal.test(x ~ sample(g))$statistic
+  })
+  
+  list(H       = unname(obs_H),
+       p_asymp = obs$p.value,
+       p_perm  = mean(perm_H >= obs_H))
+}
+
+# Pairwise permutation Wilcoxon tests with BH correction.
+# For each pair, permutes group labels and uses the W statistic (two-sided).
+perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH", seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+  g     <- droplevels(as.factor(g))
+  pairs <- combn(levels(g), 2, simplify = FALSE)
+  
+  n_pairs <- length(pairs)
+  pb <- progress::progress_bar$new(
+    format = "  Pairwise tests [:bar] :current/:total (:percent)",
+    total = n_pairs, clear = FALSE, width = 60
+  )
+
+  p_vals <- sapply(pairs, function(pair) {
+    pb$tick()
+    idx    <- g %in% pair
+    xi     <- x[idx]
+    gi     <- droplevels(g[idx])
+    obs_W  <- wilcox.test(xi ~ gi, exact = FALSE)$statistic
+    n1     <- sum(gi == levels(gi)[1])
+    n2     <- sum(gi == levels(gi)[2])
+    EW     <- n1 * n2 / 2
+    perm_W <- replicate(n_perm, wilcox.test(xi ~ sample(gi), exact = FALSE)$statistic)
+    mean(abs(perm_W - EW) >= abs(obs_W - EW))
+  })
+
+  p_adj <- p.adjust(p_vals, method = p_adjust)
+  lvls  <- levels(g)
+  mat   <- matrix(NA,
+                  nrow     = length(lvls) - 1,
+                  ncol     = length(lvls) - 1,
+                  dimnames = list(lvls[-1], lvls[-length(lvls)]))
+  for (i in seq_along(pairs)) {
+    r <- which(lvls == pairs[[i]][2]) - 1
+    c <- which(lvls == pairs[[i]][1])
+    if (r >= 1 && c <= ncol(mat)) mat[r, c] <- p_adj[i]
+  }
+  mat
+}
+```
+
 ### Plot function for richness
 
 ```{r}
@@ -185,7 +253,8 @@ plot_richness <- function(div_dataframe, feature_name,
                           ylab = "Breakaway richness", 
                           ybreaks = NULL, title = "",
                           ylim = c(0, 75), textsize = 18,
-                          space_line = 2, space_lab = 5) {
+                          space_line = 2, space_lab = 5,
+                          ptest = NULL) {
   
   # Remove levels with zero observations
   div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
@@ -202,15 +271,17 @@ plot_richness <- function(div_dataframe, feature_name,
                                  textsize = textsize, title = title) 
   
   # Significance test
-  pval_kt <- pval <- kruskal.test(richness_genus ~ feature, 
-                                  data = div_dataframe)$p.value
-  pval_kt
-  
-  if (pval_kt <= 0.05 && nfeat > 2) {
-    pval <- pairwise.wilcox.test(div_dataframe$richness_genus,
-                                 g = div_dataframe$feature,
-                                 p.adjust.method = "BH")$p.value
-    pval
+  if (is.null(ptest)) {
+    pval_kt <- pval <- kruskal.test(richness_genus ~ feature,
+                                    data = div_dataframe)$p.value
+    if (pval_kt <= 0.05 && nfeat > 2) {
+      pval <- pairwise.wilcox.test(div_dataframe$richness_genus,
+                                   g = div_dataframe$feature,
+                                   p.adjust.method = "BH")$p.value
+    }
+  } else {
+    pval_kt <- ptest$p_perm
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) ptest$p_pairwise else pval_kt
   }
   
   if (pval_kt <= 0.05) {
@@ -231,7 +302,8 @@ plot_shannon <- function(div_dataframe, feature_name,
                          binwidth = 0.04, dotsize = 1, ylim = c(0, 4), 
                          space_line = 0.3, space_lab = 0.15,
                          ylab = "Shannon index (DivNet)", 
-                         ybreaks = NULL, title = "", textsize = 18) {
+                         ybreaks = NULL, title = "", textsize = 18,
+                         ptest = NULL) {
   # Remove levels with zero observations
   div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
                                               names(which(table(div_dataframe$feature) > 0)), ])
@@ -247,15 +319,17 @@ plot_shannon <- function(div_dataframe, feature_name,
                                  textsize = textsize, title = title) 
   
   # Significance test
-  pval_kt <- pval <- kruskal.test(shannon ~ feature, 
-                                  data = div_dataframe)$p.value
-  pval_kt
-  
-  if (pval_kt <= 0.05 && nfeat > 2) {
-    pval <- pairwise.wilcox.test(div_dataframe$shannon,
-                                 g = div_dataframe$feature,
-                                 p.adjust.method = "BH")$p.value
-    pval
+  if (is.null(ptest)) {
+    pval_kt <- pval <- kruskal.test(shannon ~ feature,
+                                    data = div_dataframe)$p.value
+    if (pval_kt <= 0.05 && nfeat > 2) {
+      pval <- pairwise.wilcox.test(div_dataframe$shannon,
+                                   g = div_dataframe$feature,
+                                   p.adjust.method = "BH")$p.value
+    }
+  } else {
+    pval_kt <- ptest$p_perm
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) ptest$p_pairwise else pval_kt
   }
   
   if (pval_kt <= 0.05) {
@@ -276,7 +350,8 @@ plot_gini <- function(div_dataframe, feature_name,
                       binwidth = 0.01, dotsize = 1, ylim = c(0, 1.1), 
                       space_line = 0.08, space_lab = 0.04,
                       ylab = "Gini-Simpson index (DivNet)", 
-                      ybreaks = NULL, title = "", textsize = 18) {
+                      ybreaks = NULL, title = "", textsize = 18,
+                      ptest = NULL) {
   
   # Remove levels with zero observations
   div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
@@ -293,15 +368,17 @@ plot_gini <- function(div_dataframe, feature_name,
                                  textsize = textsize, title = title) 
   
   # Significance test
-  pval_kt <- pval <- kruskal.test(gini ~ feature, 
-                                  data = div_dataframe)$p.value
-  pval_kt
-  
-  if (pval_kt <= 0.05 && nfeat > 2) {
-    pval <- pairwise.wilcox.test(div_dataframe$gini,
-                                 g = div_dataframe$feature,
-                                 p.adjust.method = "BH")$p.value
-    pval
+  if (is.null(ptest)) {
+    pval_kt <- pval <- kruskal.test(gini ~ feature,
+                                    data = div_dataframe)$p.value
+    if (pval_kt <= 0.05 && nfeat > 2) {
+      pval <- pairwise.wilcox.test(div_dataframe$gini,
+                                   g = div_dataframe$feature,
+                                   p.adjust.method = "BH")$p.value
+    }
+  } else {
+    pval_kt <- ptest$p_perm
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) ptest$p_pairwise else pval_kt
   }
   
   if (pval_kt <= 0.05) {
@@ -423,10 +500,114 @@ alpha_diversity <- inner_join(alpha_diversity_rich,
 head(alpha_diversity)
 ```
 
+## Permutation tests
+
+Results are cached separately per variable (one RDS file each). Delete a variable's
+file and rerun this chunk to recompute only that variable. Each test uses 9 999
+permutations. Results are reused by the plotting functions below and summarised in
+the comparison table.
+
+```{r perm-tests}
+# Helper: build metadata_alpha for a given variable
+prep_meta <- function(col, extra_filter = NULL) {
+  d <- sampdata[, c("SampleID", col)]
+  colnames(d) <- c("SampleID", "feature")
+  rownames(d) <- NULL
+  if (col == "Sex") {
+    d$feature <- fct_recode(as.factor(d$feature), female = "f", male = "m")
+  } else if (col == "cesarean") {
+    d$feature <- fct_recode(as.factor(d$feature), no = "0", yes = "1")
+  } else {
+    d$feature <- as.factor(d$feature)
+  }
+  d <- d |> tidyr::drop_na(feature)
+  if (!is.null(extra_filter)) d <- d |> filter(feature != extra_filter)
+  d$feature <- droplevels(d$feature)
+  inner_join(d, alpha_diversity, by = "SampleID")
+}
+
+vars_def <- list(
+  Country        = list(col = "Country",         filter = NULL),
+  Sex            = list(col = "Sex",              filter = NULL),
+  Cesarean       = list(col = "cesarean",         filter = NULL),
+  Breastfeeding  = list(col = "breast_dur_cat1",  filter = NULL),
+  Exclusive_BF   = list(col = "breast_excl_cat1", filter = "1"),
+  Prenatal_smoke = list(col = "pregsmoke",        filter = NULL),
+  Siblings       = list(col = "sibs_numb_cat",    filter = NULL)
+)
+measures_def <- c("richness_genus", "shannon", "gini")
+
+perm_results <- list()
+
+for (vname in names(vars_def)) {
+  rds_path <- path_target(paste0("perm_results_", vname, ".rds"))
+
+  if (!file.exists(rds_path)) {
+    message("Running permutation tests for: ", vname)
+    meta    <- prep_meta(vars_def[[vname]]$col, vars_def[[vname]]$filter)
+    nfeat_v <- nlevels(meta$feature)
+    var_res <- list()
+    set.seed(123456)
+    for (m in measures_def) {
+      key <- paste0(vname, "_", m)
+      x   <- meta[[m]]
+      g   <- meta$feature
+      res <- perm_kruskal(x, g, n_perm = 9999)
+      res$p_pairwise <- NULL
+      if (nfeat_v > 2 && res$p_perm <= 0.05) {
+        res$p_pairwise <- perm_pairwise(x, g, n_perm = 9999)
+      }
+      var_res[[key]] <- res
+    }
+    saveRDS(var_res, rds_path)
+  } else {
+    var_res <- readRDS(rds_path)
+  }
+
+  perm_results <- c(perm_results, var_res)
+}
+```
+
+### Comparison of asymptotic vs. permutation p-values
+
+```{r perm-table}
+var_labels <- c(
+  Country        = "Country",
+  Sex            = "Sex",
+  Cesarean       = "C-section",
+  Breastfeeding  = "Breastfeeding duration",
+  Exclusive_BF   = "Exclusive breastfeeding",
+  Prenatal_smoke = "Prenatal smoking",
+  Siblings       = "Number of siblings"
+)
+measure_labels <- c(
+  richness_genus = "Breakaway richness",
+  shannon        = "Shannon (DivNet)",
+  gini           = "Gini-Simpson (DivNet)"
+)
+
+perm_table <- purrr::imap_dfr(perm_results, function(res, key) {
+  parts <- strsplit(key, "_(?=[^_]+$)", perl = TRUE)[[1]]
+  tibble::tibble(
+    Variable = var_labels[parts[1]],
+    Measure  = measure_labels[parts[2]],
+    H        = round(res$H, 2),
+    p_asymp  = signif(res$p_asymp, 3),
+    p_perm   = signif(res$p_perm,  3)
+  )
+})
+
+knitr::kable(perm_table,
+             col.names = c("Variable", "Measure", "H statistic",
+                           "p (KW asymptotic)", "p (permutation)"),
+             align = "llrrr")
+```
+
 ## Study center
 
 ```{r}
 feature_name <- "Country"
+feat_key     <- "Country"
 ```
 
 ### 2 months
@@ -458,7 +639,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.5, dotsize = 1.2,
               ylim = c(0, 90), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = levels(metadata$feature))
+              labels = levels(metadata$feature),
+              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
 #### Shannon
@@ -468,7 +650,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = levels(metadata$feature)) 
+             labels = levels(metadata$feature),
+             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 #### Gini-Simpson index
@@ -478,7 +661,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = levels(metadata$feature))
+          labels = levels(metadata$feature),
+          ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 #### Plot all
@@ -493,6 +677,7 @@ ggarrange(pr, ps, pg,
 
 ```{r}
 feature_name <- "Sex"
+feat_key     <- "Sex"
 ```
 
 ### 2 months
@@ -522,7 +707,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = levels(metadata$feature))
+              labels = levels(metadata$feature),
+              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
 #### Shannon
@@ -532,7 +718,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = levels(metadata$feature)) 
+             labels = levels(metadata$feature),
+             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 #### Gini-Simpson index
@@ -542,7 +729,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = levels(metadata$feature))
+          labels = levels(metadata$feature),
+          ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 #### Plot all
@@ -556,6 +744,7 @@ ggarrange(pr, ps, pg,
 
 ```{r}
 feature_name <- "C-section"
+feat_key     <- "Cesarean"
 ```
 
 ### 2 months
@@ -588,7 +777,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = levels(metadata$feature))
+              labels = levels(metadata$feature),
+              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
 #### Shannon
@@ -598,7 +788,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = levels(metadata$feature)) 
+             labels = levels(metadata$feature),
+             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 #### Gini-Simpson index
@@ -608,7 +799,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = levels(metadata$feature))
+          labels = levels(metadata$feature),
+          ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 #### Plot all
@@ -622,6 +814,7 @@ ggarrange(pr, ps, pg, ncol = 3, nrow = 1)
 
 ```{r}
 feature_name <- "Breast feeding"
+feat_key     <- "Breastfeeding"
 ```
 
 ### 2 months
@@ -649,7 +842,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = c("0", "1", "\u2265 2"))
+              labels = c("0", "1", "\u2265 2"),
+              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
 #### Shannon
@@ -659,7 +853,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = c("0", "1", "\u2265 2")) 
+             labels = c("0", "1", "\u2265 2"),
+             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 #### Gini-Simpson index
@@ -669,7 +864,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = c("0", "1", "\u2265 2"))
+          labels = c("0", "1", "\u2265 2"),
+          ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 #### Plot all
@@ -682,6 +878,7 @@ ggarrange(pr, ps, pg,
 
 ```{r}
 feature_name <- "Exclusive breast feeding"
+feat_key     <- "Exclusive_BF"
 ```
 
 ### 2 months
@@ -710,7 +907,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = c("0", "1", "\u2265 2"))
+              labels = c("0", "\u2265 2"),
+              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
 #### Shannon
@@ -720,7 +918,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = c("0", "1", "\u2265 2")) 
+             labels = c("0", "\u2265 2"),
+             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 #### Gini-Simpson index
@@ -730,7 +929,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = c("0", "1", "\u2265 2"))
+          labels = c("0", "\u2265 2"),
+          ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 
@@ -744,6 +944,7 @@ ggarrange(pr, ps, pg,
 
 ```{r}
 feature_name <- "Smoke during Pregnancy"
+feat_key     <- "Prenatal_smoke"
 ```
 
 ### 2 months
@@ -776,7 +977,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = levels(metadata$feature))
+              labels = levels(metadata$feature),
+              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
 #### Shannon
@@ -786,7 +988,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = levels(metadata$feature)) 
+             labels = levels(metadata$feature),
+             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 #### Gini-Simpson index
@@ -796,7 +999,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = levels(metadata$feature))
+          labels = levels(metadata$feature),
+          ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 #### Plot all
@@ -810,6 +1014,7 @@ ggarrange(pr, ps, pg,
 
 ```{r}
 feature_name <- "Number of siblings"
+feat_key     <- "Siblings"
 ```
 
 ### 2 months
@@ -837,7 +1042,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = c("0", "1", "&gt;1"))
+              labels = c("0", "1", "&gt;1"),
+              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
 #### Shannon
@@ -847,7 +1053,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = c("0", "1", "&gt;1")) 
+             labels = c("0", "1", "&gt;1"),
+             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 #### Gini-Simpson index
@@ -857,7 +1064,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = c("0", "1", "&gt;1"))
+          labels = c("0", "1", "&gt;1"),
+          ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 #### Plot all
