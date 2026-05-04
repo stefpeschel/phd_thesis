@@ -1,6 +1,6 @@
 Alpha diversity analysis
 ================
-Compiled at 2026-05-04 08:16:23 UTC
+Compiled at 2026-05-04 20:38:27 UTC
 
 ## Load packages
 
@@ -26,15 +26,289 @@ Compiled at 2026-05-04 08:16:23 UTC
 
 ### Function for significance plot
 
+``` r
+modify_div_plot <- function(strip_chart, xlab = "", breaks = NULL, labels = NULL,
+                            binwidth = 0.5, dotsize = 1, ylim = c(0, 75),
+                            ylab = "", ybreaks = NULL,
+                            textsize = 18, title = "") {
+  strip_chart <- strip_chart +
+    stat_summary(fun.data = median_hilow, fun.args=0.50, show.legend=FALSE,
+                 geom="crossbar", alpha=0.25, width=0.7) +
+    geom_dotplot(binaxis = "y", binwidth = binwidth, 
+                 stackdir = "center", width = 0.5, alpha = 0.7,
+                 show.legend = FALSE, dotsize = dotsize) +
+    labs(x=NULL,
+         y=ylab) +
+    scale_fill_manual(values = cols) +
+    scale_x_discrete(name = xlab,
+                     breaks = breaks, 
+                     labels = labels) +
+    theme_classic() +
+    theme(axis.text.x = element_markdown(),
+          axis.text.y = element_markdown(),
+          legend.text = element_markdown(),
+          text = element_text(size = textsize)) +
+    ggtitle(title)
+  
+  if (!is.null(ybreaks)) {
+    strip_chart <- strip_chart + 
+      scale_y_continuous(breaks=ybreaks, limits = ylim)
+  } else {
+    strip_chart <- strip_chart + 
+      scale_y_continuous(limits = ylim)
+  }
+  strip_chart
+}
+```
+
 ### Function for significance line
+
+``` r
+add_sig_line <- function(strip_chart, pval, diversity,
+                         space_line = 0.05, space_lab = 0.05, nfeat = nfeat, 
+                         linewidth = 0.8, size = 5) {
+  
+  if (nfeat == 2) {
+    pmat_x <- c(1)
+    pmat_y <- c(1)
+    line_left <- c(1)
+    line_right <- c(2)
+    lab_x <- c(1.5)
+  } else if (nfeat == 3) {
+    pmat_x <- c(1, 2, 2)
+    pmat_y <- c(1, 2, 1)
+    line_left <- c(1, 2, 1)
+    line_right <- c(2, 3, 3)
+    lab_x <- c(1.5, 2.5, 2)
+  } else {
+    pmat_x <- c(1, 2, 3, 2, 3, 3)
+    pmat_y <- c(1, 2, 3, 1, 2, 1)
+    line_left <- c(1, 2, 3, 1, 2, 1)
+    line_right <- c(2, 3, 4, 3, 4, 4)
+    lab_x <- c(1.5, 2.5, 3.5, 2, 3, 2.5)
+  }
+  
+  pos_line <- max(diversity) - space_line + 0.1 * space_line
+  pos_lab <- pos_line + space_lab
+  
+  for (i in seq_along(pmat_x)) {
+    if (is.null(dim(pval))) {
+      label <- pval
+    } else {
+      label <- pval[pmat_x[i], pmat_y[i]]
+    }
+    
+    if (label <= 0.05) {
+      pos_line <- pos_line + space_line
+      pos_lab <- pos_lab + space_line
+      
+      strip_chart <- strip_chart +
+        geom_line(data = tibble(x = c(line_left[i], line_right[i]), 
+                                y = c(pos_line, pos_line)), 
+                  aes(x=x, y=y),
+                  inherit.aes = FALSE, 
+                  linewidth = linewidth) +
+        #geom_text(x = lab_x[i], y = pos_lab, label = signif(label, digits = 3))
+        annotate("text", lab_x[i], y = pos_lab, 
+                 label = signif(label, digits = 3), size = size)
+    } 
+  }
+  strip_chart
+}
+```
 
 ### Permutation test functions
 
-### Plot function for richness
+``` r
+make_perm_chunks <- function(n_perm, n_chunks = NULL) {
+  if (is.null(n_chunks)) {
+    n_chunks <- min(parallelly::availableCores(), n_perm)
+  }
+  split(seq_len(n_perm), cut(seq_len(n_perm), breaks = n_chunks, labels = FALSE))
+}
 
-### Plot function for Shannon
+perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL,
+                         n_chunks = NULL, progress = TRUE) {
+  g    <- droplevels(as.factor(g))
+  keep <- complete.cases(x, g)
+  x    <- x[keep]
+  g    <- droplevels(g[keep])
 
-### Plot function for Gini-Simpson
+  # Asymptotic test called once (for p_asymp only)
+  obs     <- kruskal.test(x ~ g)
+  p_asymp <- obs$p.value
+
+  # Pre-compute fixed quantities — ranks never change under permutation
+  r    <- rank(x)
+  n    <- length(x)
+  gi   <- as.integer(g)            # integer group labels, faster than factor
+  K    <- nlevels(g)
+  nj   <- tabulate(gi, nbins = K)  # group sizes
+  coef <- 12 / (n * (n + 1L))
+  adj  <- 3 * (n + 1L)
+
+  # Observed H with the same formula used in permutations (ensures fair comparison)
+  Rj_obs <- c(rowsum(r, gi))
+  obs_H  <- coef * sum(Rj_obs^2 / nj) - adj
+
+  chunks <- make_perm_chunks(n_perm, n_chunks)
+
+  if (progress) {
+    prog <- progressr::progressor(steps = length(chunks))
+  }
+
+  perm_list <- future.apply::future_lapply(
+    chunks,
+    function(idx) {
+      out <- numeric(length(idx))
+      for (b in seq_along(idx)) {
+        Rj     <- c(rowsum(r, sample(gi)))
+        out[b] <- coef * sum(Rj^2 / nj) - adj
+      }
+      if (progress) prog()
+      out
+    },
+    future.seed = if (is.null(seed)) TRUE else seed
+  )
+  
+  perm_H <- unlist(perm_list, use.names = FALSE)
+  p_perm <- (sum(perm_H >= obs_H) + 1) / (n_perm + 1)
+
+  pa <- permApprox::perm_approx(
+    obs_stats     = obs_H,
+    perm_stats    = matrix(perm_H, ncol = 1),
+    alternative   = "greater",
+    adjust_method = "none",
+    verbose       = FALSE,
+    gpd_ctrl      = permApprox::make_gpd_ctrl(
+      sample_size     = min(nj),
+      # With large n_perm the discreteness screen incorrectly flags the KW H
+      # distribution (tied ranks) and falls back to empirical; disable it.
+      discrete_screen = FALSE,
+      exceed0_min     = 250L,
+      # For large permutation numbers, the number of starting exceedances is 
+      # reduced below 25% to reduce runtime.
+      exceed0         = min(0.25, (5000 / n_perm))
+    )
+  )
+
+  list(
+    H        = obs_H,
+    H_perm   = perm_H,
+    p_asymp  = p_asymp,
+    p_perm   = p_perm,
+    p_approx = pa$p_unadjusted[1]
+  )
+}
+
+perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH",
+                          seed = NULL, n_chunks = NULL, progress = TRUE) {
+  g <- droplevels(as.factor(g))
+  keep <- complete.cases(x, g)
+  x <- x[keep]
+  g <- droplevels(g[keep])
+  
+  lvls  <- levels(g)
+  pairs <- combn(lvls, 2, simplify = FALSE)
+  
+  p_vals        <- numeric(length(pairs))
+  p_vals_approx <- numeric(length(pairs))
+  
+  for (i in seq_along(pairs)) {
+    pair <- pairs[[i]]
+    idx  <- g %in% pair
+
+    xi <- x[idx]
+    gi <- droplevels(g[idx])
+
+    n1 <- sum(gi == levels(gi)[1])
+    n2 <- sum(gi == levels(gi)[2])
+    EW <- n1 * n2 / 2
+
+    # Pre-compute fixed quantities for fast W calculation
+    ri     <- rank(xi)                  # ranks fixed across all permutations
+    gi_int <- as.integer(gi)            # 1 = first level, 2 = second level
+    # W = (sum of ranks in group 1) - n1*(n1+1)/2  [Mann-Whitney U convention]
+    W_obs <- sum(ri[gi_int == 1L]) - n1 * (n1 + 1) / 2
+    obs_T <- abs(W_obs - EW)
+
+    chunks <- make_perm_chunks(n_perm, n_chunks)
+
+    if (progress) {
+      message("Running pairwise permutations for: ", pair[1], " vs ", pair[2])
+      prog <- progressr::progressor(steps = length(chunks))
+    }
+
+    pair_seed <- if (is.null(seed)) TRUE else seed + i
+
+    perm_list <- future.apply::future_lapply(
+      chunks,
+      function(idx_perm) {
+        out      <- numeric(length(idx_perm))
+        rank_adj <- n1 * (n1 + 1) / 2
+        for (b in seq_along(idx_perm)) {
+          gi_perm <- sample(gi_int)
+          W_perm  <- sum(ri[gi_perm == 1L]) - rank_adj
+          out[b]  <- abs(W_perm - EW)
+        }
+        if (progress) prog()
+        out
+      },
+      future.seed = pair_seed
+    )
+    
+    perm_T <- unlist(perm_list, use.names = FALSE)
+    
+    p_vals[i] <- (sum(perm_T >= obs_T) + 1) / (n_perm + 1)
+    
+    pa <- permApprox::perm_approx(
+      obs_stats     = obs_T,
+      perm_stats    = matrix(perm_T, ncol = 1),
+      alternative   = "greater",
+      adjust_method = "none",
+      verbose       = FALSE,
+      gpd_ctrl      = permApprox::make_gpd_ctrl(
+        sample_size     = min(n1, n2),
+        discrete_screen = FALSE,
+        exceed0_min     = 250L,
+        exceed0         = min(0.25, (5000 / n_perm))
+      )
+    )
+    
+    p_vals_approx[i] <- pa$p_unadjusted[1]
+  }
+  
+  p_adj        <- p.adjust(p_vals, method = p_adjust)
+  p_adj_approx <- p.adjust(p_vals_approx, method = p_adjust)
+  
+  make_mat <- function(vals) {
+    mat <- matrix(
+      NA_real_,
+      nrow = length(lvls) - 1,
+      ncol = length(lvls) - 1,
+      dimnames = list(lvls[-1], lvls[-length(lvls)])
+    )
+    
+    for (i in seq_along(pairs)) {
+      r <- which(lvls == pairs[[i]][2]) - 1
+      c <- which(lvls == pairs[[i]][1])
+      if (r >= 1 && c <= ncol(mat)) mat[r, c] <- vals[i]
+    }
+    
+    mat
+  }
+  
+  list(
+    p_matrix         = make_mat(p_adj),
+    p_matrix_approx  = make_mat(p_adj_approx),
+    p_raw            = p_vals,
+    p_raw_approx     = p_vals_approx,
+    pairs            = pairs
+  )
+}
+```
+
+### Plot functions
 
 ## Compute alpha diversity
 
@@ -91,6 +365,11 @@ Find base taxon (with minimum number of non-zero counts)
     ## Bifidobacterium 
     ##               0
 
+    ## [1] "Runtime:"
+
+    ##      user    system   elapsed 
+    ## 23304.326 23626.235  2641.461
+
     ##   SampleID      age richness_otu richness_genus   shannon   simpson inv_simpson      gini
     ## 1  s025647 2 months     53.07729       40.07097 1.8412512 0.2415143    4.140542 0.7584857
     ## 2  s023779 2 months     42.02288       29.02846 0.6171782 0.7836776    1.276035 0.2163224
@@ -103,158 +382,88 @@ Find base taxon (with minimum number of non-zero counts)
 
 Results are cached separately per variable (one RDS file each). Delete a
 variable’s file and rerun this chunk to recompute only that variable.
-Each test uses 9 999 permutations. Results are reused by the plotting
+Each test uses $10^6$ permutations. Results are reused by the plotting
 functions below and summarised in the comparison table.
 
 ### Comparison of asymptotic vs. permutation p-values
 
 | Variable | Measure | H statistic | p (KW asymptotic) | p (permutation) | p (GPD-refined) |
 |:---|:---|---:|---:|---:|---:|
-| Country | Breakaway richness | 31.57 | 1.40e-07 | 1.00e-04 | 2.01e-07 |
-| Country | Shannon (DivNet) | 40.06 | 2.00e-09 | 1.00e-04 | 6.56e-12 |
-| Country | Gini-Simpson (DivNet) | 39.88 | 2.19e-09 | 1.00e-04 | 4.46e-16 |
+| Country | Breakaway richness | 31.57 | 1.40e-07 | 1.00e-06 | 1.99e-07 |
+| Country | Shannon (DivNet) | 40.06 | 2.00e-09 | 1.00e-06 | 3.01e-09 |
+| Country | Gini-Simpson (DivNet) | 39.88 | 2.19e-09 | 1.00e-06 | 4.89e-09 |
 | Sex | Breakaway richness | 1.79 | 1.80e-01 | 1.77e-01 | 1.77e-01 |
 | Sex | Shannon (DivNet) | 1.85 | 1.73e-01 | 1.72e-01 | 1.72e-01 |
 | Sex | Gini-Simpson (DivNet) | 2.10 | 1.47e-01 | 1.49e-01 | 1.49e-01 |
 | C-section | Breakaway richness | 0.33 | 5.64e-01 | 5.64e-01 | 5.64e-01 |
 | C-section | Shannon (DivNet) | 4.86 | 2.74e-02 | 2.54e-02 | 2.50e-02 |
 | C-section | Gini-Simpson (DivNet) | 5.73 | 1.67e-02 | 1.35e-02 | 1.43e-02 |
-| Breastfeeding duration | Breakaway richness | 7.69 | 2.14e-02 | 2.26e-02 | 2.26e-02 |
-| Breastfeeding duration | Shannon (DivNet) | 83.47 | 7.51e-19 | 1.00e-04 | 6.26e-15 |
-| Breastfeeding duration | Gini-Simpson (DivNet) | 73.49 | 1.10e-16 | 1.00e-04 | 2.09e-43 |
-| Exclusive breastfeeding | Breakaway richness | 2.73 | 9.84e-02 | 9.70e-02 | 9.77e-02 |
-| Exclusive breastfeeding | Shannon (DivNet) | 65.13 | 7.02e-16 | 1.00e-04 | 1.75e-09 |
-| Exclusive breastfeeding | Gini-Simpson (DivNet) | 56.47 | 5.71e-14 | 1.00e-04 | 1.39e-08 |
-| Prenatal smoking | Breakaway richness | 3.95 | 4.70e-02 | 4.82e-02 | 4.80e-02 |
-| Prenatal smoking | Shannon (DivNet) | 18.81 | 1.45e-05 | 1.00e-04 | 5.31e-05 |
-| Prenatal smoking | Gini-Simpson (DivNet) | 18.08 | 2.12e-05 | 1.00e-04 | 6.73e-05 |
+| Breastfeeding duration | Breakaway richness | 7.69 | 2.14e-02 | 2.12e-02 | 2.12e-02 |
+| Breastfeeding duration | Shannon (DivNet) | 83.47 | 7.51e-19 | 1.00e-06 | 1.44e-17 |
+| Breastfeeding duration | Gini-Simpson (DivNet) | 73.49 | 1.10e-16 | 1.00e-06 | 4.69e-15 |
+| Exclusive breastfeeding | Breakaway richness | 2.73 | 9.84e-02 | 9.84e-02 | 9.84e-02 |
+| Exclusive breastfeeding | Shannon (DivNet) | 65.13 | 7.02e-16 | 1.00e-06 | 5.18e-14 |
+| Exclusive breastfeeding | Gini-Simpson (DivNet) | 56.47 | 5.71e-14 | 1.00e-06 | 5.04e-14 |
+| Prenatal smoking | Breakaway richness | 3.95 | 4.70e-02 | 4.69e-02 | 4.69e-02 |
+| Prenatal smoking | Shannon (DivNet) | 18.81 | 1.45e-05 | 1.30e-05 | 1.01e-05 |
+| Prenatal smoking | Gini-Simpson (DivNet) | 18.08 | 2.12e-05 | 1.60e-05 | 1.47e-05 |
 | Number of siblings | Breakaway richness | 1.41 | 4.94e-01 | 4.97e-01 | 4.97e-01 |
 | Number of siblings | Shannon (DivNet) | 2.66 | 2.64e-01 | 2.61e-01 | 2.61e-01 |
 | Number of siblings | Gini-Simpson (DivNet) | 3.04 | 2.18e-01 | 2.20e-01 | 2.20e-01 |
 
 ## Study center
 
-### 2 months
-
     ## 
     ##     Austria     Germany Switzerland 
     ##         173         197         222
-
-#### Richness
-
-#### Shannon
-
-#### Gini-Simpson index
-
-#### Plot all
 
 ![](figures/02_alpha_diversity/alpha_Country_2m-1.png)<!-- -->
 
 ## Sex
 
-### 2 months
-
     ## 
     ## female   male 
     ##    294    298
-
-#### Richness
-
-#### Shannon
-
-#### Gini-Simpson index
-
-#### Plot all
 
 ![](figures/02_alpha_diversity/alpha_sex_2m-1.png)<!-- -->
 
 ## C-section
 
-### 2 months
-
     ## 
     ## yes  no 
     ## 121 468
-
-#### Richness
-
-#### Shannon
-
-#### Gini-Simpson index
-
-#### Plot all
 
 ![](figures/02_alpha_diversity/alpha_cesarean_2m-1.png)<!-- -->
 
 ## Breast feeding
 
-### 2 months
-
     ## 
     ##   0   1 >=2 
     ##  36  88 456
-
-#### Richness
-
-#### Shannon
-
-#### Gini-Simpson index
-
-#### Plot all
 
 ![](figures/02_alpha_diversity/alpha_breastfeed_2m-1.png)<!-- -->
 
 ## Exclusive breast feeding
 
-### 2 months
-
     ## 
     ##   0   1 >=2 
     ## 179   0 375
-
-#### Richness
-
-#### Shannon
-
-#### Gini-Simpson index
-
-#### Plot all
 
 ![](figures/02_alpha_diversity/alpha_breast_excl_2m-1.png)<!-- -->
 
 ## Smoke during pregnancy
 
-### 2 months
-
     ## 
     ## yes  no 
     ##  63 529
-
-#### Richness
-
-#### Shannon
-
-#### Gini-Simpson index
-
-#### Plot all
 
 ![](figures/02_alpha_diversity/alpha_pregsmoke_2m-1.png)<!-- -->
 
 ## Number of siblings
 
-### 2 months
-
     ## 
     ##   0   1  >1 
     ##  46 200 257
-
-#### Richness
-
-#### Shannon
-
-#### Gini-Simpson index
-
-#### Plot all
 
 ![](figures/02_alpha_diversity/alpha_sibsnumb_2m-1.png)<!-- -->
 
@@ -267,91 +476,48 @@ between all covariates and Shannon diversity, properly accounting for
 the uncertainty in the DivNet estimates. Note that this model uses only
 the 484 samples with complete covariate data.
 
+    ## [1] "Runtime:"
+
+    ##    user  system elapsed 
+    ## 3527.96   68.16 3601.64
+
     ##  [1] "shannon"              "simpson"              "bray-curtis"          "euclidean"            "shannon-variance"    
     ##  [6] "simpson-variance"     "bray-curtis-variance" "euclidean-variance"   "X"                    "fitted_z"
 
-    ##                        Estimates Standard Errors p-values
-    ## (Intercept)          0.937270236     0.003302320    0.000
-    ## CountryGermany       0.001748333     0.006893341    0.800
-    ## CountrySwitzerland  -0.112929589     0.005020190    0.000
-    ## Sexm                -0.008351977     0.004425848    0.059
-    ## cesarean             0.018960484     0.007861547    0.016
-    ## breast_dur_cat11     0.039074997     0.011826726    0.001
-    ## breast_dur_cat1>=2  -0.359173116     0.003501390    0.000
-    ## breast_excl_cat11    0.136467765     0.157816400    0.387
-    ## breast_excl_cat1>=2 -0.057652189     0.003591629    0.000
-    ## pregsmoke            0.073130796     0.016022738    0.000
-    ## sibs_numb_cat1      -0.003785637     0.004414114    0.391
-    ## sibs_numb_cat>1     -0.021901564     0.005180094    0.000
+### Richness
 
-    ##                         Estimates Standard Errors p-values
-    ## (Intercept)          3.868113e-01     0.001441961    0.000
-    ## CountryGermany       8.360082e-05     0.003208027    0.979
-    ## CountrySwitzerland  -4.881721e-02     0.002089876    0.000
-    ## Sexm                -1.563767e-03     0.001915400    0.414
-    ## cesarean             1.006912e-02     0.003531353    0.004
-    ## breast_dur_cat11     1.087737e-02     0.005375048    0.043
-    ## breast_dur_cat1>=2  -1.594698e-01     0.001520450    0.000
-    ## breast_excl_cat11    4.847457e-02     0.096765334    0.616
-    ## breast_excl_cat1>=2 -2.796495e-02     0.001558865    0.000
-    ## pregsmoke            3.277648e-02     0.006816235    0.000
-    ## sibs_numb_cat1      -1.700727e-02     0.001844207    0.000
-    ## sibs_numb_cat>1     -2.304203e-02     0.002422649    0.000
+    ##                      Estimates Standard Errors     p-values
+    ## (Intercept)         22.7682153       0.2920787 0.000000e+00
+    ## CountryGermany       3.9133662       0.4913796 1.554312e-15
+    ## CountrySwitzerland   2.4621555       0.4763204 2.352032e-07
+    ## Sexm                -0.3737798       0.4147730 3.674994e-01
+    ## cesarean            -0.9596835       0.6331843 1.296087e-01
+    ## breast_dur_cat11    -0.1646573       0.7911903 8.351404e-01
+    ## breast_dur_cat1>=2  -2.4319652       0.3266240 9.636736e-14
+    ## breast_excl_cat1>=2  0.1621795       0.3521153 6.450954e-01
+    ## pregsmoke            1.4524867       0.9578035 1.293989e-01
+    ## sibs_numb_cat1       1.2658116       0.4613602 6.076003e-03
+    ## sibs_numb_cat>1      1.4983661       0.4096828 2.548050e-04
 
-    ##                      Estimates Standard Errors p-values
-    ## (Intercept)         22.7998745       0.2916931    0.000
-    ## CountryGermany       3.8298925       0.4903121    0.000
-    ## CountrySwitzerland   2.4139332       0.4766735    0.000
-    ## Sexm                -0.3744760       0.4133614    0.365
-    ## cesarean            -0.9487008       0.6336536    0.134
-    ## breast_dur_cat11    -0.1677061       0.7917765    0.832
-    ## breast_dur_cat1>=2  -2.4262305       0.3260247    0.000
-    ## breast_excl_cat11   -0.4009713       4.5466298    0.930
-    ## breast_excl_cat1>=2  0.1631741       0.3523763    0.643
-    ## pregsmoke            1.4687249       0.9585137    0.125
-    ## sibs_numb_cat1       1.2727747       0.4617022    0.006
-    ## sibs_numb_cat>1      1.5078245       0.4083297    0.000
+### Shannon
 
-**Interpretation** (reference group: Austria, female, vaginal birth,
-breastfeeding duration \< 1 month, not exclusively breastfed, no
-prenatal smoking, no siblings):
-
-- **Country:** Swiss infants show lower genus-level Shannon diversity
-  than Austrian infants (β = −0.113, p \< 0.001); German infants do not
-  differ significantly (β = +0.002, p = 0.800).
-- **Sex:** Male infants show marginally lower Shannon diversity than
-  females (β = −0.008, p = 0.059), a difference that does not reach
-  conventional significance at the genus level.
-- **Caesarean delivery:** Associated with slightly higher Shannon
-  diversity (β = +0.019, p = 0.016). This is somewhat counterintuitive —
-  caesarean birth typically disrupts vertical transmission of
-  vaginal/gut microbiota — and may reflect confounding with feeding mode
-  or other factors.
-- **Breastfeeding duration:** The dominant effect in the model. Compared
-  to very short/no breastfeeding (\< 1 month), one month of
-  breastfeeding is associated with modestly higher diversity (β =
-  +0.039, p = 0.001), while ≥ 2 months is associated with substantially
-  lower diversity (β = −0.359, p \< 0.001). This non-monotone pattern
-  likely reflects the well-documented HMO-driven enrichment of
-  *Bifidobacterium* in longer-breastfed infants, which reduces overall
-  evenness (Shannon diversity) at the genus level.
-- **Exclusive breastfeeding:** Duration ≥ 2 months is associated with
-  slightly lower diversity (β = −0.058, p \< 0.001), consistent with the
-  breastfeeding duration effect above.
-- **Prenatal smoking:** Associated with higher infant Shannon diversity
-  (β = +0.073, p \< 0.001). The direction is unexpected and warrants
-  cautious interpretation; residual confounding cannot be excluded.
-- **Number of siblings:** Having more than one sibling is associated
-  with slightly lower Shannon diversity (\> 1 sibling: β = −0.022, p \<
-  0.001); having exactly one sibling shows no significant effect (β =
-  −0.004, p = 0.391). The negative direction is counterintuitive given
-  the expected increase in microbial exposure from older siblings, and
-  may interact with breastfeeding or other covariates.
+    ##                        Estimates Standard Errors     p-values
+    ## (Intercept)          0.910266581     0.002452681 0.000000e+00
+    ## CountryGermany      -0.004070408     0.006192449 5.109765e-01
+    ## CountrySwitzerland  -0.115536260     0.003028519 0.000000e+00
+    ## Sexm                -0.011791073     0.003791715 1.872811e-03
+    ## cesarean             0.019368660     0.011591259 9.472737e-02
+    ## breast_dur_cat11     0.080615782     0.019757016 4.496558e-05
+    ## breast_dur_cat1>=2  -0.330692227     0.002485428 0.000000e+00
+    ## breast_excl_cat1>=2 -0.052212329     0.002543573 0.000000e+00
+    ## pregsmoke            0.065837315     0.016234331 5.004055e-05
+    ## sibs_numb_cat1      -0.005874943     0.004493534 1.910696e-01
+    ## sibs_numb_cat>1     -0.017666091     0.002967873 2.641717e-09
 
 Global test of whether any covariate is associated with Shannon
 diversity:
 
-    ## [1] 26468.85     0.00
+    ## [1] 35030.74     0.00
 
 `betta_shannon$global` is a likelihood ratio test of the null hypothesis
 that all covariates jointly have no association with Shannon diversity
@@ -362,6 +528,21 @@ an intercept-only model, meaning at least one covariate is meaningfully
 associated with Shannon diversity. It does not identify which covariates
 are responsible — that is addressed by the individual p-values in
 `betta_shannon$table` above.
+
+### Gini-Simpson
+
+    ##                        Estimates Standard Errors     p-values
+    ## (Intercept)          0.369733044     0.001021245 0.000000e+00
+    ## CountryGermany      -0.004580139     0.002658088 8.487128e-02
+    ## CountrySwitzerland  -0.051565629     0.001225341 0.000000e+00
+    ## Sexm                -0.004524865     0.001587521 4.368194e-03
+    ## cesarean             0.009637125     0.005329765 7.057994e-02
+    ## breast_dur_cat11     0.032928307     0.010016714 1.011400e-03
+    ## breast_dur_cat1>=2  -0.143699929     0.001031199 0.000000e+00
+    ## breast_excl_cat1>=2 -0.025806871     0.001051118 0.000000e+00
+    ## pregsmoke            0.025561020     0.006807703 1.735353e-04
+    ## sibs_numb_cat1      -0.013690588     0.001887395 4.054534e-13
+    ## sibs_numb_cat>1     -0.015538696     0.001225015 0.000000e+00
 
 ### Combined coefficient plot
 
@@ -398,13 +579,13 @@ These files have been written to the target directory,
     ##    <fs::path>                      <fct> <fs::bytes> <dttm>             
     ##  1 divnet_family_cov.rds           file        1.83M 2026-04-30 18:00:56
     ##  2 divnet_genus.rds                file       10.63M 2026-04-30 15:40:51
-    ##  3 divnet_genus_cov.rds            file        2.02M 2026-05-02 15:33:18
-    ##  4 divnet_genus_cov_runtime.rds    file          163 2026-05-02 15:33:18
+    ##  3 divnet_genus_cov.rds            file        1.98M 2026-05-04 16:59:47
+    ##  4 divnet_genus_cov_runtime.rds    file          166 2026-05-04 16:59:47
     ##  5 divnet_genus_runtime.rds        file          159 2026-05-03 08:28:03
-    ##  6 perm_results_Breastfeeding.rds  file          622 2026-05-04 08:08:33
-    ##  7 perm_results_Cesarean.rds       file          270 2026-05-04 07:56:27
-    ##  8 perm_results_Country.rds        file          631 2026-05-04 07:55:27
-    ##  9 perm_results_Exclusive_BF.rds   file          279 2026-05-04 07:58:28
-    ## 10 perm_results_Prenatal_smoke.rds file          277 2026-05-04 07:58:58
-    ## 11 perm_results_Sex.rds            file          250 2026-05-04 07:55:57
-    ## 12 perm_results_Siblings.rds       file          255 2026-05-04 07:59:29
+    ##  6 perm_results_Breastfeeding.rds  file       19.81M 2026-05-04 18:15:14
+    ##  7 perm_results_Cesarean.rds       file          270 2026-05-04 15:39:37
+    ##  8 perm_results_Country.rds        file       19.81M 2026-05-04 18:11:09
+    ##  9 perm_results_Exclusive_BF.rds   file       11.39M 2026-05-04 18:17:08
+    ## 10 perm_results_Prenatal_smoke.rds file       10.08M 2026-05-04 18:18:54
+    ## 11 perm_results_Sex.rds            file          250 2026-05-04 15:39:34
+    ## 12 perm_results_Siblings.rds       file          254 2026-05-04 15:39:52

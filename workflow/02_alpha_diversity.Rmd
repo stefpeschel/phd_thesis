@@ -39,7 +39,6 @@ library(breakaway)
 library(DivNet)
 library(progress)
 library(permApprox)
-library(permApprox)
 
 # Parallel computing
 library(future)
@@ -92,7 +91,7 @@ cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00",
 
 ### Function for significance plot
 
-```{r}
+```{r, echo=TRUE}
 modify_div_plot <- function(strip_chart, xlab = "", breaks = NULL, labels = NULL,
                             binwidth = 0.5, dotsize = 1, ylim = c(0, 75),
                             ylab = "", ybreaks = NULL,
@@ -130,7 +129,7 @@ modify_div_plot <- function(strip_chart, xlab = "", breaks = NULL, labels = NULL
 
 ### Function for significance line
 
-```{r}
+```{r, echo=TRUE}
 add_sig_line <- function(strip_chart, pval, diversity,
                          space_line = 0.05, space_lab = 0.05, nfeat = nfeat, 
                          linewidth = 0.8, size = 5) {
@@ -186,7 +185,7 @@ add_sig_line <- function(strip_chart, pval, diversity,
 
 ### Permutation test functions
 
-```{r}
+```{r, echo=TRUE}
 make_perm_chunks <- function(n_perm, n_chunks = NULL) {
   if (is.null(n_chunks)) {
     n_chunks <- min(parallelly::availableCores(), n_perm)
@@ -196,49 +195,73 @@ make_perm_chunks <- function(n_perm, n_chunks = NULL) {
 
 perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL,
                          n_chunks = NULL, progress = TRUE) {
-  g <- droplevels(as.factor(g))
+  g    <- droplevels(as.factor(g))
   keep <- complete.cases(x, g)
-  x <- x[keep]
-  g <- droplevels(g[keep])
-  
-  obs <- kruskal.test(x ~ g)
-  obs_H <- unname(obs$statistic)
-  
+  x    <- x[keep]
+  g    <- droplevels(g[keep])
+
+  # Asymptotic test called once (for p_asymp only)
+  obs     <- kruskal.test(x ~ g)
+  p_asymp <- obs$p.value
+
+  # Pre-compute fixed quantities — ranks never change under permutation
+  r    <- rank(x)
+  n    <- length(x)
+  gi   <- as.integer(g)            # integer group labels, faster than factor
+  K    <- nlevels(g)
+  nj   <- tabulate(gi, nbins = K)  # group sizes
+  coef <- 12 / (n * (n + 1L))
+  adj  <- 3 * (n + 1L)
+
+  # Observed H with the same formula used in permutations (ensures fair comparison)
+  Rj_obs <- c(rowsum(r, gi))
+  obs_H  <- coef * sum(Rj_obs^2 / nj) - adj
+
   chunks <- make_perm_chunks(n_perm, n_chunks)
-  
+
   if (progress) {
-    p <- progressr::progressor(steps = length(chunks))
+    prog <- progressr::progressor(steps = length(chunks))
   }
-  
+
   perm_list <- future.apply::future_lapply(
     chunks,
     function(idx) {
       out <- numeric(length(idx))
       for (b in seq_along(idx)) {
-        out[b] <- unname(kruskal.test(x ~ sample(g))$statistic)
+        Rj     <- c(rowsum(r, sample(gi)))
+        out[b] <- coef * sum(Rj^2 / nj) - adj
       }
-      if (progress) p()
+      if (progress) prog()
       out
     },
     future.seed = if (is.null(seed)) TRUE else seed
   )
   
   perm_H <- unlist(perm_list, use.names = FALSE)
-  
   p_perm <- (sum(perm_H >= obs_H) + 1) / (n_perm + 1)
-  
+
   pa <- permApprox::perm_approx(
     obs_stats     = obs_H,
     perm_stats    = matrix(perm_H, ncol = 1),
     alternative   = "greater",
     adjust_method = "none",
     verbose       = FALSE,
-    gpd_ctrl      = permApprox::make_gpd_ctrl(sample_size = min(table(g)))
+    gpd_ctrl      = permApprox::make_gpd_ctrl(
+      sample_size     = min(nj),
+      # With large n_perm the discreteness screen incorrectly flags the KW H
+      # distribution (tied ranks) and falls back to empirical; disable it.
+      discrete_screen = FALSE,
+      exceed0_min     = 250L,
+      # For large permutation numbers, the number of starting exceedances is 
+      # reduced below 25% to reduce runtime.
+      exceed0         = min(0.25, (5000 / n_perm))
+    )
   )
-  
+
   list(
     H        = obs_H,
-    p_asymp  = obs$p.value,
+    H_perm   = perm_H,
+    p_asymp  = p_asymp,
     p_perm   = p_perm,
     p_approx = pa$p_unadjusted[1]
   )
@@ -260,36 +283,41 @@ perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH",
   for (i in seq_along(pairs)) {
     pair <- pairs[[i]]
     idx  <- g %in% pair
-    
+
     xi <- x[idx]
     gi <- droplevels(g[idx])
-    
+
     n1 <- sum(gi == levels(gi)[1])
     n2 <- sum(gi == levels(gi)[2])
     EW <- n1 * n2 / 2
-    
-    obs_W <- unname(wilcox.test(xi ~ gi, exact = FALSE)$statistic)
-    obs_T <- abs(obs_W - EW)
-    
+
+    # Pre-compute fixed quantities for fast W calculation
+    ri     <- rank(xi)                  # ranks fixed across all permutations
+    gi_int <- as.integer(gi)            # 1 = first level, 2 = second level
+    # W = (sum of ranks in group 1) - n1*(n1+1)/2  [Mann-Whitney U convention]
+    W_obs <- sum(ri[gi_int == 1L]) - n1 * (n1 + 1) / 2
+    obs_T <- abs(W_obs - EW)
+
     chunks <- make_perm_chunks(n_perm, n_chunks)
-    
+
     if (progress) {
       message("Running pairwise permutations for: ", pair[1], " vs ", pair[2])
-      p <- progressr::progressor(steps = length(chunks))
+      prog <- progressr::progressor(steps = length(chunks))
     }
-    
+
     pair_seed <- if (is.null(seed)) TRUE else seed + i
-    
+
     perm_list <- future.apply::future_lapply(
       chunks,
       function(idx_perm) {
-        out <- numeric(length(idx_perm))
+        out      <- numeric(length(idx_perm))
+        rank_adj <- n1 * (n1 + 1) / 2
         for (b in seq_along(idx_perm)) {
-          gi_perm <- sample(gi)
-          perm_W  <- unname(wilcox.test(xi ~ gi_perm, exact = FALSE)$statistic)
-          out[b]  <- abs(perm_W - EW)
+          gi_perm <- sample(gi_int)
+          W_perm  <- sum(ri[gi_perm == 1L]) - rank_adj
+          out[b]  <- abs(W_perm - EW)
         }
-        if (progress) p()
+        if (progress) prog()
         out
       },
       future.seed = pair_seed
@@ -305,7 +333,12 @@ perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH",
       alternative   = "greater",
       adjust_method = "none",
       verbose       = FALSE,
-      gpd_ctrl      = permApprox::make_gpd_ctrl(sample_size = min(n1, n2))
+      gpd_ctrl      = permApprox::make_gpd_ctrl(
+        sample_size     = min(n1, n2),
+        discrete_screen = FALSE,
+        exceed0_min     = 250L,
+        exceed0         = min(0.25, (5000 / n_perm))
+      )
     )
     
     p_vals_approx[i] <- pa$p_unadjusted[1]
@@ -342,7 +375,7 @@ perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH",
 ```
 
 
-### Plot function for richness
+### Plot functions
 
 ```{r}
 plot_richness <- function(div_dataframe, feature_name, 
@@ -395,11 +428,7 @@ plot_richness <- function(div_dataframe, feature_name,
   }
   strip_chart
 }
-```
 
-### Plot function for Shannon
-
-```{r}
 plot_shannon <- function(div_dataframe, feature_name, 
                          xlab = "", breaks = NULL, labels = NULL,
                          binwidth = 0.04, dotsize = 1, ylim = c(0, 4), 
@@ -448,11 +477,7 @@ plot_shannon <- function(div_dataframe, feature_name,
   }
   strip_chart
 }
-```
 
-### Plot function for Gini-Simpson
-
-```{r}
 plot_gini <- function(div_dataframe, feature_name, 
                       xlab = "", breaks = NULL, labels = NULL,
                       binwidth = 0.01, dotsize = 1, ylim = c(0, 1.1), 
@@ -588,6 +613,9 @@ if (!file.exists(path_target("divnet_genus.rds"))) {
   divnet_genus <- readRDS(path_target("divnet_genus.rds"))
   divnet_runtime <- readRDS(path_target("divnet_genus_runtime.rds"))
 }
+
+print("Runtime:")
+divnet_runtime
 ```
 
 ```{r}
@@ -616,14 +644,16 @@ head(alpha_diversity)
 ## Permutation tests
 
 Results are cached separately per variable (one RDS file each). Delete a variable's
-file and rerun this chunk to recompute only that variable. Each test uses 9 999
+file and rerun this chunk to recompute only that variable. Each test uses $10^6$
 permutations. Results are reused by the plotting functions below and summarised in
 the comparison table.
 
 ```{r perm-tests, warning=FALSE}
+cores <- 10
+
 future::plan(
   future::multisession,
-  workers = max(1, parallelly::availableCores() - 2)
+  workers = cores
 )
 
 progressr::handlers("txtprogressbar")
@@ -656,6 +686,7 @@ vars_def <- list(
   Prenatal_smoke = list(col = "pregsmoke",        filter = NULL),
   Siblings       = list(col = "sibs_numb_cat",    filter = NULL)
 )
+
 measures_def <- c("richness_genus", "shannon", "gini")
 
 perm_results <- list()
@@ -674,10 +705,10 @@ progressr::with_progress({
         key <- paste0(vname, "_", m)
         x   <- meta[[m]]
         g   <- meta$feature
-        res <- perm_kruskal(x, g, n_perm = 9999)
+        res <- perm_kruskal(x, g, n_perm = 1e6)
         res$p_pairwise <- NULL
         if (nfeat_v > 2 && res$p_perm <= 0.05) {
-          res$p_pairwise <- perm_pairwise(x, g, n_perm = 9999)  # returns list(p_matrix, p_matrix_approx)
+          res$p_pairwise <- perm_pairwise(x, g, n_perm = 1e6)  # returns list(p_matrix, p_matrix_approx)
         }
         var_res[[key]] <- res
       }
@@ -737,7 +768,7 @@ feature_name <- "Country"
 feat_key     <- "Country"
 ```
 
-### 2 months
+
 
 ```{r}
 metadata <- sampdata[, c("SampleID", "Country")]
@@ -759,9 +790,8 @@ nfeat <- nlevels(metadata_alpha$feature)
 table(metadata$feature)
 ```
 
-#### Richness
-
 ```{r Country_richness_2m, fig.width=5, fig.height=5}
+# Richness
 pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.5, dotsize = 1.2, 
               ylim = c(0, 90), space_line = 6, space_lab = 3,
               xlab = feature_name, 
@@ -770,9 +800,10 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.5, dotsize = 1.2,
               ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
-#### Shannon
+
 
 ```{r Country_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
 ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
@@ -781,9 +812,10 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
-#### Gini-Simpson index
+
 
 ```{r Country_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
 pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
@@ -792,7 +824,7 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
-#### Plot all
+
 
 ```{r Country_2m, fig.width=14, fig.height=5}
 ggarrange(pr, ps, pg,
@@ -807,7 +839,7 @@ feature_name <- "Sex"
 feat_key     <- "Sex"
 ```
 
-### 2 months
+
 
 ```{r}
 metadata <- sampdata[, c("SampleID", "Sex")]
@@ -827,9 +859,8 @@ nfeat <- nlevels(metadata_alpha$feature)
 table(metadata$feature)
 ```
 
-#### Richness
-
 ```{r sex_richness_2m, fig.width=5, fig.height=5}
+# Richness
 pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
@@ -838,9 +869,9 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
-#### Shannon
 
 ```{r sex_shannon_2m, fig.width=5, fig.height=5}
+# Shannon 
 ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
@@ -849,9 +880,10 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
-#### Gini-Simpson index
+
 
 ```{r sex_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
 pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
@@ -860,7 +892,7 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
-#### Plot all
+
 
 ```{r sex_2m, fig.width=12, fig.height=5}
 ggarrange(pr, ps, pg,
@@ -874,7 +906,7 @@ feature_name <- "C-section"
 feat_key     <- "Cesarean"
 ```
 
-### 2 months
+
 
 ```{r}
 metadata <- sampdata[, c("SampleID", "cesarean")]
@@ -897,9 +929,8 @@ nfeat <- nlevels(metadata_alpha$feature)
 table(metadata$feature)
 ```
 
-#### Richness
-
 ```{r cesarean_richness_2m, fig.width=5, fig.height=5}
+# Richness
 pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
@@ -908,9 +939,10 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
-#### Shannon
+
 
 ```{r cesarean_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
 ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
@@ -919,9 +951,10 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
-#### Gini-Simpson index
+
 
 ```{r cesarean_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
 pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
@@ -930,7 +963,7 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
-#### Plot all
+
 
 ```{r cesarean_2m, fig.width=12, fig.height=5}
 ggarrange(pr, ps, pg, ncol = 3, nrow = 1)
@@ -944,7 +977,7 @@ feature_name <- "Breast feeding"
 feat_key     <- "Breastfeeding"
 ```
 
-### 2 months
+
 
 ```{r}
 metadata <- sampdata[, c("SampleID", "breast_dur_cat1")]
@@ -962,9 +995,9 @@ nfeat <- nlevels(metadata_alpha$feature)
 table(metadata$feature)
 ```
 
-#### Richness
 
 ```{r breastfeed_richness_2m, fig.width=5, fig.height=5}
+# Richness
 pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3, 
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
@@ -973,9 +1006,10 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
               ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
-#### Shannon
+
 
 ```{r breastfeed_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
 ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
@@ -984,9 +1018,10 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
-#### Gini-Simpson index
+
 
 ```{r breastfeed_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
 pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
@@ -995,7 +1030,7 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
-#### Plot all
+
 ```{r breastfeed_2m, fig.width=12, fig.height=5}
 ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
@@ -1008,7 +1043,7 @@ feature_name <- "Exclusive breast feeding"
 feat_key     <- "Exclusive_BF"
 ```
 
-### 2 months
+
 
 ```{r}
 metadata <- sampdata[, c("SampleID", "breast_excl_cat1")]
@@ -1027,9 +1062,9 @@ nfeat <- nlevels(metadata_alpha$feature)
 table(metadata$feature)
 ```
 
-#### Richness
 
 ```{r breast_excl_richness_2m, fig.width=5, fig.height=5}
+# Richness
 pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3, 
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
@@ -1038,9 +1073,10 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
               ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
-#### Shannon
+
 
 ```{r breast_excl_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
 ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
@@ -1049,9 +1085,10 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
-#### Gini-Simpson index
+
 
 ```{r breast_excl_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
 pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
@@ -1061,7 +1098,7 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
 ```
 
 
-#### Plot all
+
 ```{r breast_excl_2m, fig.width=12, fig.height=5}
 ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
@@ -1074,7 +1111,7 @@ feature_name <- "Smoke during Pregnancy"
 feat_key     <- "Prenatal_smoke"
 ```
 
-### 2 months
+
 
 ```{r}
 metadata <- sampdata[, c("SampleID", "pregsmoke")]
@@ -1097,9 +1134,8 @@ nfeat <- nlevels(metadata_alpha$feature)
 table(metadata$feature)
 ```
 
-#### Richness
-
 ```{r pregsmoke_richness_2m, fig.width=5, fig.height=5}
+# Richness
 pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
@@ -1108,9 +1144,10 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
-#### Shannon
+
 
 ```{r pregsmoke_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
 ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
@@ -1119,9 +1156,10 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
-#### Gini-Simpson index
+
 
 ```{r pregsmoke_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
 pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
@@ -1130,7 +1168,7 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
-#### Plot all
+
 
 ```{r pregsmoke_2m, fig.width=12, fig.height=5}
 ggarrange(pr, ps, pg,
@@ -1144,7 +1182,7 @@ feature_name <- "Number of siblings"
 feat_key     <- "Siblings"
 ```
 
-### 2 months
+
 
 ```{r}
 metadata <- sampdata[, c("SampleID", "sibs_numb_cat")]
@@ -1162,9 +1200,8 @@ nfeat <- nlevels(metadata_alpha$feature)
 table(metadata$feature)
 ```
 
-#### Richness
-
 ```{r sibsnumb_richness_2m, fig.width=5, fig.height=5}
+# Richness
 pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
@@ -1173,9 +1210,10 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
 
-#### Shannon
+
 
 ```{r sibsnumb_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
 ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
@@ -1184,9 +1222,10 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
-#### Gini-Simpson index
+
 
 ```{r sibsnumb_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
 pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
@@ -1195,7 +1234,7 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
-#### Plot all
+
 
 ```{r sibsnumb_2m, fig.width=12, fig.height=5}
 ggarrange(pr, ps, pg,
@@ -1204,13 +1243,6 @@ ggarrange(pr, ps, pg,
 
 
 ## Model-based analysis: regression on Shannon diversity (betta)
-
-The strip charts above show unadjusted, per-sample DivNet estimates. Here we use
-the covariate model (`divnet_genus_cov`, family level) together with
-`breakaway::betta` to jointly estimate associations between all covariates and
-Shannon diversity, properly accounting for the uncertainty in the DivNet estimates.
-Note that this model uses only the `r nsamples(phylo_genus_cov)` samples with
-complete covariate data.
 
 ```{r}
 # Drop samples with NAs in any formula covariate
@@ -1221,7 +1253,16 @@ sdata <- data.frame(sample_data(phylo_genus))
 complete_samples <- rownames(sdata)[complete.cases(sdata[, cov_vars])]
 complete_samples <- complete_samples[sdata[complete_samples, "breast_excl_cat1"] != "1"]
 phylo_genus_cov <- prune_samples(complete_samples, phylo_genus)
+```
 
+The strip charts above show unadjusted, per-sample DivNet estimates. Here we use
+the covariate model (`divnet_genus_cov`, family level) together with
+`breakaway::betta` to jointly estimate associations between all covariates and
+Shannon diversity, properly accounting for the uncertainty in the DivNet estimates.
+Note that this model uses only the `r nsamples(phylo_genus_cov)` samples with
+complete covariate data.
+
+```{r}
 if (!file.exists(path_target("divnet_genus_cov.rds"))) {
   set.seed(123456)
   divnet_start <- proc.time()
@@ -1239,27 +1280,16 @@ if (!file.exists(path_target("divnet_genus_cov.rds"))) {
   divnet_genus_cov <- readRDS(path_target("divnet_genus_cov.rds"))
   divnet_runtime <- readRDS(path_target("divnet_genus_cov_runtime.rds"))
 }
+
+print("Runtime:")
+divnet_runtime
 ```
 
 ```{r}
 names(divnet_genus_cov)
 ```
 
-```{r}
-betta_estimates <- divnet_genus_cov$shannon |> summary() |> dplyr::pull(estimate)
-betta_ses       <- sqrt(divnet_genus_cov$`shannon-variance`)
-
-betta_shannon <- breakaway::betta(betta_estimates, betta_ses, divnet_genus_cov$X)
-betta_shannon$table
-```
-
-```{r}
-gini_estimates <- 1 - (divnet_genus_cov$simpson |> summary() |> dplyr::pull(estimate))
-gini_ses       <- sqrt(divnet_genus_cov$`simpson-variance`)
-
-betta_gini <- breakaway::betta(gini_estimates, gini_ses, divnet_genus_cov$X)
-betta_gini$table
-```
+### Richness
 
 ```{r}
 # Rerun breakaway only on the model samples (n = 486) to obtain aligned SEs.
@@ -1272,36 +1302,21 @@ rich_cov       <- lapply(flist_cov, breakaway::breakaway)
 rich_estimates <- sapply(rich_cov, function(x) x$estimate)
 rich_ses       <- pmax(sapply(rich_cov, function(x) x$error), 0.5)
 
-betta_rich <- breakaway::betta(rich_estimates, rich_ses, divnet_genus_cov$X)
+betta_rich <- breakaway::betta(rich_estimates, rich_ses, divnet_genus_cov$X,
+                                  p.digits = 30)
 betta_rich$table
 ```
 
-**Interpretation** (reference group: Austria, female, vaginal birth, breastfeeding duration < 1 month,
-not exclusively breastfed, no prenatal smoking, no siblings):
+### Shannon
 
-- **Country:** Swiss infants show lower genus-level Shannon diversity than Austrian infants
-  (β = −0.113, p < 0.001); German infants do not differ significantly (β = +0.002, p = 0.800).
-- **Sex:** Male infants show marginally lower Shannon diversity than females (β = −0.008,
-  p = 0.059), a difference that does not reach conventional significance at the genus level.
-- **Caesarean delivery:** Associated with slightly higher Shannon diversity (β = +0.019, p = 0.016).
-  This is somewhat counterintuitive — caesarean birth typically disrupts vertical transmission
-  of vaginal/gut microbiota — and may reflect confounding with feeding mode or other factors.
-- **Breastfeeding duration:** The dominant effect in the model. Compared to very short/no
-  breastfeeding (< 1 month), one month of breastfeeding is associated with modestly higher
-  diversity (β = +0.039, p = 0.001), while ≥ 2 months is associated with substantially lower
-  diversity (β = −0.359, p < 0.001). This non-monotone pattern likely reflects the well-documented
-  HMO-driven enrichment of *Bifidobacterium* in longer-breastfed infants, which reduces
-  overall evenness (Shannon diversity) at the genus level.
-- **Exclusive breastfeeding:** Duration ≥ 2 months is associated with slightly lower
-  diversity (β = −0.058, p < 0.001), consistent with the breastfeeding duration effect above.
-- **Prenatal smoking:** Associated with higher infant Shannon diversity (β = +0.073, p < 0.001).
-  The direction is unexpected and warrants cautious interpretation; residual confounding
-  cannot be excluded.
-- **Number of siblings:** Having more than one sibling is associated with slightly lower Shannon
-  diversity (> 1 sibling: β = −0.022, p < 0.001); having exactly one sibling shows no significant
-  effect (β = −0.004, p = 0.391). The negative direction is counterintuitive given the expected
-  increase in microbial exposure from older siblings, and may interact with breastfeeding or
-  other covariates.
+```{r}
+betta_estimates <- divnet_genus_cov$shannon |> summary() |> dplyr::pull(estimate)
+betta_ses       <- sqrt(divnet_genus_cov$`shannon-variance`)
+
+betta_shannon <- breakaway::betta(betta_estimates, betta_ses, divnet_genus_cov$X,
+                                  p.digits = 30)
+betta_shannon$table
+```
 
 Global test of whether any covariate is associated with Shannon diversity:
 
@@ -1316,6 +1331,18 @@ respectively. A significant result indicates that the model as a whole fits bett
 intercept-only model, meaning at least one covariate is meaningfully associated with Shannon
 diversity. It does not identify which covariates are responsible — that is addressed by the
 individual p-values in `betta_shannon$table` above.
+
+### Gini-Simpson
+
+```{r}
+gini_estimates <- 1 - (divnet_genus_cov$simpson |> summary() |> dplyr::pull(estimate))
+gini_ses       <- sqrt(divnet_genus_cov$`simpson-variance`)
+
+betta_gini <- breakaway::betta(gini_estimates, gini_ses, divnet_genus_cov$X,
+                                  p.digits = 30)
+betta_gini$table
+```
+
 
 
 ### Combined coefficient plot
