@@ -40,6 +40,11 @@ library(DivNet)
 library(progress)
 library(permApprox)
 library(permApprox)
+
+# Parallel computing
+library(future)
+library(future.apply)
+library(progressr)
 ```
 
 ```{r directories}
@@ -182,27 +187,48 @@ add_sig_line <- function(strip_chart, pval, diversity,
 ### Permutation test functions
 
 ```{r}
-# Kruskal-Wallis test with permutation p-value and GPD-refined p-value.
-# Uses the KW H statistic on permuted group labels.
-perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  g      <- droplevels(as.factor(g))
-  obs    <- kruskal.test(x ~ g)
-  obs_H  <- obs$statistic
+make_perm_chunks <- function(n_perm, n_chunks = NULL) {
+  if (is.null(n_chunks)) {
+    n_chunks <- min(parallelly::availableCores(), n_perm)
+  }
+  split(seq_len(n_perm), cut(seq_len(n_perm), breaks = n_chunks, labels = FALSE))
+}
+
+perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL,
+                         n_chunks = NULL, progress = TRUE) {
+  g <- droplevels(as.factor(g))
+  keep <- complete.cases(x, g)
+  x <- x[keep]
+  g <- droplevels(g[keep])
   
-  pb <- progress::progress_bar$new(
-    format = "  Permutations [:bar] :current/:total (:percent)",
-    total = n_perm, clear = FALSE, width = 60
+  obs <- kruskal.test(x ~ g)
+  obs_H <- unname(obs$statistic)
+  
+  chunks <- make_perm_chunks(n_perm, n_chunks)
+  
+  if (progress) {
+    p <- progressr::progressor(steps = length(chunks))
+  }
+  
+  perm_list <- future.apply::future_lapply(
+    chunks,
+    function(idx) {
+      out <- numeric(length(idx))
+      for (b in seq_along(idx)) {
+        out[b] <- unname(kruskal.test(x ~ sample(g))$statistic)
+      }
+      if (progress) p()
+      out
+    },
+    future.seed = if (is.null(seed)) TRUE else seed
   )
-  perm_H <- sapply(1:n_perm, function(i) {
-    pb$tick()
-    kruskal.test(x ~ sample(g))$statistic
-  })
+  
+  perm_H <- unlist(perm_list, use.names = FALSE)
   
   p_perm <- (sum(perm_H >= obs_H) + 1) / (n_perm + 1)
   
   pa <- permApprox::perm_approx(
-    obs_stats     = unname(obs_H),
+    obs_stats     = obs_H,
     perm_stats    = matrix(perm_H, ncol = 1),
     alternative   = "greater",
     adjust_method = "none",
@@ -210,78 +236,111 @@ perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL) {
     gpd_ctrl      = permApprox::make_gpd_ctrl(sample_size = min(table(g)))
   )
   
-  list(H        = unname(obs_H),
-       p_asymp  = obs$p.value,
-       p_perm   = p_perm,
-       p_approx = pa$p_unadjusted[1])
+  list(
+    H        = obs_H,
+    p_asymp  = obs$p.value,
+    p_perm   = p_perm,
+    p_approx = pa$p_unadjusted[1]
+  )
 }
 
-# Pairwise permutation Wilcoxon tests with BH correction.
-# For each pair, permutes group labels and uses the W statistic (two-sided).
-# Returns both empirical and GPD-refined BH-adjusted p-value matrices.
-perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH", seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  g     <- droplevels(as.factor(g))
-  pairs <- combn(levels(g), 2, simplify = FALSE)
+perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH",
+                          seed = NULL, n_chunks = NULL, progress = TRUE) {
+  g <- droplevels(as.factor(g))
+  keep <- complete.cases(x, g)
+  x <- x[keep]
+  g <- droplevels(g[keep])
   
-  n_pairs <- length(pairs)
-  pb <- progress::progress_bar$new(
-    format = "  Pairwise tests [:bar] :current/:total (:percent)",
-    total = n_pairs, clear = FALSE, width = 60
-  )
-
-  p_vals        <- numeric(n_pairs)
-  p_vals_approx <- numeric(n_pairs)
+  lvls  <- levels(g)
+  pairs <- combn(lvls, 2, simplify = FALSE)
+  
+  p_vals        <- numeric(length(pairs))
+  p_vals_approx <- numeric(length(pairs))
   
   for (i in seq_along(pairs)) {
-    pb$tick()
-    pair   <- pairs[[i]]
-    idx    <- g %in% pair
-    xi     <- x[idx]
-    gi     <- droplevels(g[idx])
-    obs_W  <- wilcox.test(xi ~ gi, exact = FALSE)$statistic
-    n1     <- sum(gi == levels(gi)[1])
-    n2     <- sum(gi == levels(gi)[2])
-    EW     <- n1 * n2 / 2
-    perm_W <- replicate(n_perm, wilcox.test(xi ~ sample(gi), exact = FALSE)$statistic)
+    pair <- pairs[[i]]
+    idx  <- g %in% pair
     
-    p_vals[i] <- (sum(abs(perm_W - EW) >= abs(obs_W - EW)) + 1) / (n_perm + 1)
+    xi <- x[idx]
+    gi <- droplevels(g[idx])
+    
+    n1 <- sum(gi == levels(gi)[1])
+    n2 <- sum(gi == levels(gi)[2])
+    EW <- n1 * n2 / 2
+    
+    obs_W <- unname(wilcox.test(xi ~ gi, exact = FALSE)$statistic)
+    obs_T <- abs(obs_W - EW)
+    
+    chunks <- make_perm_chunks(n_perm, n_chunks)
+    
+    if (progress) {
+      message("Running pairwise permutations for: ", pair[1], " vs ", pair[2])
+      p <- progressr::progressor(steps = length(chunks))
+    }
+    
+    pair_seed <- if (is.null(seed)) TRUE else seed + i
+    
+    perm_list <- future.apply::future_lapply(
+      chunks,
+      function(idx_perm) {
+        out <- numeric(length(idx_perm))
+        for (b in seq_along(idx_perm)) {
+          gi_perm <- sample(gi)
+          perm_W  <- unname(wilcox.test(xi ~ gi_perm, exact = FALSE)$statistic)
+          out[b]  <- abs(perm_W - EW)
+        }
+        if (progress) p()
+        out
+      },
+      future.seed = pair_seed
+    )
+    
+    perm_T <- unlist(perm_list, use.names = FALSE)
+    
+    p_vals[i] <- (sum(perm_T >= obs_T) + 1) / (n_perm + 1)
     
     pa <- permApprox::perm_approx(
-      obs_stats     = obs_W,
-      perm_stats    = matrix(perm_W, ncol = 1),
-      alternative   = "two_sided",
-      null_center   = EW,
+      obs_stats     = obs_T,
+      perm_stats    = matrix(perm_T, ncol = 1),
+      alternative   = "greater",
       adjust_method = "none",
       verbose       = FALSE,
       gpd_ctrl      = permApprox::make_gpd_ctrl(sample_size = min(n1, n2))
     )
+    
     p_vals_approx[i] <- pa$p_unadjusted[1]
   }
-
-  # BH correction across pairs
-  p_adj        <- p.adjust(p_vals,        method = p_adjust)
+  
+  p_adj        <- p.adjust(p_vals, method = p_adjust)
   p_adj_approx <- p.adjust(p_vals_approx, method = p_adjust)
-
-  # Build upper-triangular-style matrices matching pairwise.wilcox.test() format
-  lvls <- levels(g)
+  
   make_mat <- function(vals) {
-    mat <- matrix(NA,
-                  nrow     = length(lvls) - 1,
-                  ncol     = length(lvls) - 1,
-                  dimnames = list(lvls[-1], lvls[-length(lvls)]))
+    mat <- matrix(
+      NA_real_,
+      nrow = length(lvls) - 1,
+      ncol = length(lvls) - 1,
+      dimnames = list(lvls[-1], lvls[-length(lvls)])
+    )
+    
     for (i in seq_along(pairs)) {
       r <- which(lvls == pairs[[i]][2]) - 1
       c <- which(lvls == pairs[[i]][1])
       if (r >= 1 && c <= ncol(mat)) mat[r, c] <- vals[i]
     }
+    
     mat
   }
   
-  list(p_matrix        = make_mat(p_adj),
-       p_matrix_approx = make_mat(p_adj_approx))
+  list(
+    p_matrix         = make_mat(p_adj),
+    p_matrix_approx  = make_mat(p_adj_approx),
+    p_raw            = p_vals,
+    p_raw_approx     = p_vals_approx,
+    pairs            = pairs
+  )
 }
 ```
+
 
 ### Plot function for richness
 
@@ -561,7 +620,15 @@ file and rerun this chunk to recompute only that variable. Each test uses 9 999
 permutations. Results are reused by the plotting functions below and summarised in
 the comparison table.
 
-```{r perm-tests}
+```{r perm-tests, warning=FALSE}
+future::plan(
+  future::multisession,
+  workers = max(1, parallelly::availableCores() - 2)
+)
+
+progressr::handlers("txtprogressbar")
+options(progressr.enable = TRUE)
+
 # Helper: build metadata_alpha for a given variable
 prep_meta <- function(col, extra_filter = NULL) {
   d <- sampdata[, c("SampleID", col)]
@@ -593,33 +660,35 @@ measures_def <- c("richness_genus", "shannon", "gini")
 
 perm_results <- list()
 
-for (vname in names(vars_def)) {
-  rds_path <- path_target(paste0("perm_results_", vname, ".rds"))
-
-  if (!file.exists(rds_path)) {
-    message("Running permutation tests for: ", vname)
-    meta    <- prep_meta(vars_def[[vname]]$col, vars_def[[vname]]$filter)
-    nfeat_v <- nlevels(meta$feature)
-    var_res <- list()
-    set.seed(123456)
-    for (m in measures_def) {
-      key <- paste0(vname, "_", m)
-      x   <- meta[[m]]
-      g   <- meta$feature
-      res <- perm_kruskal(x, g, n_perm = 9999)
-      res$p_pairwise <- NULL
-      if (nfeat_v > 2 && res$p_perm <= 0.05) {
-        res$p_pairwise <- perm_pairwise(x, g, n_perm = 9999)  # returns list(p_matrix, p_matrix_approx)
+progressr::with_progress({
+  for (vname in names(vars_def)) {
+    rds_path <- path_target(paste0("perm_results_", vname, ".rds"))
+    
+    if (!file.exists(rds_path)) {
+      message("Running permutation tests for: ", vname)
+      meta    <- prep_meta(vars_def[[vname]]$col, vars_def[[vname]]$filter)
+      nfeat_v <- nlevels(meta$feature)
+      var_res <- list()
+      set.seed(123456)
+      for (m in measures_def) {
+        key <- paste0(vname, "_", m)
+        x   <- meta[[m]]
+        g   <- meta$feature
+        res <- perm_kruskal(x, g, n_perm = 9999)
+        res$p_pairwise <- NULL
+        if (nfeat_v > 2 && res$p_perm <= 0.05) {
+          res$p_pairwise <- perm_pairwise(x, g, n_perm = 9999)  # returns list(p_matrix, p_matrix_approx)
+        }
+        var_res[[key]] <- res
       }
-      var_res[[key]] <- res
+      saveRDS(var_res, rds_path)
+    } else {
+      var_res <- readRDS(rds_path)
     }
-    saveRDS(var_res, rds_path)
-  } else {
-    var_res <- readRDS(rds_path)
+    
+    perm_results <- c(perm_results, var_res)
   }
-
-  perm_results <- c(perm_results, var_res)
-}
+})
 ```
 
 ### Comparison of asymptotic vs. permutation p-values
@@ -964,7 +1033,7 @@ table(metadata$feature)
 pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3, 
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
-              breaks = levels(metadata$feature),
+              breaks = levels(droplevels(metadata_alpha)$feature),
               labels = c("0", "\u2265 2"),
               ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
 ```
@@ -975,7 +1044,7 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
 ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
-             breaks = levels(metadata$feature),
+             breaks = levels(droplevels(metadata_alpha)$feature),
              labels = c("0", "\u2265 2"),
              ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
@@ -986,7 +1055,7 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
 pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
-          breaks = levels(metadata$feature),
+          breaks = levels(droplevels(metadata_alpha)$feature),
           labels = c("0", "\u2265 2"),
           ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```

@@ -40,3 +40,4 @@ render_file <- function(folder, subfolder = NULL, file, output_format = "all") {
 
 render_file("workflow", NULL, "00_build_dataset")
 render_file("workflow", NULL, "01_overview")
+render_file("workflow", NULL, "02_alpha_diversity")
