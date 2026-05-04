@@ -38,6 +38,8 @@ library(ggpubr)
 library(breakaway)
 library(DivNet)
 library(progress)
+library(permApprox)
+library(permApprox)
 ```
 
 ```{r directories}
@@ -180,7 +182,7 @@ add_sig_line <- function(strip_chart, pval, diversity,
 ### Permutation test functions
 
 ```{r}
-# Kruskal-Wallis test with permutation p-value.
+# Kruskal-Wallis test with permutation p-value and GPD-refined p-value.
 # Uses the KW H statistic on permuted group labels.
 perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL) {
   if (!is.null(seed)) set.seed(seed)
@@ -192,19 +194,31 @@ perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL) {
     format = "  Permutations [:bar] :current/:total (:percent)",
     total = n_perm, clear = FALSE, width = 60
   )
-  
   perm_H <- sapply(1:n_perm, function(i) {
     pb$tick()
     kruskal.test(x ~ sample(g))$statistic
   })
   
-  list(H       = unname(obs_H),
-       p_asymp = obs$p.value,
-       p_perm  = (sum(perm_H >= obs_H) + 1) / (n_perm + 1))
+  p_perm <- (sum(perm_H >= obs_H) + 1) / (n_perm + 1)
+  
+  pa <- permApprox::perm_approx(
+    obs_stats     = unname(obs_H),
+    perm_stats    = matrix(perm_H, ncol = 1),
+    alternative   = "greater",
+    adjust_method = "none",
+    verbose       = FALSE,
+    gpd_ctrl      = permApprox::make_gpd_ctrl(sample_size = min(table(g)))
+  )
+  
+  list(H        = unname(obs_H),
+       p_asymp  = obs$p.value,
+       p_perm   = p_perm,
+       p_approx = pa$p_unadjusted[1])
 }
 
 # Pairwise permutation Wilcoxon tests with BH correction.
 # For each pair, permutes group labels and uses the W statistic (two-sided).
+# Returns both empirical and GPD-refined BH-adjusted p-value matrices.
 perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH", seed = NULL) {
   if (!is.null(seed)) set.seed(seed)
   g     <- droplevels(as.factor(g))
@@ -216,8 +230,12 @@ perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH", seed = NULL) {
     total = n_pairs, clear = FALSE, width = 60
   )
 
-  p_vals <- sapply(pairs, function(pair) {
+  p_vals        <- numeric(n_pairs)
+  p_vals_approx <- numeric(n_pairs)
+  
+  for (i in seq_along(pairs)) {
     pb$tick()
+    pair   <- pairs[[i]]
     idx    <- g %in% pair
     xi     <- x[idx]
     gi     <- droplevels(g[idx])
@@ -226,21 +244,42 @@ perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH", seed = NULL) {
     n2     <- sum(gi == levels(gi)[2])
     EW     <- n1 * n2 / 2
     perm_W <- replicate(n_perm, wilcox.test(xi ~ sample(gi), exact = FALSE)$statistic)
-    (sum(abs(perm_W - EW) >= abs(obs_W - EW)) + 1) / (n_perm + 1)
-  })
+    
+    p_vals[i] <- (sum(abs(perm_W - EW) >= abs(obs_W - EW)) + 1) / (n_perm + 1)
+    
+    pa <- permApprox::perm_approx(
+      obs_stats     = obs_W,
+      perm_stats    = matrix(perm_W, ncol = 1),
+      alternative   = "two_sided",
+      null_center   = EW,
+      adjust_method = "none",
+      verbose       = FALSE,
+      gpd_ctrl      = permApprox::make_gpd_ctrl(sample_size = min(n1, n2))
+    )
+    p_vals_approx[i] <- pa$p_unadjusted[1]
+  }
 
-  p_adj <- p.adjust(p_vals, method = p_adjust)
-  lvls  <- levels(g)
-  mat   <- matrix(NA,
+  # BH correction across pairs
+  p_adj        <- p.adjust(p_vals,        method = p_adjust)
+  p_adj_approx <- p.adjust(p_vals_approx, method = p_adjust)
+
+  # Build upper-triangular-style matrices matching pairwise.wilcox.test() format
+  lvls <- levels(g)
+  make_mat <- function(vals) {
+    mat <- matrix(NA,
                   nrow     = length(lvls) - 1,
                   ncol     = length(lvls) - 1,
                   dimnames = list(lvls[-1], lvls[-length(lvls)]))
-  for (i in seq_along(pairs)) {
-    r <- which(lvls == pairs[[i]][2]) - 1
-    c <- which(lvls == pairs[[i]][1])
-    if (r >= 1 && c <= ncol(mat)) mat[r, c] <- p_adj[i]
+    for (i in seq_along(pairs)) {
+      r <- which(lvls == pairs[[i]][2]) - 1
+      c <- which(lvls == pairs[[i]][1])
+      if (r >= 1 && c <= ncol(mat)) mat[r, c] <- vals[i]
+    }
+    mat
   }
-  mat
+  
+  list(p_matrix        = make_mat(p_adj),
+       p_matrix_approx = make_mat(p_adj_approx))
 }
 ```
 
@@ -254,7 +293,9 @@ plot_richness <- function(div_dataframe, feature_name,
                           ybreaks = NULL, title = "",
                           ylim = c(0, 75), textsize = 18,
                           space_line = 2, space_lab = 5,
-                          ptest = NULL) {
+                          ptest = NULL,
+                          p_type = c("p_approx", "p_perm")) {
+  p_type <- match.arg(p_type)
   
   # Remove levels with zero observations
   div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
@@ -280,8 +321,11 @@ plot_richness <- function(div_dataframe, feature_name,
                                    p.adjust.method = "BH")$p.value
     }
   } else {
-    pval_kt <- ptest$p_perm
-    pval    <- if (nfeat > 2 && pval_kt <= 0.05) ptest$p_pairwise else pval_kt
+    pval_kt <- ptest[[p_type]]
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) {
+      if (p_type == "p_approx") ptest$p_pairwise$p_matrix_approx
+      else                      ptest$p_pairwise$p_matrix
+    } else pval_kt
   }
   
   if (pval_kt <= 0.05) {
@@ -303,7 +347,9 @@ plot_shannon <- function(div_dataframe, feature_name,
                          space_line = 0.3, space_lab = 0.15,
                          ylab = "Shannon index (DivNet)", 
                          ybreaks = NULL, title = "", textsize = 18,
-                         ptest = NULL) {
+                         ptest = NULL,
+                         p_type = c("p_approx", "p_perm")) {
+  p_type <- match.arg(p_type)
   # Remove levels with zero observations
   div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
                                               names(which(table(div_dataframe$feature) > 0)), ])
@@ -328,8 +374,11 @@ plot_shannon <- function(div_dataframe, feature_name,
                                    p.adjust.method = "BH")$p.value
     }
   } else {
-    pval_kt <- ptest$p_perm
-    pval    <- if (nfeat > 2 && pval_kt <= 0.05) ptest$p_pairwise else pval_kt
+    pval_kt <- ptest[[p_type]]
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) {
+      if (p_type == "p_approx") ptest$p_pairwise$p_matrix_approx
+      else                      ptest$p_pairwise$p_matrix
+    } else pval_kt
   }
   
   if (pval_kt <= 0.05) {
@@ -351,7 +400,9 @@ plot_gini <- function(div_dataframe, feature_name,
                       space_line = 0.08, space_lab = 0.04,
                       ylab = "Gini-Simpson index (DivNet)", 
                       ybreaks = NULL, title = "", textsize = 18,
-                      ptest = NULL) {
+                      ptest = NULL,
+                      p_type = c("p_approx", "p_perm")) {
+  p_type <- match.arg(p_type)
   
   # Remove levels with zero observations
   div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
@@ -377,8 +428,11 @@ plot_gini <- function(div_dataframe, feature_name,
                                    p.adjust.method = "BH")$p.value
     }
   } else {
-    pval_kt <- ptest$p_perm
-    pval    <- if (nfeat > 2 && pval_kt <= 0.05) ptest$p_pairwise else pval_kt
+    pval_kt <- ptest[[p_type]]
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) {
+      if (p_type == "p_approx") ptest$p_pairwise$p_matrix_approx
+      else                      ptest$p_pairwise$p_matrix
+    } else pval_kt
   }
   
   if (pval_kt <= 0.05) {
@@ -555,7 +609,7 @@ for (vname in names(vars_def)) {
       res <- perm_kruskal(x, g, n_perm = 9999)
       res$p_pairwise <- NULL
       if (nfeat_v > 2 && res$p_perm <= 0.05) {
-        res$p_pairwise <- perm_pairwise(x, g, n_perm = 9999)
+        res$p_pairwise <- perm_pairwise(x, g, n_perm = 9999)  # returns list(p_matrix, p_matrix_approx)
       }
       var_res[[key]] <- res
     }
@@ -592,18 +646,19 @@ perm_table <- purrr::imap_dfr(perm_results, function(res, key) {
   measure_part <- stringr::str_extract(key, "richness_genus|shannon|gini")
   var_part     <- sub(paste0("_", measure_part, "$"), "", key)
   tibble::tibble(
-    Variable = var_labels[var_part],
-    Measure  = measure_labels[measure_part],
-    H        = round(res$H, 2),
-    p_asymp  = fmt_p(res$p_asymp),
-    p_perm   = fmt_p(res$p_perm)
+    Variable  = var_labels[var_part],
+    Measure   = measure_labels[measure_part],
+    H         = round(res$H, 2),
+    p_asymp   = fmt_p(res$p_asymp),
+    p_perm    = fmt_p(res$p_perm),
+    p_approx  = fmt_p(res$p_approx)
   )
 })
 
 knitr::kable(perm_table,
              col.names = c("Variable", "Measure", "H statistic",
-                           "p (KW asymptotic)", "p (permutation)"),
-             align = "llrrr")
+                           "p (KW asymptotic)", "p (permutation)", "p (GPD-refined)"),
+             align = "llrrrr")
 ```
 
 ## Study center
