@@ -24,13 +24,12 @@ knitr::opts_chunk$set(
   dpi = 250,
   fig.path = paste0('figures/', params, "/alpha_"),
   echo = FALSE)
-
-conflicts_prefer(dplyr::filter)
 ```
 
 ## Load packages
 
 ```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
 library(phyloseq)
 library(tidyverse)
 library(ggtext)
@@ -47,6 +46,7 @@ library(permApprox)
 library(future)
 library(future.apply)
 library(progressr)
+conflicts_prefer(dplyr::filter)
 ```
 
 ```{r directories}
@@ -991,7 +991,97 @@ knitr::kable(perm_table,
              align = "llrrrr")
 ```
 
+```{r perm_table_latex}
+library(kableExtra)
+
+sig_stars <- function(p) {
+  p <- as.numeric(p)
+  dplyr::case_when(
+    p < 0.001 ~ "***",
+    p < 0.01  ~ "**",
+    p < 0.05  ~ "*",
+    p < 0.1   ~ ".",
+    TRUE      ~ ""
+  )
+}
+
+measures_order <- c("Richness (breakaway)", "Shannon (DivNet)", "Gini-Simpson (DivNet)")
+block_labels   <- c("Richness (breakaway)", "Shannon (DivNet)", "Gini-Simpson (DivNet)")
+
+add_stars <- function(p_char) {
+  stars <- sig_stars(p_char)
+  ifelse(stars != "", paste0(p_char, "$^{", stars, "}$"), p_char)
+}
+
+var_order     <- c("Country", "Sex", "C-section", "Breastfeeding duration",
+                   "Exclusive breastfeeding", "Prenatal smoking", "Number of siblings")
+measure_order <- c("Richness (breakaway)", "Shannon (DivNet)", "Gini-Simpson (DivNet)")
+measure_short <- c("Richness (breakaway)"  = "Richness",
+                   "Shannon (DivNet)"      = "Shannon",
+                   "Gini-Simpson (DivNet)" = "Gini-Simpson")
+
+perm_table_tex <- perm_table |>
+  mutate(
+    Variable = factor(Variable, levels = var_order),
+    Measure  = factor(Measure,  levels = measure_order)
+  ) |>
+  arrange(Variable, Measure) |>
+  mutate(
+    Measure  = dplyr::recode(as.character(Measure), !!!measure_short),
+    p_asymp  = add_stars(p_asymp),
+    p_perm   = add_stars(p_perm),
+    p_approx = add_stars(p_approx)
+  ) |>
+  select(Measure, H, p_asymp, p_perm, p_approx)
+
+# One block per variable (7 × 3 rows)
+group_starts <- seq(1, by = 3, length.out = length(var_order))
+group_ends   <- group_starts + 2L
+
+tex_table <- kbl(
+    perm_table_tex,
+    format    = "latex",
+    booktabs  = TRUE,
+    escape    = FALSE,
+    col.names = c("Measure", "$H$", "$p$ (asymptotic)",
+                  "$p$ (permutation)", "$p$ (GPD-refined)"),
+    align     = "lrrrr",
+    caption   = paste(
+      "Kruskal--Wallis test results for alpha diversity across cohort variables.",
+      "$H$ is the Kruskal--Wallis test statistic.",
+      "Richness was estimated using \\texttt{breakaway};",
+      "Shannon and Gini-Simpson were estimated using \\texttt{DivNet}.",
+      "$p$ (asymptotic): chi-squared approximation;",
+      "$p$ (permutation): empirical permutation $p$-values ($10^6$ permutations);",
+      "$p$ (GPD-refined): empirical $p$-values, refined with \\texttt{permApprox}."
+    ),
+    label     = "tab:7app:perm_results"
+  )
+
+for (i in seq_along(var_order)) {
+  tex_table <- tex_table |>
+    pack_rows(var_order[i], group_starts[i], group_ends[i], bold = TRUE)
+}
+
+tex_table <- tex_table |>
+  column_spec(1, latex_column_spec = "l@{\\hspace{1.5em}}") |>
+  kable_styling(latex_options = c("hold_position")) |>
+  footnote(
+    general        = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
+    general_title  = "",
+    escape         = FALSE,
+    threeparttable = TRUE
+  )
+
+save_kable(tex_table, file = path_target("perm_table.tex"))
+```
+
 ## Plots 
+
+```{r}
+set.seed(123456)
+```
+
 
 ### Study center
 
@@ -1538,13 +1628,13 @@ rich_predicted_int <- as.numeric(X_int_rich %*% betta_rich_int$table[, 1])
 richness_plot_data_int <- data.frame(
   SampleID           = names(rich_est_int),
   richness_predicted = rich_predicted_int
-) |>
+) %>%
   left_join(select(richness_comp, SampleID, library_size), by = "SampleID")
 ```
 
 ```{r observed_vs_predicted_richness_int_libsize, fig.width=7, fig.height=4}
 plot_obs_est_richness_int <-
-  ggplot(richness_plot_data_int |> inner_join(obs_rich, by = "SampleID"),
+  ggplot(richness_plot_data_int %>% inner_join(obs_rich, by = "SampleID"),
          aes(x = observed, y = richness_predicted, color = library_size)) +
   geom_point(alpha = 0.8, size = 2) +
   scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
@@ -1682,7 +1772,7 @@ richness_plot_data <- richness_with_model %>%
 
 ```{r observed_vs_predicted_richness_libsize, fig.width=7, fig.height=4}
 plot_obs_est_richness_cov <- 
-  ggplot(richness_plot_data |> inner_join(obs_rich, by = "SampleID"), 
+  ggplot(richness_plot_data %>% inner_join(obs_rich, by = "SampleID"), 
          aes(x = observed, y = richness_predicted,
              color = library_size)) +
   geom_point(alpha = 0.8, size = 2) +

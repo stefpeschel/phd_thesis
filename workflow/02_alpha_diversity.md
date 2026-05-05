@@ -1,6 +1,10 @@
 Alpha diversity analysis
 ================
-Compiled at 2026-05-05 21:43:34 UTC
+Compiled at 2026-05-05 22:43:45 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "41b33e9b-a351-49eb-bdc8-cdeddd77796c")
+```
 
 ## Load packages
 
@@ -327,6 +331,14 @@ Computing alpha diversity the common way (not model-based) using the
 
 ### Breakaway richness
 
+    ## Warning: `aes_string()` was deprecated in ggplot2 3.0.0.
+    ## ℹ Please use tidy evaluation idioms with `aes()`.
+    ## ℹ See also `vignette("ggplot2-in-packages")` for more information.
+    ## ℹ The deprecated feature was likely used in the breakaway package.
+    ##   Please report the issue at <https://github.com/adw96/breakaway/issues>.
+    ## This warning is displayed once per session.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
+
 ### Comparison: classical vs. breakaway
 
 Observed (classical) richness simply counts the number of non-zero ASVs
@@ -369,6 +381,13 @@ sample) to assess how strongly each is confounded by sequencing depth.
 Computing richness the common way (not model-based) using the
 `estimate_richness` function from `phyloseq` package.
 
+    ## Warning in estimate_richness(phylo_genus): The data you have provided does not have
+    ## any singletons. This is highly suspicious. Results of richness
+    ## estimates (for example) are probably unreliable, or wrong, if you have already
+    ## trimmed low-abundance taxa from the data.
+    ## 
+    ## We recommended that you find the un-trimmed data and retry.
+
     ##         Observed Chao1 se.chao1 ACE   se.ACE   Shannon   Simpson InvSimpson   Fisher
     ## s025647       40    40        0  40 2.641023 1.8370941 0.7583242   4.137775 4.564899
     ## s023779       29    29        0  29 2.491364 0.6123431 0.2157674   1.275132 3.179224
@@ -378,6 +397,10 @@ Computing richness the common way (not model-based) using the
     ## s028386       22    22        0  22 1.809068 1.2379658 0.6065971   2.541923 2.329049
 
 ### Breakaway richness
+
+    ## Warning in build_frequency_count_tables(otutab_genus): More columns then rows. You probably need to transpose your data.
+
+    ## Warning in poisson_model(input_data, cutoff = cutoff): Cut-off was too low: no data available for estimation
 
     ##         SampleID richness
     ## s025647  s025647 40.07097
@@ -631,6 +654,8 @@ the 484 samples with complete covariate data.
 
 #### Richness
 
+    ## Warning in poisson_model(input_data, cutoff = cutoff): Cut-off was too low: no data available for estimation
+
     ##                      Estimates Standard Errors     p-values
     ## (Intercept)         22.7682153       0.2920787 0.000000e+00
     ## CountryGermany       3.9133662       0.4913796 1.554312e-15
@@ -709,6 +734,11 @@ are responsible — that is addressed by the individual p-values in
 
 #### Combined coefficient plot
 
+    ## Warning: `geom_errorbarh()` was deprecated in ggplot2 4.0.0.
+    ## ℹ Please use the `orientation` argument of `geom_errorbar()` instead.
+    ## This warning is displayed once per session.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
+
     ## `height` was translated to `width`.
 
 ![](figures/02_alpha_diversity/alpha_betta_forest_combined-1.png)<!-- -->
@@ -737,7 +767,7 @@ substantially attenuated or absent.
 These files have been written to the target directory,
 `data/02_alpha_diversity`:
 
-    ## # A tibble: 13 × 4
+    ## # A tibble: 14 × 4
     ##    path                            type         size modification_time  
     ##    <fs::path>                      <fct> <fs::bytes> <dttm>             
     ##  1 breakaway_rich_full.rds         file       30.51K 2026-05-05 19:59:06
@@ -753,3 +783,4 @@ These files have been written to the target directory,
     ## 11 perm_results_Prenatal_smoke.rds file       10.08M 2026-05-04 18:18:54
     ## 12 perm_results_Sex.rds            file          250 2026-05-04 15:39:34
     ## 13 perm_results_Siblings.rds       file          254 2026-05-04 15:39:52
+    ## 14 perm_table.tex                  file        2.94K 2026-05-05 22:44:14
