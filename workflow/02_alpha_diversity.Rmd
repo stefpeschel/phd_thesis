@@ -33,6 +33,7 @@ library(phyloseq)
 library(tidyverse)
 library(ggtext)
 library(ggpubr)
+library(patchwork)
 
 # Diversity packages
 library(breakaway)
@@ -79,13 +80,6 @@ phylo_asv
 phylo_genus
 ```
 
-
-## Colors
-
-```{r}
-cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00", 
-         "#CC79A7", "#F0E442", "#0072B2", "gray")
-```
 
 ## Functions
 
@@ -381,7 +375,7 @@ perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH",
 plot_richness <- function(div_dataframe, feature_name, 
                           xlab = "", breaks = NULL, labels = NULL,
                           binwidth = 0.4, dotsize = 1.2, 
-                          ylab = "Breakaway richness", 
+                          ylab = "Richness (breakaway)", 
                           ybreaks = NULL, title = "",
                           ylim = c(0, 75), textsize = 18,
                           space_line = 2, space_lab = 5,
@@ -395,7 +389,7 @@ plot_richness <- function(div_dataframe, feature_name,
   nfeat <- nlevels(div_dataframe$feature)
   
   strip_chart <- div_dataframe %>%
-    ggplot(aes(x=feature, y=richness_genus, fill=feature)) 
+    ggplot(aes(x=feature, y=richness, fill=feature)) 
   
   strip_chart <- modify_div_plot(strip_chart, 
                                  xlab = xlab, breaks = breaks, labels = labels,
@@ -405,10 +399,10 @@ plot_richness <- function(div_dataframe, feature_name,
   
   # Significance test
   if (is.null(ptest)) {
-    pval_kt <- pval <- kruskal.test(richness_genus ~ feature,
+    pval_kt <- pval <- kruskal.test(richness ~ feature,
                                     data = div_dataframe)$p.value
     if (pval_kt <= 0.05 && nfeat > 2) {
-      pval <- pairwise.wilcox.test(div_dataframe$richness_genus,
+      pval <- pairwise.wilcox.test(div_dataframe$richness,
                                    g = div_dataframe$feature,
                                    p.adjust.method = "BH")$p.value
     }
@@ -422,7 +416,7 @@ plot_richness <- function(div_dataframe, feature_name,
   
   if (pval_kt <= 0.05) {
     strip_chart <- add_sig_line(strip_chart, pval = pval, nfeat = nfeat,
-                                diversity = div_dataframe$richness_genus,
+                                diversity = div_dataframe$richness,
                                 space_line = space_line, 
                                 space_lab = space_lab)
   }
@@ -530,64 +524,226 @@ plot_gini <- function(div_dataframe, feature_name,
 ```
 
 
-## Compute alpha diversity
-
-### Alpha diversity on ASV level
-
-Computing alpha diversity the common way
+## Colors
 
 ```{r}
-alpha_div_common <- estimate_richness(phylo_asv)
-head(alpha_div_common)
+cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00", 
+         "#CC79A7", "#F0E442", "#0072B2", "gray")
 ```
 
-### Breakaway richness on ASV level
+## Compute richness (on ASV level)
+
+### Common richness
+
+Computing alpha diversity the common way (not model-based) using the `estimate_richness` function from `phyloseq` package.
+
+```{r}
+alpha_div_common_asv <- estimate_richness(phylo_asv)
+head(alpha_div_common_asv)
+```
+
+### Breakaway richness
 
 ```{r}
 frequencytablelist <- build_frequency_count_tables(otutab_asv)
 ```
 
 ```{r}
-rich_asv <- unlist(lapply(frequencytablelist, function(x) breakaway(x)$estimate))
-
-alpha_diversity_rich <- data.frame(SampleID = names(rich_asv),
-                                   age = "2 months",
-                                   richness_otu = rich_asv)
-head(alpha_diversity_rich)
+breakaway_rich_asv <- 
+  data.frame(SampleID = names(frequencytablelist),
+             richness = unlist(lapply(frequencytablelist, 
+                                      function(x) breakaway(x)$estimate))) 
 ```
 
-### Alpha diversity on genus level
+### Comparison: classical vs. breakaway
 
-Computing alpha diversity the common way
+Observed (classical) richness simply counts the number of non-zero ASVs in a sample,
+so it is directly inflated by sequencing depth. Breakaway estimates the true number of
+taxa by modelling unobserved low-abundance species, and should therefore be more robust
+to variation in library size. Here we compare both metrics against library size
+(total reads per sample) to assess how strongly each is confounded by sequencing depth.
+
+```{r richness-libsize-data-asv}
+lib_size_asv <- data.frame(
+  SampleID     = names(sample_sums(phylo_asv)),
+  library_size = as.numeric(sample_sums(phylo_asv))
+)
+
+obs_rich_asv <- data.frame(
+  SampleID = rownames(alpha_div_common_asv),
+  observed  = alpha_div_common_asv$Observed
+)
+
+richness_comp_asv <- lib_size_asv %>%
+  inner_join(obs_rich_asv, by = "SampleID") %>%
+  inner_join(rename(breakaway_rich_asv, breakaway = richness), by = "SampleID")
+
+head(richness_comp_asv)
+```
+
+**Spearman correlation between library size and each richness metric:**
+
+```{r richness-libsize-cor-asv}
+cor_obs_asv <- cor.test(richness_comp_asv$library_size, richness_comp_asv$observed,
+                        method = "spearman", exact = FALSE)
+cor_bw_asv  <- cor.test(richness_comp_asv$library_size, richness_comp_asv$breakaway,
+                        method = "spearman", exact = FALSE)
+
+tibble(
+  Metric   = c("Observed richness", "Richness (breakaway)"),
+  rho      = round(c(cor_obs_asv$estimate, cor_bw_asv$estimate), 3),
+  p_value  = signif(c(cor_obs_asv$p.value, cor_bw_asv$p.value), 3)
+)
+```
+
+```{r richness-vs-libsize-asv, fig.width=10, fig.height=5}
+richness_comp_asv %>%
+  pivot_longer(c(observed, breakaway),
+               names_to  = "method",
+               values_to = "richness") %>%
+  mutate(method = factor(method,
+                         levels = c("observed", "breakaway"),
+                         labels = c("Observed richness", "Richness (breakaway)"))) %>%
+  ggplot(aes(x = library_size, y = richness)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 0.8) +
+  ggpubr::stat_cor(method = "spearman",
+                   label.x.npc = "left", label.y.npc = "top", size = 4.5) +
+  facet_wrap(~method, scales = "free_y") +
+  labs(x = "Library size (reads)", y = "Richness") +
+  theme_classic(base_size = 14)
+```
+
+```{r observed-vs-breakaway-asv, fig.width=7, fig.height=5}
+ggplot(richness_comp_asv, aes(x = observed, y = breakaway, color = library_size)) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 0.8, color = "grey40") +
+  geom_point(alpha = 1, size = 3) +
+  ggpubr::stat_cor(method = "spearman",
+                   label.x.npc = "left", label.y.npc = "top", size = 4.5,
+                   color = "black") +
+  scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
+  labs(x = "Observed richness", y = "Richness (breakaway)") +
+  theme_classic(base_size = 14)
+```
+
+
+## Compute richness (on genus level)
+
+### Common richness
+
+Computing richness the common way (not model-based) using the `estimate_richness` function from `phyloseq` package.
 
 ```{r}
-alpha_div_common_genus <- estimate_richness(phylo_genus)
-head(alpha_div_common_genus)
+alpha_div_common <- estimate_richness(phylo_genus)
+head(alpha_div_common)
 ```
 
-### Breakaway  richness on genus level
+### Breakaway richness
 
 ```{r}
 frequencytablelist <- build_frequency_count_tables(otutab_genus)
 ```
 
 ```{r}
-rich_genus <- 
+breakaway_rich <- 
   data.frame(SampleID = names(frequencytablelist),
-             richness_genus = unlist(lapply(frequencytablelist, 
-                                            function(x) breakaway(x)$estimate))) 
-```
+             richness = unlist(lapply(frequencytablelist, 
+                                      function(x) breakaway(x)$estimate))) 
 
-
-```{r}
-alpha_diversity_rich <- inner_join(alpha_diversity_rich, 
-                                      rich_genus, by = "SampleID")
+alpha_diversity_rich <- breakaway_rich
 head(alpha_diversity_rich)
 ```
 
-## DivNet diversity measures
+### Comparison: classical vs. breakaway 
 
-Due to the long runtime only on genus level
+```{r richness-libsize-data}
+lib_size <- data.frame(
+  SampleID     = names(sample_sums(phylo_genus)),
+  library_size = as.numeric(sample_sums(phylo_genus))
+)
+
+obs_rich <- data.frame(
+  SampleID = rownames(alpha_div_common),
+  observed  = alpha_div_common$Observed
+)
+
+richness_comp <- lib_size %>%
+  inner_join(obs_rich, by = "SampleID") %>%
+  inner_join(rename(breakaway_rich, breakaway = richness), by = "SampleID")
+
+head(richness_comp)
+```
+
+```{r seq-depth}
+richness_comp %>%
+  ggplot(aes(x = library_size)) +
+  geom_histogram(bins = 40, fill = "gray", colour = "white") +
+  geom_vline(xintercept = median(sample_sums(phylo_asv)), linetype = "dashed", 
+             colour = "black", linewidth = 0.9) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    x     = "Read depth (counts)",
+    y     = "Number of samples",
+    title = "Per-sample sequencing depth",
+    subtitle = paste0("Median: ", scales::comma(median(sample_sums(phylo_asv))),
+                      "  |  Range: ", scales::comma(min(sample_sums(phylo_asv))),
+                      " – ", scales::comma(max(sample_sums(phylo_asv))))
+  ) +
+  theme(
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 11),
+    plot.title        = element_text(size = 14)
+  ) +
+  theme_bw()
+```
+
+**Spearman correlation between library size and each richness metric:**
+
+```{r richness-libsize-cor}
+cor_obs <- cor.test(richness_comp$library_size, richness_comp$observed,
+                    method = "spearman", exact = FALSE)
+cor_bw  <- cor.test(richness_comp$library_size, richness_comp$breakaway,
+                    method = "spearman", exact = FALSE)
+
+tibble(
+  Metric   = c("Observed richness", "Richness (breakaway)"),
+  rho      = round(c(cor_obs$estimate, cor_bw$estimate), 3),
+  p_value  = signif(c(cor_obs$p.value, cor_bw$p.value), 3)
+)
+```
+
+```{r richness-vs-libsize, fig.width=10, fig.height=5}
+richness_comp %>%
+  pivot_longer(c(observed, breakaway),
+               names_to  = "method",
+               values_to = "richness") %>%
+  mutate(method = factor(method,
+                         levels = c("observed", "breakaway"),
+                         labels = c("Observed richness", "Richness (breakaway)"))) %>%
+  ggplot(aes(x = library_size, y = richness)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 0.8) +
+  ggpubr::stat_cor(method = "spearman",
+                   label.x.npc = "left", label.y.npc = "top", size = 4.5) +
+  facet_wrap(~method, scales = "free_y") +
+  labs(x = "Library size (reads)", y = "Richness") +
+  theme_bw(base_size = 14)
+```
+
+```{r observed-vs-breakaway, fig.width=5, fig.height=4}
+plot_obs_est_richness <- ggplot(richness_comp, aes(x = observed, y = breakaway, color = library_size)) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey60",
+              linewidth = 0.8) +
+  geom_point(alpha = 0.8, size = 2) +
+  scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
+  labs(x = "Observed richness (classical)", y = "Estimated richness (breakaway)") +
+  theme_bw(base_size = 14)
+plot_obs_est_richness
+```
+
+
+
+## DivNet diversity measures
 
 Find base taxon (with minimum number of non-zero counts)
 
@@ -641,6 +797,7 @@ alpha_diversity <- inner_join(alpha_diversity_rich,
 head(alpha_diversity)
 ```
 
+
 ## Permutation tests
 
 Results are cached separately per variable (one RDS file each). Delete a variable's
@@ -671,8 +828,8 @@ prep_meta <- function(col, extra_filter = NULL) {
   } else {
     d$feature <- as.factor(d$feature)
   }
-  d <- d |> tidyr::drop_na(feature)
-  if (!is.null(extra_filter)) d <- d |> filter(feature != extra_filter)
+  d <- d %>% tidyr::drop_na(feature)
+  if (!is.null(extra_filter)) d <- d %>% filter(feature != extra_filter)
   d$feature <- droplevels(d$feature)
   inner_join(d, alpha_diversity, by = "SampleID")
 }
@@ -687,7 +844,7 @@ vars_def <- list(
   Siblings       = list(col = "sibs_numb_cat",    filter = NULL)
 )
 
-measures_def <- c("richness_genus", "shannon", "gini")
+measures_def <- c("richness", "shannon", "gini")
 
 perm_results <- list()
 
@@ -735,7 +892,7 @@ var_labels <- c(
   Siblings       = "Number of siblings"
 )
 measure_labels <- c(
-  richness_genus = "Breakaway richness",
+  richness_genus = "Richness (breakaway)",
   shannon        = "Shannon (DivNet)",
   gini           = "Gini-Simpson (DivNet)"
 )
@@ -783,9 +940,6 @@ metadata <- metadata %>%
 metadata_alpha <- inner_join(metadata, alpha_diversity,
                              by = "SampleID")
 
-# metadata_alpha[which.max(metadata_alpha$richness_genus), "richness_genus"] <-
-#   max(metadata_alpha$richness_genus) / 2
-
 nfeat <- nlevels(metadata_alpha$feature)
 table(metadata$feature)
 ```
@@ -797,7 +951,7 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.5, dotsize = 1.2,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
               labels = levels(metadata$feature),
-              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
+              ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -866,7 +1020,7 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
               labels = levels(metadata$feature),
-              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
+              ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -936,7 +1090,7 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
               labels = levels(metadata$feature),
-              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
+              ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1003,7 +1157,7 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
               labels = c("0", "1", "\u2265 2"),
-              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
+              ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1070,7 +1224,7 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
               xlab = feature_name, 
               breaks = levels(droplevels(metadata_alpha)$feature),
               labels = c("0", "\u2265 2"),
-              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
+              ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1141,7 +1295,7 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
               labels = levels(metadata$feature),
-              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
+              ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1207,7 +1361,7 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
               labels = c("0", "1", "&gt;1"),
-              ptest = perm_results[[paste0(feat_key, "_richness_genus")]])
+              ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1285,6 +1439,8 @@ print("Runtime:")
 divnet_runtime
 ```
 
+**Computed measures:**
+
 ```{r}
 names(divnet_genus_cov)
 ```
@@ -1307,10 +1463,70 @@ betta_rich <- breakaway::betta(rich_estimates, rich_ses, divnet_genus_cov$X,
 betta_rich$table
 ```
 
+Extract predicted richness values (conditional on covariates):
+
+```{r}
+# Predicted values from the model
+rich_predicted <- divnet_genus_cov$X %*% betta_rich$table[, 1]
+
+richness_with_model <- data.frame(
+  SampleID = model_samples,
+  richness_observed = rich_estimates,
+  richness_predicted = as.numeric(rich_predicted),
+  richness_se = rich_ses
+)
+
+head(richness_with_model)
+
+sdata <- filter(sdata, SampleID %in% richness_with_model$SampleID)
+
+richness_plot_data <- richness_with_model %>%
+  left_join(select(sdata, SampleID, breast_dur_cat1), by = "SampleID") %>%
+  left_join(select(richness_comp, SampleID, library_size), by = "SampleID")
+```
+
+
+```{r observed-vs-predicted-richness-libsize, fig.width=7, fig.height=4}
+plot_obs_est_richness_cov <- 
+  ggplot(richness_plot_data |> inner_join(obs_rich, by = "SampleID"), 
+         aes(x = observed, y = richness_predicted,
+             color = library_size)) +
+  geom_point(alpha = 0.8, size = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey60",
+              linewidth = 0.6) +
+  #coord_cartesian(xlim = c(0, 55), ylim = c(15, 45)) +
+  scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
+  labs(x = "Observed richness (classical)",
+       y = "Predicted richness (model-based)") +
+  theme_bw(base_size = 14)
+plot_obs_est_richness_cov
+```
+
+```{r observed-vs-predicted-richness-libsize-combined, fig.width=8, fig.height=4}
+(plot_obs_est_richness | plot_obs_est_richness_cov) +
+  plot_layout(guides = 'collect')
+```
+
+
+Observed vs. predicted richness (with covariates):
+
+```{r observed-vs-predicted-richness, fig.width=7, fig.height=4}
+ggplot(richness_plot_data, aes(x = richness_observed, y = richness_predicted, 
+                                color = breast_dur_cat1)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey60", 
+              linewidth = 0.6) +
+  scale_color_manual(name = "breast_dur_cat1", 
+                     values = cols[1:length(unique(richness_plot_data$breast_dur_cat1))]) +
+  labs(x = "Observed richness (breakaway)", 
+       y = "Predicted richness (model-based)") +
+  theme_classic(base_size = 14)
+```
+
 ### Shannon
 
 ```{r}
-betta_estimates <- divnet_genus_cov$shannon |> summary() |> dplyr::pull(estimate)
+betta_estimates <- divnet_genus_cov$shannon %>% summary() %>% dplyr::pull(estimate)
 betta_ses       <- sqrt(divnet_genus_cov$`shannon-variance`)
 
 betta_shannon <- breakaway::betta(betta_estimates, betta_ses, divnet_genus_cov$X,
@@ -1335,7 +1551,7 @@ individual p-values in `betta_shannon$table` above.
 ### Gini-Simpson
 
 ```{r}
-gini_estimates <- 1 - (divnet_genus_cov$simpson |> summary() |> dplyr::pull(estimate))
+gini_estimates <- 1 - (divnet_genus_cov$simpson %>% summary() %>% dplyr::pull(estimate))
 gini_ses       <- sqrt(divnet_genus_cov$`simpson-variance`)
 
 betta_gini <- breakaway::betta(gini_estimates, gini_ses, divnet_genus_cov$X,
@@ -1363,9 +1579,9 @@ term_labels <- c(
 )
 
 tidy_betta <- function(betta_res, measure_label) {
-  as.data.frame(betta_res$table) |>
-    tibble::rownames_to_column("term") |>
-    filter(term != "(Intercept)") |>
+  as.data.frame(betta_res$table) %>%
+    tibble::rownames_to_column("term") %>%
+    filter(term != "(Intercept)") %>%
     mutate(
       lower   = Estimates - 1.96 * `Standard Errors`,
       upper   = Estimates + 1.96 * `Standard Errors`,
@@ -1378,14 +1594,14 @@ tidy_betta <- function(betta_res, measure_label) {
 bind_rows(
   tidy_betta(betta_shannon, "Shannon (DivNet)"),
   tidy_betta(betta_gini,   "Gini-Simpson (DivNet)"),
-  tidy_betta(betta_rich,   "Breakaway richness")
-) |>
+  tidy_betta(betta_rich,   "Richness (breakaway)")
+) %>%
   mutate(
-    measure = factor(measure, levels = c("Breakaway richness",
+    measure = factor(measure, levels = c("Richness (breakaway)",
                                          "Shannon (DivNet)",
                                          "Gini-Simpson (DivNet)")),
     term = factor(term, levels = rev(unique(term)))
-  ) |>
+  ) %>%
   ggplot(aes(x = Estimates, y = term, color = sig)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey60") +
   geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0.3) +
@@ -1407,13 +1623,13 @@ higher Shannon diversity (the dominant effect in the model). The following two p
 investigate this.
 
 ```{r cesarean_breastfeed_confounding, fig.width=9, fig.height=4}
-plot_dat <- alpha_diversity_div |>
+plot_dat <- alpha_diversity_div %>%
   left_join(
-    sdata |>
+    sdata %>%
       select(SampleID, cesarean, breast_dur_cat1),
     by = "SampleID"
-  ) |>
-  filter(!is.na(cesarean), !is.na(breast_dur_cat1)) |>
+  ) %>%
+  filter(!is.na(cesarean), !is.na(breast_dur_cat1)) %>%
   mutate(
     cesarean = factor(cesarean, levels = c(1, 0), labels = c("C-section", "Vaginal")),
     breast_dur_cat1 = factor(breast_dur_cat1,
@@ -1422,10 +1638,10 @@ plot_dat <- alpha_diversity_div |>
   )
 
 # Panel 1: breastfeeding duration distribution by delivery mode
-p1 <- plot_dat |>
-  count(cesarean, breast_dur_cat1) |>
-  group_by(cesarean) |>
-  mutate(pct = n / sum(n)) |>
+p1 <- plot_dat %>%
+  count(cesarean, breast_dur_cat1) %>%
+  group_by(cesarean) %>%
+  mutate(pct = n / sum(n)) %>%
   ggplot(aes(x = cesarean, y = pct, fill = breast_dur_cat1)) +
   geom_col() +
   scale_y_continuous(labels = scales::percent_format()) +

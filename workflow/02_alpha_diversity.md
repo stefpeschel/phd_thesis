@@ -1,6 +1,6 @@
 Alpha diversity analysis
 ================
-Compiled at 2026-05-04 20:38:27 UTC
+Compiled at 2026-05-05 16:00:07 UTC
 
 ## Load packages
 
@@ -19,8 +19,6 @@ Compiled at 2026-05-04 20:38:27 UTC
     ## otu_table()   OTU Table:         [ 235 taxa and 592 samples ]
     ## sample_data() Sample Data:       [ 592 samples by 9 sample variables ]
     ## tax_table()   Taxonomy Table:    [ 235 taxa by 7 taxonomic ranks ]
-
-## Colors
 
 ## Functions
 
@@ -310,11 +308,14 @@ perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH",
 
 ### Plot functions
 
-## Compute alpha diversity
+## Colors
 
-### Alpha diversity on ASV level
+## Compute richness (on ASV level)
 
-Computing alpha diversity the common way
+### Common richness
+
+Computing alpha diversity the common way (not model-based) using the
+`estimate_richness` function from `phyloseq` package.
 
     ##         Observed Chao1 se.chao1 ACE   se.ACE   Shannon   Simpson InvSimpson   Fisher
     ## s025647       53    53        0  53 2.952453 2.1820592 0.8101643   5.267713 6.276531
@@ -324,19 +325,47 @@ Computing alpha diversity the common way
     ## s022897       34    34        0  34 2.656845 1.1561633 0.5047898   2.019344 3.937578
     ## s028386       44    44        0  44 2.954196 1.6938618 0.7081637   3.426579 5.076860
 
-### Breakaway richness on ASV level
+### Breakaway richness
 
-    ##         SampleID      age richness_otu
-    ## s025647  s025647 2 months     53.07729
-    ## s023779  s023779 2 months     42.02288
-    ## s026625  s026625 2 months     37.10025
-    ## s022898  s022898 2 months     35.01528
-    ## s022897  s022897 2 months     34.01016
-    ## s028386  s028386 2 months     44.01542
+### Comparison: classical vs. breakaway
 
-### Alpha diversity on genus level
+Observed (classical) richness simply counts the number of non-zero ASVs
+in a sample, so it is directly inflated by sequencing depth. Breakaway
+estimates the true number of taxa by modelling unobserved low-abundance
+species, and should therefore be more robust to variation in library
+size. Here we compare both metrics against library size (total reads per
+sample) to assess how strongly each is confounded by sequencing depth.
 
-Computing alpha diversity the common way
+    ##   SampleID library_size observed breakaway
+    ## 1  s025647        29166       53  53.07729
+    ## 2  s023779        29093       42  42.02288
+    ## 3  s026625        26739       37  37.10025
+    ## 4  s022898        35983       35  35.01528
+    ## 5  s022897        22140       34  34.01016
+    ## 6  s028386        29475       44  44.01542
+
+**Spearman correlation between library size and each richness metric:**
+
+    ## # A tibble: 2 × 3
+    ##   Metric                 rho  p_value
+    ##   <chr>                <dbl>    <dbl>
+    ## 1 Observed richness    0.725 1.25e-97
+    ## 2 Richness (breakaway) 0.723 6.89e-97
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+![](figures/02_alpha_diversity/alpha_richness-vs-libsize-asv-1.png)<!-- -->
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+![](figures/02_alpha_diversity/alpha_observed-vs-breakaway-asv-1.png)<!-- -->
+
+## Compute richness (on genus level)
+
+### Common richness
+
+Computing richness the common way (not model-based) using the
+`estimate_richness` function from `phyloseq` package.
 
     ##         Observed Chao1 se.chao1 ACE   se.ACE   Shannon   Simpson InvSimpson   Fisher
     ## s025647       40    40        0  40 2.641023 1.8370941 0.7583242   4.137775 4.564899
@@ -346,19 +375,43 @@ Computing alpha diversity the common way
     ## s022897       25    25        0  25 2.244994 0.4977167 0.1736147   1.210089 2.783480
     ## s028386       22    22        0  22 1.809068 1.2379658 0.6065971   2.541923 2.329049
 
-### Breakaway richness on genus level
+### Breakaway richness
 
-    ##   SampleID      age richness_otu richness_genus
-    ## 1  s025647 2 months     53.07729       40.07097
-    ## 2  s023779 2 months     42.02288       29.02846
-    ## 3  s026625 2 months     37.10025       26.06324
-    ## 4  s022898 2 months     35.01528       21.02326
-    ## 5  s022897 2 months     34.01016       25.00990
-    ## 6  s028386 2 months     44.01542       22.01301
+    ##         SampleID richness
+    ## s025647  s025647 40.07097
+    ## s023779  s023779 29.02846
+    ## s026625  s026625 26.06324
+    ## s022898  s022898 21.02326
+    ## s022897  s022897 25.00990
+    ## s028386  s028386 22.01301
+
+### Comparison: classical vs. breakaway
+
+    ##   SampleID library_size observed breakaway
+    ## 1  s025647        29166       40  40.07097
+    ## 2  s023779        29093       29  29.02846
+    ## 3  s026625        26739       26  26.06324
+    ## 4  s022898        35983       21  21.02326
+    ## 5  s022897        22140       25  25.00990
+    ## 6  s028386        29475       22  22.01301
+
+![](figures/02_alpha_diversity/alpha_seq-depth-1.png)<!-- -->
+
+**Spearman correlation between library size and each richness metric:**
+
+    ## # A tibble: 2 × 3
+    ##   Metric                 rho  p_value
+    ##   <chr>                <dbl>    <dbl>
+    ## 1 Observed richness    0.7   1.99e-88
+    ## 2 Richness (breakaway) 0.696 6.55e-87
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+![](figures/02_alpha_diversity/alpha_richness-vs-libsize-1.png)<!-- -->
+
+![](figures/02_alpha_diversity/alpha_observed-vs-breakaway-1.png)<!-- -->
 
 ## DivNet diversity measures
-
-Due to the long runtime only on genus level
 
 Find base taxon (with minimum number of non-zero counts)
 
@@ -370,13 +423,13 @@ Find base taxon (with minimum number of non-zero counts)
     ##      user    system   elapsed 
     ## 23304.326 23626.235  2641.461
 
-    ##   SampleID      age richness_otu richness_genus   shannon   simpson inv_simpson      gini
-    ## 1  s025647 2 months     53.07729       40.07097 1.8412512 0.2415143    4.140542 0.7584857
-    ## 2  s023779 2 months     42.02288       29.02846 0.6171782 0.7836776    1.276035 0.2163224
-    ## 3  s026625 2 months     37.10025       26.06324 0.3617418 0.8870403    1.127344 0.1129597
-    ## 4  s022898 2 months     35.01528       21.02326 0.5151174 0.7639270    1.309026 0.2360730
-    ## 5  s022897 2 months     34.01016       25.00990 0.5041177 0.8256020    1.211237 0.1743980
-    ## 6  s028386 2 months     44.01542       22.01301 1.2426791 0.3931188    2.543760 0.6068812
+    ##   SampleID richness   shannon   simpson inv_simpson      gini
+    ## 1  s025647 40.07097 1.8412512 0.2415143    4.140542 0.7584857
+    ## 2  s023779 29.02846 0.6171782 0.7836776    1.276035 0.2163224
+    ## 3  s026625 26.06324 0.3617418 0.8870403    1.127344 0.1129597
+    ## 4  s022898 21.02326 0.5151174 0.7639270    1.309026 0.2360730
+    ## 5  s022897 25.00990 0.5041177 0.8256020    1.211237 0.1743980
+    ## 6  s028386 22.01301 1.2426791 0.3931188    2.543760 0.6068812
 
 ## Permutation tests
 
@@ -389,25 +442,25 @@ functions below and summarised in the comparison table.
 
 | Variable | Measure | H statistic | p (KW asymptotic) | p (permutation) | p (GPD-refined) |
 |:---|:---|---:|---:|---:|---:|
-| Country | Breakaway richness | 31.57 | 1.40e-07 | 1.00e-06 | 1.99e-07 |
+| Country | Richness (breakaway) | 31.57 | 1.40e-07 | 1.00e-06 | 1.99e-07 |
 | Country | Shannon (DivNet) | 40.06 | 2.00e-09 | 1.00e-06 | 3.01e-09 |
 | Country | Gini-Simpson (DivNet) | 39.88 | 2.19e-09 | 1.00e-06 | 4.89e-09 |
-| Sex | Breakaway richness | 1.79 | 1.80e-01 | 1.77e-01 | 1.77e-01 |
+| Sex | Richness (breakaway) | 1.79 | 1.80e-01 | 1.77e-01 | 1.77e-01 |
 | Sex | Shannon (DivNet) | 1.85 | 1.73e-01 | 1.72e-01 | 1.72e-01 |
 | Sex | Gini-Simpson (DivNet) | 2.10 | 1.47e-01 | 1.49e-01 | 1.49e-01 |
-| C-section | Breakaway richness | 0.33 | 5.64e-01 | 5.64e-01 | 5.64e-01 |
+| C-section | Richness (breakaway) | 0.33 | 5.64e-01 | 5.64e-01 | 5.64e-01 |
 | C-section | Shannon (DivNet) | 4.86 | 2.74e-02 | 2.54e-02 | 2.50e-02 |
 | C-section | Gini-Simpson (DivNet) | 5.73 | 1.67e-02 | 1.35e-02 | 1.43e-02 |
-| Breastfeeding duration | Breakaway richness | 7.69 | 2.14e-02 | 2.12e-02 | 2.12e-02 |
+| Breastfeeding duration | Richness (breakaway) | 7.69 | 2.14e-02 | 2.12e-02 | 2.12e-02 |
 | Breastfeeding duration | Shannon (DivNet) | 83.47 | 7.51e-19 | 1.00e-06 | 1.44e-17 |
 | Breastfeeding duration | Gini-Simpson (DivNet) | 73.49 | 1.10e-16 | 1.00e-06 | 4.69e-15 |
-| Exclusive breastfeeding | Breakaway richness | 2.73 | 9.84e-02 | 9.84e-02 | 9.84e-02 |
+| Exclusive breastfeeding | Richness (breakaway) | 2.73 | 9.84e-02 | 9.84e-02 | 9.84e-02 |
 | Exclusive breastfeeding | Shannon (DivNet) | 65.13 | 7.02e-16 | 1.00e-06 | 5.18e-14 |
 | Exclusive breastfeeding | Gini-Simpson (DivNet) | 56.47 | 5.71e-14 | 1.00e-06 | 5.04e-14 |
-| Prenatal smoking | Breakaway richness | 3.95 | 4.70e-02 | 4.69e-02 | 4.69e-02 |
+| Prenatal smoking | Richness (breakaway) | 3.95 | 4.70e-02 | 4.69e-02 | 4.69e-02 |
 | Prenatal smoking | Shannon (DivNet) | 18.81 | 1.45e-05 | 1.30e-05 | 1.01e-05 |
 | Prenatal smoking | Gini-Simpson (DivNet) | 18.08 | 2.12e-05 | 1.60e-05 | 1.47e-05 |
-| Number of siblings | Breakaway richness | 1.41 | 4.94e-01 | 4.97e-01 | 4.97e-01 |
+| Number of siblings | Richness (breakaway) | 1.41 | 4.94e-01 | 4.97e-01 | 4.97e-01 |
 | Number of siblings | Shannon (DivNet) | 2.66 | 2.64e-01 | 2.61e-01 | 2.61e-01 |
 | Number of siblings | Gini-Simpson (DivNet) | 3.04 | 2.18e-01 | 2.20e-01 | 2.20e-01 |
 
@@ -481,8 +534,10 @@ the 484 samples with complete covariate data.
     ##    user  system elapsed 
     ## 3527.96   68.16 3601.64
 
-    ##  [1] "shannon"              "simpson"              "bray-curtis"          "euclidean"            "shannon-variance"    
-    ##  [6] "simpson-variance"     "bray-curtis-variance" "euclidean-variance"   "X"                    "fitted_z"
+**Computed measures:**
+
+    ##  [1] "shannon"              "simpson"              "bray-curtis"          "euclidean"            "shannon-variance"     "simpson-variance"    
+    ##  [7] "bray-curtis-variance" "euclidean-variance"   "X"                    "fitted_z"
 
 ### Richness
 
@@ -498,6 +553,24 @@ the 484 samples with complete covariate data.
     ## pregsmoke            1.4524867       0.9578035 1.293989e-01
     ## sibs_numb_cat1       1.2658116       0.4613602 6.076003e-03
     ## sibs_numb_cat>1      1.4983661       0.4096828 2.548050e-04
+
+Extract predicted richness values (conditional on covariates):
+
+    ##         SampleID richness_observed richness_predicted richness_se
+    ## s026625  s026625          26.06324           29.09400         0.5
+    ## s022898  s022898          21.02326           25.30383         0.5
+    ## s022897  s022897          25.00990           24.34414         0.5
+    ## s028386  s028386          22.01301           25.67761         0.5
+    ## s023716  s023716          22.02520           25.14165         0.5
+    ## s021517  s021517          34.05488           26.98887         0.5
+
+![](figures/02_alpha_diversity/alpha_observed-vs-predicted-richness-libsize-1.png)<!-- -->
+
+![](figures/02_alpha_diversity/alpha_observed-vs-predicted-richness-libsize-combined-1.png)<!-- -->
+
+Observed vs. predicted richness (with covariates):
+
+![](figures/02_alpha_diversity/alpha_observed-vs-predicted-richness-1.png)<!-- -->
 
 ### Shannon
 
