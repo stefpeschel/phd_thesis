@@ -15,7 +15,7 @@ params:
 here::i_am(paste0(params$name, ".Rmd"), uuid = "41b33e9b-a351-49eb-bdc8-cdeddd77796c")
 ```
 
-```{r global-options, include=FALSE}
+```{r global_options, include=FALSE}
 knitr::opts_chunk$set(
   dev = c("png", "cairo_pdf"),
   fig.ext = c("png", "pdf"),
@@ -24,6 +24,8 @@ knitr::opts_chunk$set(
   dpi = 250,
   fig.path = paste0('figures/', params, "/alpha_"),
   echo = FALSE)
+
+conflicts_prefer(dplyr::filter)
 ```
 
 ## Load packages
@@ -60,7 +62,7 @@ path_source <- projthis::proj_path_source(params$name)
 
 ## Load data
 
-```{r load-data}
+```{r load_data}
 phylo_asv   <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_asv.rds"))
 phylo_genus <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_genus.rds"))
 sampdata <- sample_data(phylo_asv) %>% as("data.frame")
@@ -563,7 +565,7 @@ taxa by modelling unobserved low-abundance species, and should therefore be more
 to variation in library size. Here we compare both metrics against library size
 (total reads per sample) to assess how strongly each is confounded by sequencing depth.
 
-```{r richness-libsize-data-asv}
+```{r richness_libsize_data_asv}
 lib_size_asv <- data.frame(
   SampleID     = names(sample_sums(phylo_asv)),
   library_size = as.numeric(sample_sums(phylo_asv))
@@ -583,7 +585,7 @@ head(richness_comp_asv)
 
 **Spearman correlation between library size and each richness metric:**
 
-```{r richness-libsize-cor-asv}
+```{r richness_libsize_cor_asv}
 cor_obs_asv <- cor.test(richness_comp_asv$library_size, richness_comp_asv$observed,
                         method = "spearman", exact = FALSE)
 cor_bw_asv  <- cor.test(richness_comp_asv$library_size, richness_comp_asv$breakaway,
@@ -596,7 +598,7 @@ tibble(
 )
 ```
 
-```{r richness-vs-libsize-asv, fig.width=10, fig.height=5}
+```{r richness_vs_libsize_asv, fig.width=10, fig.height=5}
 richness_comp_asv %>%
   pivot_longer(c(observed, breakaway),
                names_to  = "method",
@@ -614,7 +616,7 @@ richness_comp_asv %>%
   theme_classic(base_size = 14)
 ```
 
-```{r observed-vs-breakaway-asv, fig.width=7, fig.height=5}
+```{r observed_vs_breakaway_asv, fig.width=7, fig.height=5}
 ggplot(richness_comp_asv, aes(x = observed, y = breakaway, color = library_size)) +
   geom_smooth(method = "lm", se = TRUE, linewidth = 0.8, color = "grey40") +
   geom_point(alpha = 1, size = 3) +
@@ -626,6 +628,33 @@ ggplot(richness_comp_asv, aes(x = observed, y = breakaway, color = library_size)
   theme_classic(base_size = 14)
 ```
 
+```{r freq_spectrum_asv, fig.width=7, fig.height=4}
+# For each read-count class 0–10, count how many genera hit that count per sample
+freq_spectrum <- map_dfr(1:10, function(k) {
+  counts_per_sample <- colSums(otutab_asv == k)
+  tibble(
+    count     = k,
+    mean_taxa = mean(counts_per_sample),
+    sd_taxa   = sd(counts_per_sample)
+  )
+})
+
+ggplot(freq_spectrum, aes(x = factor(count), y = mean_taxa)) +
+  geom_errorbar(aes(ymin = pmax(0, mean_taxa - sd_taxa),
+                    ymax = mean_taxa + sd_taxa),
+                width = 0.25, linewidth = 0.5, color = "grey40") +
+  geom_point(size = 3) +
+  scale_x_discrete(labels = 1:10) +
+  scale_y_continuous(
+    trans        = "log1p",
+    breaks       = c(0, 1, 2, 5, 10, 50, 100, 500, 1000, 2000),
+    minor_breaks = NULL
+  ) +
+  labs(x = "Read count per sample",
+       y = "Mean number of ASVs per sample") +
+  theme_bw(base_size = 13) +
+  theme(plot.caption = element_text(hjust = 0, size = 10))
+```
 
 ## Compute richness (on genus level)
 
@@ -656,7 +685,7 @@ head(alpha_diversity_rich)
 
 ### Comparison: classical vs. breakaway 
 
-```{r richness-libsize-data}
+```{r richness_libsize_data}
 lib_size <- data.frame(
   SampleID     = names(sample_sums(phylo_genus)),
   library_size = as.numeric(sample_sums(phylo_genus))
@@ -674,7 +703,7 @@ richness_comp <- lib_size %>%
 head(richness_comp)
 ```
 
-```{r seq-depth}
+```{r seq_depth}
 richness_comp %>%
   ggplot(aes(x = library_size)) +
   geom_histogram(bins = 40, fill = "gray", colour = "white") +
@@ -699,7 +728,7 @@ richness_comp %>%
 
 **Spearman correlation between library size and each richness metric:**
 
-```{r richness-libsize-cor}
+```{r richness_libsize_cor}
 cor_obs <- cor.test(richness_comp$library_size, richness_comp$observed,
                     method = "spearman", exact = FALSE)
 cor_bw  <- cor.test(richness_comp$library_size, richness_comp$breakaway,
@@ -712,7 +741,7 @@ tibble(
 )
 ```
 
-```{r richness-vs-libsize, fig.width=10, fig.height=5}
+```{r richness_vs_libsize, fig.width=10, fig.height=5}
 richness_comp %>%
   pivot_longer(c(observed, breakaway),
                names_to  = "method",
@@ -730,7 +759,7 @@ richness_comp %>%
   theme_bw(base_size = 14)
 ```
 
-```{r observed-vs-breakaway, fig.width=5, fig.height=4}
+```{r observed_vs_breakaway, fig.width=5, fig.height=4}
 plot_obs_est_richness <- ggplot(richness_comp, aes(x = observed, y = breakaway, color = library_size)) +
   geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey60",
               linewidth = 0.8) +
@@ -741,7 +770,51 @@ plot_obs_est_richness <- ggplot(richness_comp, aes(x = observed, y = breakaway, 
 plot_obs_est_richness
 ```
 
+Breakaway estimates closely track observed richness. The frequency spectrum below
+explains why: unseen-species estimators such as breakaway extrapolate unobserved
+diversity from the ratio of rare taxa (singletons, doubletons, …). At genus level,
+read counts are aggregated across ASVs, so genera with very few reads are rare.
 
+```{r freq_spectrum_genus, fig.width=7, fig.height=4}
+# For each read-count class 0–10, count how many genera hit that count per sample
+freq_spectrum <- map_dfr(0:10, function(k) {
+  counts_per_sample <- colSums(otutab_genus == k)
+  tibble(
+    count     = k,
+    mean_taxa = mean(counts_per_sample),
+    sd_taxa   = sd(counts_per_sample)
+  )
+})
+
+x_labels <- c("0\n(absent)", "1\n(singleton)", "2\n(doubleton)", "3\n(tripleton)",
+               as.character(4:10))
+
+ggplot(freq_spectrum, aes(x = factor(count), y = mean_taxa)) +
+  geom_errorbar(aes(ymin = pmax(0, mean_taxa - sd_taxa),
+                    ymax = mean_taxa + sd_taxa),
+                width = 0.25, linewidth = 0.5, color = "grey40") +
+  geom_point(size = 3) +
+  scale_x_discrete(labels = 0:10) +
+  scale_y_continuous(
+    trans        = "log1p",
+    breaks       = c(0, 1, 2, 5, 10, 50, 100, 200),
+    minor_breaks = NULL
+  ) +
+  labs(x = "Read count per sample",
+       y = "Mean number of genera per sample") +
+  theme_bw(base_size = 13) +
+  theme(plot.caption = element_text(hjust = 0, size = 10))
+```
+
+Legend: Dots = mean across 592 samples; bars = \u00b11 SD.
+
+~211 genera are absent in the average sample (count = 0, top-left point). No sample
+contains any singleton genus (count = 1, pinned at zero): ASV-level rareness
+disappears when reads are aggregated to genus. The f~2~–f~10~ band contains only
+~0.6–0.9 genera on average per sample — an extremely sparse frequency tail.
+Without singleton signal, estimators that rely on f~1~/f~2~ (Chao1, breakaway)
+have no basis to project unseen genera, which is why breakaway estimates
+closely track observed richness throughout this analysis.
 
 ## DivNet diversity measures
 
@@ -805,7 +878,7 @@ file and rerun this chunk to recompute only that variable. Each test uses $10^6$
 permutations. Results are reused by the plotting functions below and summarised in
 the comparison table.
 
-```{r perm-tests, warning=FALSE}
+```{r perm_tests, warning=FALSE}
 cores <- 10
 
 future::plan(
@@ -881,7 +954,7 @@ progressr::with_progress({
 
 ### Comparison of asymptotic vs. permutation p-values
 
-```{r perm-table}
+```{r perm_table}
 var_labels <- c(
   Country        = "Country",
   Sex            = "Sex",
@@ -918,7 +991,9 @@ knitr::kable(perm_table,
              align = "llrrrr")
 ```
 
-## Study center
+## Plots 
+
+### Study center
 
 ```{r}
 feature_name <- "Country"
@@ -986,7 +1061,7 @@ ggarrange(pr, ps, pg,
 ```
 
 
-## Sex
+### Sex
 
 ```{r}
 feature_name <- "Sex"
@@ -1053,7 +1128,7 @@ ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
 ```
 
-## C-section
+### C-section
 
 ```{r}
 feature_name <- "C-section"
@@ -1124,7 +1199,7 @@ ggarrange(pr, ps, pg, ncol = 3, nrow = 1)
 ```
 
 
-## Breast feeding
+### Breast feeding
 
 ```{r}
 feature_name <- "Breast feeding"
@@ -1190,7 +1265,7 @@ ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
 ```
 
-## Exclusive breast feeding
+### Exclusive breast feeding
 
 ```{r}
 feature_name <- "Exclusive breast feeding"
@@ -1258,7 +1333,7 @@ ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
 ```
 
-## Smoke during pregnancy
+### Smoke during pregnancy
 
 ```{r}
 feature_name <- "Smoke during Pregnancy"
@@ -1329,7 +1404,7 @@ ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
 ```
 
-## Number of siblings
+### Number of siblings
 
 ```{r}
 feature_name <- "Number of siblings"
@@ -1396,7 +1471,126 @@ ggarrange(pr, ps, pg,
 ```
 
 
-## Model-based analysis: regression on Shannon diversity (betta)
+## Model-based analysis
+
+The permutation tests above treat each sample's diversity estimate as an exact
+observation. A model-based alternative, introduced by Willis & Martin (2020), uses
+`breakaway::betta()` — a mixed-effects regression model that explicitly accounts
+for the per-sample estimation variance ($\delta_i^2$) from breakaway/DivNet while
+simultaneously estimating residual biological heterogeneity ($\sigma^2$). We
+present two versions:
+
+1. **Intercept-only**: estimates the grand mean of each diversity metric with
+   proper variance weighting, using the full sample set. This is the baseline
+   approach from Willis & Martin (2020) and can serve as a foundation for
+   permutation tests that respect estimation uncertainty.
+2. **With covariates**: adds cohort-level predictors to jointly estimate
+   associations with diversity, restricted to samples with complete covariate data.
+
+---
+
+### Intercept-only model
+
+The intercept-only `betta` model fits
+
+$$Y_i = \mu + \varepsilon_i + \delta_i,$$
+
+where $Y_i$ is the diversity estimate for sample $i$, $\mu$ is the global mean,
+$\varepsilon_i \sim \mathcal{N}(0,\,\sigma^2)$ captures residual biological
+variation (estimated from the data), and $\delta_i$ is the estimation error with
+known variance supplied by breakaway/DivNet.
+
+The estimated $\sigma^2$ (labelled `global` in the betta output) captures
+between-sample variation after accounting for estimation noise. A large $\sigma^2$
+relative to the typical $\delta_i^2$ means biological heterogeneity dominates —
+which is a prerequisite for permutation tests to have power beyond a naïve
+Kruskal–Wallis test on raw estimates. The BLUP-like fitted values from this model
+could replace raw estimates in permutation tests, downweighting samples with high
+estimation uncertainty and providing a fairer test statistic when $\delta_i^2$
+varies substantially across samples.
+
+#### Richness
+
+```{r betta_int_richness}
+# Cache full-sample breakaway runs (estimate + SE needed for betta)
+if (!file.exists(path_target("breakaway_rich_full.rds"))) {
+  rich_full <- lapply(frequencytablelist, breakaway::breakaway)
+  saveRDS(rich_full, file = path_target("breakaway_rich_full.rds"))
+} else {
+  rich_full <- readRDS(path_target("breakaway_rich_full.rds"))
+}
+
+rich_est_int <- sapply(rich_full, function(x) x$estimate)
+rich_ses_int <- pmax(sapply(rich_full, function(x) x$error), 0.5)
+
+X_int_rich <- matrix(1, nrow = length(rich_est_int), ncol = 1,
+                     dimnames = list(NULL, "(Intercept)"))
+
+betta_rich_int <- breakaway::betta(rich_est_int, rich_ses_int, X_int_rich,
+                                   p.digits = 30)
+betta_rich_int$table
+```
+
+```{r}
+# Predicted values: intercept-only model predicts the grand mean for every sample
+rich_predicted_int <- as.numeric(X_int_rich %*% betta_rich_int$table[, 1])
+
+richness_plot_data_int <- data.frame(
+  SampleID           = names(rich_est_int),
+  richness_predicted = rich_predicted_int
+) |>
+  left_join(select(richness_comp, SampleID, library_size), by = "SampleID")
+```
+
+```{r observed_vs_predicted_richness_int_libsize, fig.width=7, fig.height=4}
+plot_obs_est_richness_int <-
+  ggplot(richness_plot_data_int |> inner_join(obs_rich, by = "SampleID"),
+         aes(x = observed, y = richness_predicted, color = library_size)) +
+  geom_point(alpha = 0.8, size = 2) +
+  scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
+  labs(x = "Observed richness (classical)",
+       y = "Predicted richness (intercept-only)") +
+  theme_bw(base_size = 14)
+plot_obs_est_richness_int
+```
+
+Since the intercept-only model has no covariates, all samples receive the same
+predicted value (the grand mean), so the points form a horizontal band. The
+vertical spread reflects true biological variation plus estimation noise that
+the model cannot explain without predictors.
+
+#### Shannon
+
+```{r betta_int_shannon}
+betta_est_int_s <- divnet_genus$shannon %>% summary() %>% dplyr::pull(estimate)
+betta_ses_int_s <- sqrt(divnet_genus$`shannon-variance`)
+
+X_int_s <- matrix(1, nrow = length(betta_est_int_s), ncol = 1,
+                  dimnames = list(NULL, "(Intercept)"))
+
+betta_shannon_int <- breakaway::betta(betta_est_int_s, betta_ses_int_s, X_int_s,
+                                      p.digits = 30)
+betta_shannon_int$table
+```
+
+#### Gini-Simpson
+
+```{r betta_int_gini}
+gini_est_int <- 1 - (divnet_genus$simpson %>% summary() %>% dplyr::pull(estimate))
+gini_ses_int <- sqrt(divnet_genus$`simpson-variance`)
+
+X_int_g <- matrix(1, nrow = length(gini_est_int), ncol = 1,
+                  dimnames = list(NULL, "(Intercept)"))
+
+betta_gini_int <- breakaway::betta(gini_est_int, gini_ses_int, X_int_g,
+                                   p.digits = 30)
+betta_gini_int$table
+```
+
+
+---
+
+### With covariates
 
 ```{r}
 # Drop samples with NAs in any formula covariate
@@ -1445,7 +1639,7 @@ divnet_runtime
 names(divnet_genus_cov)
 ```
 
-### Richness
+#### Richness
 
 ```{r}
 # Rerun breakaway only on the model samples (n = 486) to obtain aligned SEs.
@@ -1486,7 +1680,7 @@ richness_plot_data <- richness_with_model %>%
 ```
 
 
-```{r observed-vs-predicted-richness-libsize, fig.width=7, fig.height=4}
+```{r observed_vs_predicted_richness_libsize, fig.width=7, fig.height=4}
 plot_obs_est_richness_cov <- 
   ggplot(richness_plot_data |> inner_join(obs_rich, by = "SampleID"), 
          aes(x = observed, y = richness_predicted,
@@ -1502,7 +1696,7 @@ plot_obs_est_richness_cov <-
 plot_obs_est_richness_cov
 ```
 
-```{r observed-vs-predicted-richness-libsize-combined, fig.width=8, fig.height=4}
+```{r observed_vs_predicted_richness_libsize_combined, fig.width=8, fig.height=4}
 (plot_obs_est_richness | plot_obs_est_richness_cov) +
   plot_layout(guides = 'collect')
 ```
@@ -1510,7 +1704,7 @@ plot_obs_est_richness_cov
 
 Observed vs. predicted richness (with covariates):
 
-```{r observed-vs-predicted-richness, fig.width=7, fig.height=4}
+```{r observed_vs_predicted_richness, fig.width=7, fig.height=4}
 ggplot(richness_plot_data, aes(x = richness_observed, y = richness_predicted, 
                                 color = breast_dur_cat1)) +
   geom_point(alpha = 0.7, size = 2) +
@@ -1523,7 +1717,7 @@ ggplot(richness_plot_data, aes(x = richness_observed, y = richness_predicted,
   theme_classic(base_size = 14)
 ```
 
-### Shannon
+#### Shannon
 
 ```{r}
 betta_estimates <- divnet_genus_cov$shannon %>% summary() %>% dplyr::pull(estimate)
@@ -1548,7 +1742,7 @@ intercept-only model, meaning at least one covariate is meaningfully associated 
 diversity. It does not identify which covariates are responsible — that is addressed by the
 individual p-values in `betta_shannon$table` above.
 
-### Gini-Simpson
+#### Gini-Simpson
 
 ```{r}
 gini_estimates <- 1 - (divnet_genus_cov$simpson %>% summary() %>% dplyr::pull(estimate))
@@ -1561,7 +1755,7 @@ betta_gini$table
 
 
 
-### Combined coefficient plot
+#### Combined coefficient plot
 
 ```{r betta_forest_combined, fig.width=10, fig.height=6}
 term_labels <- c(
@@ -1614,7 +1808,7 @@ bind_rows(
   theme(strip.text = element_text(face = "bold"))
 ```
 
-#### Investigating the C-section effect: confounding by breastfeeding duration
+##### Investigating the C-section effect: confounding by breastfeeding duration
 
 The positive association of caesarean delivery with Shannon diversity is counterintuitive
 biologically. A likely explanation is confounding by breastfeeding: C-section delivery is
@@ -1669,6 +1863,6 @@ duration stratum, the delivery mode difference is substantially attenuated or ab
 
 These files have been written to the target directory, ```r paste0("data/", params$name)```:
 
-```{r list-files-target}
+```{r list_files_target}
 projthis::proj_dir_info(path_target())
 ```

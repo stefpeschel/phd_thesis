@@ -1,6 +1,6 @@
 Alpha diversity analysis
 ================
-Compiled at 2026-05-05 16:00:07 UTC
+Compiled at 2026-05-05 21:43:34 UTC
 
 ## Load packages
 
@@ -354,11 +354,13 @@ sample) to assess how strongly each is confounded by sequencing depth.
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](figures/02_alpha_diversity/alpha_richness-vs-libsize-asv-1.png)<!-- -->
+![](figures/02_alpha_diversity/alpha_richness_vs_libsize_asv-1.png)<!-- -->
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](figures/02_alpha_diversity/alpha_observed-vs-breakaway-asv-1.png)<!-- -->
+![](figures/02_alpha_diversity/alpha_observed_vs_breakaway_asv-1.png)<!-- -->
+
+![](figures/02_alpha_diversity/alpha_freq_spectrum_asv-1.png)<!-- -->
 
 ## Compute richness (on genus level)
 
@@ -395,7 +397,7 @@ Computing richness the common way (not model-based) using the
     ## 5  s022897        22140       25  25.00990
     ## 6  s028386        29475       22  22.01301
 
-![](figures/02_alpha_diversity/alpha_seq-depth-1.png)<!-- -->
+![](figures/02_alpha_diversity/alpha_seq_depth-1.png)<!-- -->
 
 **Spearman correlation between library size and each richness metric:**
 
@@ -407,9 +409,29 @@ Computing richness the common way (not model-based) using the
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](figures/02_alpha_diversity/alpha_richness-vs-libsize-1.png)<!-- -->
+![](figures/02_alpha_diversity/alpha_richness_vs_libsize-1.png)<!-- -->
 
-![](figures/02_alpha_diversity/alpha_observed-vs-breakaway-1.png)<!-- -->
+![](figures/02_alpha_diversity/alpha_observed_vs_breakaway-1.png)<!-- -->
+
+Breakaway estimates closely track observed richness. The frequency
+spectrum below explains why: unseen-species estimators such as breakaway
+extrapolate unobserved diversity from the ratio of rare taxa
+(singletons, doubletons, …). At genus level, read counts are aggregated
+across ASVs, so genera with very few reads are rare.
+
+![](figures/02_alpha_diversity/alpha_freq_spectrum_genus-1.png)<!-- -->
+
+Legend: Dots = mean across 592 samples; bars = 0b11 SD.
+
+~211 genera are absent in the average sample (count = 0, top-left
+point). No sample contains any singleton genus (count = 1, pinned at
+zero): ASV-level rareness disappears when reads are aggregated to genus.
+The f<sub>2</sub>–f<sub>10</sub> band contains only ~0.6–0.9 genera on
+average per sample — an extremely sparse frequency tail. Without
+singleton signal, estimators that rely on f<sub>1</sub>/f<sub>2</sub>
+(Chao1, breakaway) have no basis to project unseen genera, which is why
+breakaway estimates closely track observed richness throughout this
+analysis.
 
 ## DivNet diversity measures
 
@@ -464,7 +486,9 @@ functions below and summarised in the comparison table.
 | Number of siblings | Shannon (DivNet) | 2.66 | 2.64e-01 | 2.61e-01 | 2.61e-01 |
 | Number of siblings | Gini-Simpson (DivNet) | 3.04 | 2.18e-01 | 2.20e-01 | 2.20e-01 |
 
-## Study center
+## Plots
+
+### Study center
 
     ## 
     ##     Austria     Germany Switzerland 
@@ -472,7 +496,7 @@ functions below and summarised in the comparison table.
 
 ![](figures/02_alpha_diversity/alpha_Country_2m-1.png)<!-- -->
 
-## Sex
+### Sex
 
     ## 
     ## female   male 
@@ -480,7 +504,7 @@ functions below and summarised in the comparison table.
 
 ![](figures/02_alpha_diversity/alpha_sex_2m-1.png)<!-- -->
 
-## C-section
+### C-section
 
     ## 
     ## yes  no 
@@ -488,7 +512,7 @@ functions below and summarised in the comparison table.
 
 ![](figures/02_alpha_diversity/alpha_cesarean_2m-1.png)<!-- -->
 
-## Breast feeding
+### Breast feeding
 
     ## 
     ##   0   1 >=2 
@@ -496,7 +520,7 @@ functions below and summarised in the comparison table.
 
 ![](figures/02_alpha_diversity/alpha_breastfeed_2m-1.png)<!-- -->
 
-## Exclusive breast feeding
+### Exclusive breast feeding
 
     ## 
     ##   0   1 >=2 
@@ -504,7 +528,7 @@ functions below and summarised in the comparison table.
 
 ![](figures/02_alpha_diversity/alpha_breast_excl_2m-1.png)<!-- -->
 
-## Smoke during pregnancy
+### Smoke during pregnancy
 
     ## 
     ## yes  no 
@@ -512,7 +536,7 @@ functions below and summarised in the comparison table.
 
 ![](figures/02_alpha_diversity/alpha_pregsmoke_2m-1.png)<!-- -->
 
-## Number of siblings
+### Number of siblings
 
     ## 
     ##   0   1  >1 
@@ -520,7 +544,73 @@ functions below and summarised in the comparison table.
 
 ![](figures/02_alpha_diversity/alpha_sibsnumb_2m-1.png)<!-- -->
 
-## Model-based analysis: regression on Shannon diversity (betta)
+## Model-based analysis
+
+The permutation tests above treat each sample’s diversity estimate as an
+exact observation. A model-based alternative, introduced by Willis &
+Martin (2020), uses `breakaway::betta()` — a mixed-effects regression
+model that explicitly accounts for the per-sample estimation variance
+($\delta_i^2$) from breakaway/DivNet while simultaneously estimating
+residual biological heterogeneity ($\sigma^2$). We present two versions:
+
+1.  **Intercept-only**: estimates the grand mean of each diversity
+    metric with proper variance weighting, using the full sample set.
+    This is the baseline approach from Willis & Martin (2020) and can
+    serve as a foundation for permutation tests that respect estimation
+    uncertainty.
+2.  **With covariates**: adds cohort-level predictors to jointly
+    estimate associations with diversity, restricted to samples with
+    complete covariate data.
+
+------------------------------------------------------------------------
+
+### Intercept-only model
+
+The intercept-only `betta` model fits
+
+$$Y_i = \mu + \varepsilon_i + \delta_i,$$
+
+where $Y_i$ is the diversity estimate for sample $i$, $\mu$ is the
+global mean, $\varepsilon_i \sim \mathcal{N}(0,\,\sigma^2)$ captures
+residual biological variation (estimated from the data), and $\delta_i$
+is the estimation error with known variance supplied by
+breakaway/DivNet.
+
+The estimated $\sigma^2$ (labelled `global` in the betta output)
+captures between-sample variation after accounting for estimation noise.
+A large $\sigma^2$ relative to the typical $\delta_i^2$ means biological
+heterogeneity dominates — which is a prerequisite for permutation tests
+to have power beyond a naïve Kruskal–Wallis test on raw estimates. The
+BLUP-like fitted values from this model could replace raw estimates in
+permutation tests, downweighting samples with high estimation
+uncertainty and providing a fairer test statistic when $\delta_i^2$
+varies substantially across samples.
+
+#### Richness
+
+    ##      Estimates Standard Errors p-values
+    ## [1,]  24.26414       0.2710555        0
+
+![](figures/02_alpha_diversity/alpha_observed_vs_predicted_richness_int_libsize-1.png)<!-- -->
+
+Since the intercept-only model has no covariates, all samples receive
+the same predicted value (the grand mean), so the points form a
+horizontal band. The vertical spread reflects true biological variation
+plus estimation noise that the model cannot explain without predictors.
+
+#### Shannon
+
+    ##      Estimates Standard Errors p-values
+    ## [1,] 0.9947692      0.02078224        0
+
+#### Gini-Simpson
+
+    ##      Estimates Standard Errors p-values
+    ## [1,] 0.4262151     0.009476933        0
+
+------------------------------------------------------------------------
+
+### With covariates
 
 The strip charts above show unadjusted, per-sample DivNet estimates.
 Here we use the covariate model (`divnet_genus_cov`, family level)
@@ -536,10 +626,10 @@ the 484 samples with complete covariate data.
 
 **Computed measures:**
 
-    ##  [1] "shannon"              "simpson"              "bray-curtis"          "euclidean"            "shannon-variance"     "simpson-variance"    
-    ##  [7] "bray-curtis-variance" "euclidean-variance"   "X"                    "fitted_z"
+    ##  [1] "shannon"              "simpson"              "bray-curtis"          "euclidean"            "shannon-variance"    
+    ##  [6] "simpson-variance"     "bray-curtis-variance" "euclidean-variance"   "X"                    "fitted_z"
 
-### Richness
+#### Richness
 
     ##                      Estimates Standard Errors     p-values
     ## (Intercept)         22.7682153       0.2920787 0.000000e+00
@@ -564,15 +654,15 @@ Extract predicted richness values (conditional on covariates):
     ## s023716  s023716          22.02520           25.14165         0.5
     ## s021517  s021517          34.05488           26.98887         0.5
 
-![](figures/02_alpha_diversity/alpha_observed-vs-predicted-richness-libsize-1.png)<!-- -->
+![](figures/02_alpha_diversity/alpha_observed_vs_predicted_richness_libsize-1.png)<!-- -->
 
-![](figures/02_alpha_diversity/alpha_observed-vs-predicted-richness-libsize-combined-1.png)<!-- -->
+![](figures/02_alpha_diversity/alpha_observed_vs_predicted_richness_libsize_combined-1.png)<!-- -->
 
 Observed vs. predicted richness (with covariates):
 
-![](figures/02_alpha_diversity/alpha_observed-vs-predicted-richness-1.png)<!-- -->
+![](figures/02_alpha_diversity/alpha_observed_vs_predicted_richness-1.png)<!-- -->
 
-### Shannon
+#### Shannon
 
     ##                        Estimates Standard Errors     p-values
     ## (Intercept)          0.910266581     0.002452681 0.000000e+00
@@ -602,7 +692,7 @@ associated with Shannon diversity. It does not identify which covariates
 are responsible — that is addressed by the individual p-values in
 `betta_shannon$table` above.
 
-### Gini-Simpson
+#### Gini-Simpson
 
     ##                        Estimates Standard Errors     p-values
     ## (Intercept)          0.369733044     0.001021245 0.000000e+00
@@ -617,13 +707,13 @@ are responsible — that is addressed by the individual p-values in
     ## sibs_numb_cat1      -0.013690588     0.001887395 4.054534e-13
     ## sibs_numb_cat>1     -0.015538696     0.001225015 0.000000e+00
 
-### Combined coefficient plot
+#### Combined coefficient plot
 
     ## `height` was translated to `width`.
 
 ![](figures/02_alpha_diversity/alpha_betta_forest_combined-1.png)<!-- -->
 
-#### Investigating the C-section effect: confounding by breastfeeding duration
+##### Investigating the C-section effect: confounding by breastfeeding duration
 
 The positive association of caesarean delivery with Shannon diversity is
 counterintuitive biologically. A likely explanation is confounding by
@@ -647,18 +737,19 @@ substantially attenuated or absent.
 These files have been written to the target directory,
 `data/02_alpha_diversity`:
 
-    ## # A tibble: 12 × 4
+    ## # A tibble: 13 × 4
     ##    path                            type         size modification_time  
     ##    <fs::path>                      <fct> <fs::bytes> <dttm>             
-    ##  1 divnet_family_cov.rds           file        1.83M 2026-04-30 18:00:56
-    ##  2 divnet_genus.rds                file       10.63M 2026-04-30 15:40:51
-    ##  3 divnet_genus_cov.rds            file        1.98M 2026-05-04 16:59:47
-    ##  4 divnet_genus_cov_runtime.rds    file          166 2026-05-04 16:59:47
-    ##  5 divnet_genus_runtime.rds        file          159 2026-05-03 08:28:03
-    ##  6 perm_results_Breastfeeding.rds  file       19.81M 2026-05-04 18:15:14
-    ##  7 perm_results_Cesarean.rds       file          270 2026-05-04 15:39:37
-    ##  8 perm_results_Country.rds        file       19.81M 2026-05-04 18:11:09
-    ##  9 perm_results_Exclusive_BF.rds   file       11.39M 2026-05-04 18:17:08
-    ## 10 perm_results_Prenatal_smoke.rds file       10.08M 2026-05-04 18:18:54
-    ## 11 perm_results_Sex.rds            file          250 2026-05-04 15:39:34
-    ## 12 perm_results_Siblings.rds       file          254 2026-05-04 15:39:52
+    ##  1 breakaway_rich_full.rds         file       30.51K 2026-05-05 19:59:06
+    ##  2 divnet_family_cov.rds           file        1.83M 2026-04-30 18:00:56
+    ##  3 divnet_genus.rds                file       10.63M 2026-04-30 15:40:51
+    ##  4 divnet_genus_cov.rds            file        1.98M 2026-05-04 16:59:47
+    ##  5 divnet_genus_cov_runtime.rds    file          166 2026-05-04 16:59:47
+    ##  6 divnet_genus_runtime.rds        file          159 2026-05-03 08:28:03
+    ##  7 perm_results_Breastfeeding.rds  file       19.81M 2026-05-04 18:15:14
+    ##  8 perm_results_Cesarean.rds       file          270 2026-05-04 15:39:37
+    ##  9 perm_results_Country.rds        file       19.81M 2026-05-04 18:11:09
+    ## 10 perm_results_Exclusive_BF.rds   file       11.39M 2026-05-04 18:17:08
+    ## 11 perm_results_Prenatal_smoke.rds file       10.08M 2026-05-04 18:18:54
+    ## 12 perm_results_Sex.rds            file          250 2026-05-04 15:39:34
+    ## 13 perm_results_Siblings.rds       file          254 2026-05-04 15:39:52
