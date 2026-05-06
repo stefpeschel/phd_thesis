@@ -382,7 +382,7 @@ plot_richness <- function(div_dataframe, feature_name,
                           ylim = c(0, 75), textsize = 18,
                           space_line = 2, space_lab = 5,
                           ptest = NULL,
-                          p_type = c("p_approx", "p_perm")) {
+                          p_type = c("p_asymp", "p_approx", "p_perm")) {
   p_type <- match.arg(p_type)
   
   # Remove levels with zero observations
@@ -432,7 +432,8 @@ plot_shannon <- function(div_dataframe, feature_name,
                          ylab = "Shannon index (DivNet)", 
                          ybreaks = NULL, title = "", textsize = 18,
                          ptest = NULL,
-                         p_type = c("p_approx", "p_perm")) {
+                         p_type = c("p_asymp", "p_approx", "p_perm")) {
+  
   p_type <- match.arg(p_type)
   # Remove levels with zero observations
   div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
@@ -481,7 +482,7 @@ plot_gini <- function(div_dataframe, feature_name,
                       ylab = "Gini-Simpson index (DivNet)", 
                       ybreaks = NULL, title = "", textsize = 18,
                       ptest = NULL,
-                      p_type = c("p_approx", "p_perm")) {
+                      p_type = c("p_asymp", "p_approx", "p_perm")) {
   p_type <- match.arg(p_type)
   
   # Remove levels with zero observations
@@ -1020,18 +1021,18 @@ measure_short <- c("Richness (breakaway)"  = "Richness",
                    "Shannon (DivNet)"      = "Shannon",
                    "Gini-Simpson (DivNet)" = "Gini-Simpson")
 
-perm_table_tex <- perm_table |>
+perm_table_tex <- perm_table %>%
   mutate(
     Variable = factor(Variable, levels = var_order),
     Measure  = factor(Measure,  levels = measure_order)
-  ) |>
-  arrange(Variable, Measure) |>
+  ) %>%
+  arrange(Variable, Measure) %>%
   mutate(
     Measure  = dplyr::recode(as.character(Measure), !!!measure_short),
     p_asymp  = add_stars(p_asymp),
     p_perm   = add_stars(p_perm),
     p_approx = add_stars(p_approx)
-  ) |>
+  ) %>%
   select(Measure, H, p_asymp, p_perm, p_approx)
 
 # One block per variable (7 × 3 rows)
@@ -1059,13 +1060,13 @@ tex_table <- kbl(
   )
 
 for (i in seq_along(var_order)) {
-  tex_table <- tex_table |>
+  tex_table <- tex_table %>%
     pack_rows(var_order[i], group_starts[i], group_ends[i], bold = TRUE)
 }
 
-tex_table <- tex_table |>
-  column_spec(1, latex_column_spec = "l@{\\hspace{1.5em}}") |>
-  kable_styling(latex_options = c("hold_position")) |>
+tex_table <- tex_table %>%
+  column_spec(1, latex_column_spec = "l@{\\hspace{1.5em}}") %>%
+  kable_styling(latex_options = c("hold_position")) %>%
   footnote(
     general        = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
     general_title  = "",
@@ -1115,8 +1116,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.5, dotsize = 1.2,
               ylim = c(0, 90), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = levels(metadata$feature),
-              ptest = perm_results[[paste0(feat_key, "_richness")]])
+              labels = levels(metadata$feature))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1127,8 +1128,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = levels(metadata$feature),
-             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+             labels = levels(metadata$feature))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 
@@ -1139,8 +1140,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = levels(metadata$feature),
-          ptest = perm_results[[paste0(feat_key, "_gini")]])
+          labels = levels(metadata$feature))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 
@@ -1184,8 +1185,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = levels(metadata$feature),
-              ptest = perm_results[[paste0(feat_key, "_richness")]])
+              labels = levels(metadata$feature))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1195,8 +1196,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = levels(metadata$feature),
-             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+             labels = levels(metadata$feature))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 
@@ -1207,8 +1208,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = levels(metadata$feature),
-          ptest = perm_results[[paste0(feat_key, "_gini")]])
+          labels = levels(metadata$feature))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 
@@ -1254,8 +1255,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = levels(metadata$feature),
-              ptest = perm_results[[paste0(feat_key, "_richness")]])
+              labels = levels(metadata$feature))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1266,8 +1267,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = levels(metadata$feature),
-             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+             labels = levels(metadata$feature))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 
@@ -1278,8 +1279,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = levels(metadata$feature),
-          ptest = perm_results[[paste0(feat_key, "_gini")]])
+          labels = levels(metadata$feature))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 
@@ -1321,8 +1322,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = c("0", "1", "\u2265 2"),
-              ptest = perm_results[[paste0(feat_key, "_richness")]])
+              labels = c("0", "1", "\u2265 2"))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1333,8 +1334,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = c("0", "1", "\u2265 2"),
-             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+             labels = c("0", "1", "\u2265 2"))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 
@@ -1345,8 +1346,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = c("0", "1", "\u2265 2"),
-          ptest = perm_results[[paste0(feat_key, "_gini")]])
+          labels = c("0", "1", "\u2265 2"))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 
@@ -1388,8 +1389,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(droplevels(metadata_alpha)$feature),
-              labels = c("0", "\u2265 2"),
-              ptest = perm_results[[paste0(feat_key, "_richness")]])
+              labels = c("0", "\u2265 2"))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1400,8 +1401,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(droplevels(metadata_alpha)$feature),
-             labels = c("0", "\u2265 2"),
-             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+             labels = c("0", "\u2265 2"))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 
@@ -1412,8 +1413,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(droplevels(metadata_alpha)$feature),
-          labels = c("0", "\u2265 2"),
-          ptest = perm_results[[paste0(feat_key, "_gini")]])
+          labels = c("0", "\u2265 2"))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 
@@ -1459,8 +1460,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = levels(metadata$feature),
-              ptest = perm_results[[paste0(feat_key, "_richness")]])
+              labels = levels(metadata$feature))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1471,8 +1472,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = levels(metadata$feature),
-             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+             labels = levels(metadata$feature))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 
@@ -1483,8 +1484,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = levels(metadata$feature),
-          ptest = perm_results[[paste0(feat_key, "_gini")]])
+          labels = levels(metadata$feature))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 
@@ -1525,8 +1526,8 @@ pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2,
               ylim = c(0, 80), space_line = 6, space_lab = 3,
               xlab = feature_name, 
               breaks = levels(metadata$feature),
-              labels = c("0", "1", "&gt;1"),
-              ptest = perm_results[[paste0(feat_key, "_richness")]])
+              labels = c("0", "1", "&gt;1"))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
 ```
 
 
@@ -1537,8 +1538,8 @@ ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1,
              ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
              xlab = feature_name, 
              breaks = levels(metadata$feature),
-             labels = c("0", "1", "&gt;1"),
-             ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+             labels = c("0", "1", "&gt;1"))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
 ```
 
 
@@ -1549,8 +1550,8 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
           ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
           xlab = feature_name, 
           breaks = levels(metadata$feature),
-          labels = c("0", "1", "&gt;1"),
-          ptest = perm_results[[paste0(feat_key, "_gini")]])
+          labels = c("0", "1", "&gt;1"))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
 ```
 
 
@@ -1847,14 +1848,14 @@ betta_gini$table
 
 #### Combined coefficient plot
 
-```{r betta_forest_combined, fig.width=10, fig.height=6}
+```{r betta_forest_combined, fig.width=10, fig.height=5}
 term_labels <- c(
   "CountryGermany"      = "Country: Germany",
   "CountrySwitzerland"  = "Country: Switzerland",
   "Sexm"                = "Sex: male",
   "cesarean"            = "Caesarean delivery",
-  "breast_dur_cat11"    = "Breastfeeding duration: 1 month",
-  "breast_dur_cat1>=2"  = "Breastfeeding duration: \u22652 months",
+  "breast_dur_cat11"    = "BF duration: 1 month",
+  "breast_dur_cat1>=2"  = "BF duration: \u22652 months",
   "breast_excl_cat11"   = "Exclusive BF: 1 month",
   "breast_excl_cat1>=2" = "Exclusive BF: \u22652 months",
   "pregsmoke"           = "Prenatal smoking",
@@ -1894,8 +1895,9 @@ bind_rows(
                      labels = c("FALSE" = "no", "TRUE"  = "yes")) +
   facet_wrap(~measure, scales = "free_x", nrow = 1) +
   labs(x = "Coefficient estimate (95% CI)", y = NULL, color = "p < 0.05") +
-  theme_bw() +
-  theme(strip.text = element_text(face = "bold"))
+  theme_bw(base_size = 14) +
+  theme(strip.text = element_text(face = "bold"),
+        legend.position = "bottom")
 ```
 
 ##### Investigating the C-section effect: confounding by breastfeeding duration
@@ -1928,6 +1930,7 @@ p1 <- plot_dat %>%
   mutate(pct = n / sum(n)) %>%
   ggplot(aes(x = cesarean, y = pct, fill = breast_dur_cat1)) +
   geom_col() +
+  scale_fill_manual(values = cols[1:3]) +
   scale_y_continuous(labels = scales::percent_format()) +
   labs(x = "Delivery mode", y = "Proportion", fill = "Breastfeeding\nduration") +
   theme_bw()

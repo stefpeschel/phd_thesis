@@ -1,10 +1,6 @@
 Alpha diversity analysis
 ================
-Compiled at 2026-05-05 22:43:45 UTC
-
-``` r
-here::i_am(paste0(params$name, ".Rmd"), uuid = "41b33e9b-a351-49eb-bdc8-cdeddd77796c")
-```
+Compiled at 2026-05-06 15:04:39 UTC
 
 ## Load packages
 
@@ -331,14 +327,6 @@ Computing alpha diversity the common way (not model-based) using the
 
 ### Breakaway richness
 
-    ## Warning: `aes_string()` was deprecated in ggplot2 3.0.0.
-    ## ℹ Please use tidy evaluation idioms with `aes()`.
-    ## ℹ See also `vignette("ggplot2-in-packages")` for more information.
-    ## ℹ The deprecated feature was likely used in the breakaway package.
-    ##   Please report the issue at <https://github.com/adw96/breakaway/issues>.
-    ## This warning is displayed once per session.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
-
 ### Comparison: classical vs. breakaway
 
 Observed (classical) richness simply counts the number of non-zero ASVs
@@ -381,13 +369,6 @@ sample) to assess how strongly each is confounded by sequencing depth.
 Computing richness the common way (not model-based) using the
 `estimate_richness` function from `phyloseq` package.
 
-    ## Warning in estimate_richness(phylo_genus): The data you have provided does not have
-    ## any singletons. This is highly suspicious. Results of richness
-    ## estimates (for example) are probably unreliable, or wrong, if you have already
-    ## trimmed low-abundance taxa from the data.
-    ## 
-    ## We recommended that you find the un-trimmed data and retry.
-
     ##         Observed Chao1 se.chao1 ACE   se.ACE   Shannon   Simpson InvSimpson   Fisher
     ## s025647       40    40        0  40 2.641023 1.8370941 0.7583242   4.137775 4.564899
     ## s023779       29    29        0  29 2.491364 0.6123431 0.2157674   1.275132 3.179224
@@ -397,10 +378,6 @@ Computing richness the common way (not model-based) using the
     ## s028386       22    22        0  22 1.809068 1.2379658 0.6065971   2.541923 2.329049
 
 ### Breakaway richness
-
-    ## Warning in build_frequency_count_tables(otutab_genus): More columns then rows. You probably need to transpose your data.
-
-    ## Warning in poisson_model(input_data, cutoff = cutoff): Cut-off was too low: no data available for estimation
 
     ##         SampleID richness
     ## s025647  s025647 40.07097
@@ -487,27 +464,27 @@ functions below and summarised in the comparison table.
 
 | Variable | Measure | H statistic | p (KW asymptotic) | p (permutation) | p (GPD-refined) |
 |:---|:---|---:|---:|---:|---:|
-| Country | Richness (breakaway) | 31.57 | 1.40e-07 | 1.00e-06 | 1.99e-07 |
+| NA | NA | 31.57 | 1.40e-07 | 1.00e-06 | 1.99e-07 |
 | Country | Shannon (DivNet) | 40.06 | 2.00e-09 | 1.00e-06 | 3.01e-09 |
 | Country | Gini-Simpson (DivNet) | 39.88 | 2.19e-09 | 1.00e-06 | 4.89e-09 |
-| Sex | Richness (breakaway) | 1.79 | 1.80e-01 | 1.77e-01 | 1.77e-01 |
-| Sex | Shannon (DivNet) | 1.85 | 1.73e-01 | 1.72e-01 | 1.72e-01 |
-| Sex | Gini-Simpson (DivNet) | 2.10 | 1.47e-01 | 1.49e-01 | 1.49e-01 |
-| C-section | Richness (breakaway) | 0.33 | 5.64e-01 | 5.64e-01 | 5.64e-01 |
-| C-section | Shannon (DivNet) | 4.86 | 2.74e-02 | 2.54e-02 | 2.50e-02 |
-| C-section | Gini-Simpson (DivNet) | 5.73 | 1.67e-02 | 1.35e-02 | 1.43e-02 |
-| Breastfeeding duration | Richness (breakaway) | 7.69 | 2.14e-02 | 2.12e-02 | 2.12e-02 |
+| NA | NA | 1.79 | 1.80e-01 | 1.80e-01 | 1.80e-01 |
+| Sex | Shannon (DivNet) | 1.85 | 1.73e-01 | 1.74e-01 | 1.74e-01 |
+| Sex | Gini-Simpson (DivNet) | 2.10 | 1.47e-01 | 1.47e-01 | 1.47e-01 |
+| NA | NA | 0.33 | 5.64e-01 | 5.65e-01 | 5.65e-01 |
+| C-section | Shannon (DivNet) | 4.86 | 2.74e-02 | 2.71e-02 | 2.71e-02 |
+| C-section | Gini-Simpson (DivNet) | 5.73 | 1.67e-02 | 1.67e-02 | 1.67e-02 |
+| NA | NA | 7.69 | 2.14e-02 | 2.12e-02 | 2.12e-02 |
 | Breastfeeding duration | Shannon (DivNet) | 83.47 | 7.51e-19 | 1.00e-06 | 1.44e-17 |
 | Breastfeeding duration | Gini-Simpson (DivNet) | 73.49 | 1.10e-16 | 1.00e-06 | 4.69e-15 |
-| Exclusive breastfeeding | Richness (breakaway) | 2.73 | 9.84e-02 | 9.84e-02 | 9.84e-02 |
+| NA | NA | 2.73 | 9.84e-02 | 9.84e-02 | 9.84e-02 |
 | Exclusive breastfeeding | Shannon (DivNet) | 65.13 | 7.02e-16 | 1.00e-06 | 5.18e-14 |
 | Exclusive breastfeeding | Gini-Simpson (DivNet) | 56.47 | 5.71e-14 | 1.00e-06 | 5.04e-14 |
-| Prenatal smoking | Richness (breakaway) | 3.95 | 4.70e-02 | 4.69e-02 | 4.69e-02 |
+| NA | NA | 3.95 | 4.70e-02 | 4.69e-02 | 4.69e-02 |
 | Prenatal smoking | Shannon (DivNet) | 18.81 | 1.45e-05 | 1.30e-05 | 1.01e-05 |
 | Prenatal smoking | Gini-Simpson (DivNet) | 18.08 | 2.12e-05 | 1.60e-05 | 1.47e-05 |
-| Number of siblings | Richness (breakaway) | 1.41 | 4.94e-01 | 4.97e-01 | 4.97e-01 |
-| Number of siblings | Shannon (DivNet) | 2.66 | 2.64e-01 | 2.61e-01 | 2.61e-01 |
-| Number of siblings | Gini-Simpson (DivNet) | 3.04 | 2.18e-01 | 2.20e-01 | 2.20e-01 |
+| NA | NA | 1.41 | 4.94e-01 | 4.94e-01 | 4.94e-01 |
+| Number of siblings | Shannon (DivNet) | 2.66 | 2.64e-01 | 2.65e-01 | 2.65e-01 |
+| Number of siblings | Gini-Simpson (DivNet) | 3.04 | 2.18e-01 | 2.19e-01 | 2.19e-01 |
 
 ## Plots
 
@@ -654,8 +631,6 @@ the 484 samples with complete covariate data.
 
 #### Richness
 
-    ## Warning in poisson_model(input_data, cutoff = cutoff): Cut-off was too low: no data available for estimation
-
     ##                      Estimates Standard Errors     p-values
     ## (Intercept)         22.7682153       0.2920787 0.000000e+00
     ## CountryGermany       3.9133662       0.4913796 1.554312e-15
@@ -734,11 +709,6 @@ are responsible — that is addressed by the individual p-values in
 
 #### Combined coefficient plot
 
-    ## Warning: `geom_errorbarh()` was deprecated in ggplot2 4.0.0.
-    ## ℹ Please use the `orientation` argument of `geom_errorbar()` instead.
-    ## This warning is displayed once per session.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
-
     ## `height` was translated to `width`.
 
 ![](figures/02_alpha_diversity/alpha_betta_forest_combined-1.png)<!-- -->
@@ -776,11 +746,11 @@ These files have been written to the target directory,
     ##  4 divnet_genus_cov.rds            file        1.98M 2026-05-04 16:59:47
     ##  5 divnet_genus_cov_runtime.rds    file          166 2026-05-04 16:59:47
     ##  6 divnet_genus_runtime.rds        file          159 2026-05-03 08:28:03
-    ##  7 perm_results_Breastfeeding.rds  file       19.81M 2026-05-04 18:15:14
-    ##  8 perm_results_Cesarean.rds       file          270 2026-05-04 15:39:37
-    ##  9 perm_results_Country.rds        file       19.81M 2026-05-04 18:11:09
-    ## 10 perm_results_Exclusive_BF.rds   file       11.39M 2026-05-04 18:17:08
-    ## 11 perm_results_Prenatal_smoke.rds file       10.08M 2026-05-04 18:18:54
-    ## 12 perm_results_Sex.rds            file          250 2026-05-04 15:39:34
-    ## 13 perm_results_Siblings.rds       file          254 2026-05-04 15:39:52
-    ## 14 perm_table.tex                  file        2.94K 2026-05-05 22:44:14
+    ##  7 perm_results_Breastfeeding.rds  file       19.81M 2026-05-06 13:47:43
+    ##  8 perm_results_Cesarean.rds       file       10.47M 2026-05-06 13:43:38
+    ##  9 perm_results_Country.rds        file       19.81M 2026-05-06 13:39:58
+    ## 10 perm_results_Exclusive_BF.rds   file       11.39M 2026-05-06 13:49:33
+    ## 11 perm_results_Prenatal_smoke.rds file       10.08M 2026-05-06 13:51:16
+    ## 12 perm_results_Sex.rds            file       11.26M 2026-05-06 13:41:51
+    ## 13 perm_results_Siblings.rds       file       19.81M 2026-05-06 13:53:12
+    ## 14 perm_table.tex                  file         2.9K 2026-05-06 15:05:04
