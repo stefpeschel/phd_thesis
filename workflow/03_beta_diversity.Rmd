@@ -1,0 +1,845 @@
+---
+title: "Beta diversity analysis"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output: 
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+params:
+  name: "03_beta_diversity" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "7eead4d7-01e8-4990-84ab-a0f2c7355f9f")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params, "/beta_"),
+  echo = FALSE)
+```
+
+## Load packages
+
+```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
+library(phyloseq)
+library(tidyverse)
+library(ggtext)
+library(ggpubr)
+library(patchwork)
+library(vegan)
+library(pheatmap)
+library(permApprox)
+
+# Parallel computing
+library(future)
+library(future.apply)
+library(progressr)
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::rename)
+conflicts_prefer(dplyr::mutate)
+conflicts_prefer(dplyr::arrange)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+#projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Set global parameters
+
+```{r, echo = TRUE}
+emclr_epsilon <- 1e-4
+n_perm <- 999
+permutation_seed <- 42
+alpha_perm_approx <- 0.05
+```
+
+
+## Load data
+
+```{r load_data}
+phylo_genus <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_genus.rds"))
+sampdata <- sample_data(phylo_genus) %>% as("data.frame")
+otutab <- as(otu_table(phylo_genus), "matrix")
+```
+
+### Phyloseq object on genus level
+
+```{r}
+phylo_genus
+```
+
+## Helper functions
+
+**Note on the emCLR transformation:**
+
+We use the **emCLR** version from Chapter 2, where sample-specific offsets are first computed from the tolerance criterion and then the global offset is chosen as the minimum of these offsets. That keeps all samples on the same transformed scale for distances.
+
+```{r}
+# Extract taxonomic table with samples in rows and taxa in columns
+get_sample_by_taxa <- function(phylo) {
+  mat <- as(otu_table(phylo), "matrix")
+  
+  if (taxa_are_rows(phylo)) {
+    mat <- t(mat)
+  }
+  
+  mat <- as.matrix(mat)
+  storage.mode(mat) <- "numeric"
+  
+  mat
+}
+
+# Convert count matrix to relative abundances
+counts_to_rel_abund <- function(count_mat) {
+  lib_size <- rowSums(count_mat)
+  
+  if (any(lib_size == 0)) {
+    stop("At least one sample has library size zero.")
+  }
+  
+  sweep(count_mat, 1, lib_size, "/")
+}
+
+# Ordinary geometric mean of positive values
+geom_mean <- function(x) {
+  if (any(x <= 0)) {
+    stop("geom_mean() requires strictly positive values.")
+  }
+  
+  exp(mean(log(x)))
+}
+
+# Extended geometric mean according to Chapter 2:
+# gtilde_delta(x) = exp(mean(log(x + delta))) - delta
+extended_geom_mean <- function(x, delta) {
+  exp(mean(log(x + delta))) - delta
+}
+
+# Compute the largest sample-specific offset delta_k for which
+# |gtilde_delta(x_positive) - g(x_positive)| <= epsilon * g(x_positive)
+compute_delta_k <- function(x, epsilon = 1e-4, max_expand = 60) {
+  x_pos <- x[x > 0]
+  
+  if (length(x_pos) == 0) {
+    return(NA_real_)
+  }
+  
+  # If there is only one positive component, the extended geometric mean
+  # of the positive part equals the observed positive value for all delta.
+  # This sample does not constrain the global offset.
+  if (length(x_pos) == 1) {
+    return(Inf)
+  }
+  
+  g_pos <- geom_mean(x_pos)
+  
+  f <- function(delta) {
+    abs(extended_geom_mean(x_pos, delta) - g_pos) - epsilon * g_pos
+  }
+  
+  lower <- 0
+  upper <- max(1, min(x_pos))
+  
+  # Increase upper until the tolerance condition is violated.
+  # If no crossing is found, return Inf so the sample does not constrain
+  # the global minimum offset.
+  for (i in seq_len(max_expand)) {
+    if (f(upper) > 0) {
+      break
+    }
+    upper <- upper * 2
+  }
+  
+  if (f(upper) <= 0) {
+    return(Inf)
+  }
+  
+  uniroot(f, lower = lower, upper = upper)$root
+}
+
+# Common-offset emCLR transformation.
+# The global offset is the minimum finite sample-specific offset.
+compute_emclr <- function(count_mat, epsilon = 1e-4) {
+  delta_by_sample <- apply(
+    count_mat,
+    1,
+    compute_delta_k,
+    epsilon = epsilon
+  )
+  
+  finite_delta <- delta_by_sample[is.finite(delta_by_sample)]
+  
+  if (length(finite_delta) == 0) {
+    stop("No finite sample-specific emCLR offset could be computed.")
+  }
+  
+  delta_global <- min(finite_delta, na.rm = TRUE)
+  
+  # emCLR with common offset:
+  # log((x + delta) / (gtilde_delta(x) + delta)).
+  # Since gtilde_delta(x) + delta = exp(mean(log(x + delta))),
+  # this is equivalent to row-centering log(x + delta).
+  log_shifted <- log(count_mat + delta_global)
+  z <- sweep(log_shifted, 1, rowMeans(log_shifted), "-")
+  
+  list(
+    z = z,
+    delta_global = delta_global,
+    delta_by_sample = delta_by_sample,
+    epsilon = epsilon
+  )
+}
+
+# Principal coordinates analysis using classical MDS.
+# For non-Euclidean dissimilarities, negative eigenvalues may occur; the
+# percentage shown here is based on the sum of positive eigenvalues.
+compute_pcoa <- function(dist_obj, n_axes = 5) {
+  n_axes <- min(n_axes, attr(dist_obj, "Size") - 1)
+  
+  fit <- cmdscale(dist_obj, k = n_axes, eig = TRUE)
+  
+  coords <- as_tibble(fit$points, .name_repair = "minimal")
+  names(coords) <- paste0("PCo", seq_len(ncol(coords)))
+  
+  coords <- coords %>%
+    mutate(SampleID = attr(dist_obj, "Labels"), .before = 1)
+  
+  eig <- fit$eig
+  pos_eig <- eig[eig > 0]
+  
+  var_explained <- eig[seq_len(ncol(fit$points))] / sum(pos_eig)
+  names(var_explained) <- paste0("PCo", seq_along(var_explained))
+  
+  list(
+    coords = coords,
+    eig = eig,
+    var_explained = var_explained
+  )
+}
+
+plot_pcoa <- function(pcoa_res, metadata, color_var = NULL, title = NULL) {
+  plot_df <- pcoa_res$coords %>%
+    left_join(metadata, by = "SampleID")
+  
+  x_lab <- paste0(
+    "PCo1 (",
+    scales::percent(pcoa_res$var_explained["PCo1"], accuracy = 0.1),
+    ")"
+  )
+  
+  y_lab <- paste0(
+    "PCo2 (",
+    scales::percent(pcoa_res$var_explained["PCo2"], accuracy = 0.1),
+    ")"
+  )
+  
+  p <- ggplot(plot_df, aes(x = PCo1, y = PCo2)) +
+    geom_point(alpha = 0.8, size = 2) +
+    labs(
+      x = x_lab,
+      y = y_lab,
+      color = NULL,
+      title = title
+    ) +
+    theme_bw() +
+    theme(
+      axis.text  = element_text(size = 12),
+      axis.title = element_text(size = 14),
+      plot.title = element_text(face = "bold"),
+      panel.grid = element_blank()
+    )
+  
+  if (!is.null(color_var) && color_var %in% names(plot_df)) {
+    p <- ggplot(plot_df, aes(x = PCo1, y = PCo2, color = .data[[color_var]])) +
+      geom_point(alpha = 0.8, size = 2) +
+      labs(
+        x = x_lab,
+        y = y_lab,
+        color = color_var,
+        title = title
+      ) +
+      theme_bw() +
+      theme(
+        plot.title = element_text(face = "bold"),
+        panel.grid = element_blank()
+      )
+  }
+  
+  p
+}
+
+plot_distance_heatmap <- function(dist_obj, metadata, ann_vars = NULL, title = NULL) {
+  dist_mat <- as.matrix(dist_obj)
+  
+  # Hierarchical clustering on the precomputed distance object
+  hc <- hclust(dist_obj)
+  
+  # Distance color scale: white -> blue
+  col_fun <- circlize::colorRamp2(
+    c(0, max(dist_mat) / 2, max(dist_mat)),
+    c("white", "#4393C3", "#2166AC")
+  )
+  
+  # Build top (column) and left (row) annotations from metadata variables
+  valid_ann <- ann_vars[ann_vars %in% names(metadata)]
+  if (length(valid_ann) > 0) {
+    ann_df <- metadata[rownames(dist_mat), valid_ann, drop = FALSE]
+    
+    # Each variable gets a distinct qualitative palette
+    qual_palettes <- c("Set2", "Dark2", "Set1", "Accent", "Paired", "Set3", "Pastel1")
+    ann_colors <- mapply(function(v, pal) {
+      vals <- ann_df[[v]]
+      lvls <- levels(droplevels(vals))
+      n    <- length(lvls)
+      cols <- if (n <= RColorBrewer::brewer.pal.info[pal, "maxcolors"])
+                RColorBrewer::brewer.pal(max(3, n), pal)[seq_len(n)]
+              else
+                grDevices::hcl.colors(n, palette = "Dynamic")
+      setNames(cols, lvls)
+    }, valid_ann, qual_palettes[seq_along(valid_ann)], SIMPLIFY = FALSE)
+    
+    col_ann <- ComplexHeatmap::HeatmapAnnotation(
+      df                   = ann_df,
+      col                  = ann_colors,
+      show_annotation_name = TRUE,
+      annotation_name_side = "left"
+    )
+  } else {
+    col_ann <- NULL
+  }
+  
+  ComplexHeatmap::Heatmap(
+    dist_mat,
+    name               = "Distance",
+    col                = col_fun,
+    cluster_rows       = hc,
+    cluster_columns    = hc,
+    top_annotation     = col_ann,
+    show_row_names     = FALSE,
+    show_column_names  = FALSE,
+    column_title       = title,
+    border             = FALSE
+  )
+}
+```
+
+## Prepare genus-level data
+
+For the PASTURE application, beta-diversity analyses are performed at genus level. Bray-Curtis dissimilarity is computed on relative abundance profiles, whereas Euclidean distance is computed after common-offset emCLR transformation.
+
+```{r}
+counts_raw <- get_sample_by_taxa(phylo_genus)
+
+# Ensure sample metadata has the same sample IDs as the count matrix.
+sampdata <- sampdata %>%
+  filter(SampleID %in% rownames(counts_raw)) %>%
+  arrange(match(SampleID, rownames(counts_raw)))
+
+counts_raw <- counts_raw[sampdata$SampleID, , drop = FALSE]
+
+stopifnot(identical(rownames(counts_raw), sampdata$SampleID))
+
+counts_rel <- counts_to_rel_abund(counts_raw)
+
+data_summary <- tibble(
+  n_samples = nrow(counts_raw),
+  n_taxa = ncol(counts_raw),
+  min_library_size = min(rowSums(counts_raw)),
+  median_library_size = median(rowSums(counts_raw)),
+  max_library_size = max(rowSums(counts_raw)),
+  zero_fraction = mean(counts_raw == 0)
+)
+
+data_summary
+```
+
+
+## Compute dissimilarity matrices
+
+### Bray-Curtis dissimilarity
+
+```{r}
+dist_bray <- vegan::vegdist(counts_rel, method = "bray")
+
+summary(as.vector(dist_bray))
+```
+
+### Euclidean distance after emCLR transformation
+
+```{r}
+emclr_object <- compute_emclr(
+  count_mat = counts_raw,
+  epsilon = emclr_epsilon
+)
+
+counts_emclr <- emclr_object$z
+
+emclr_summary <- tibble(
+  epsilon = emclr_object$epsilon,
+  delta_global = emclr_object$delta_global,
+  n_finite_delta_k = sum(is.finite(emclr_object$delta_by_sample)),
+  n_infinite_delta_k = sum(is.infinite(emclr_object$delta_by_sample)),
+  min_delta_k = min(emclr_object$delta_by_sample[is.finite(emclr_object$delta_by_sample)]),
+  median_delta_k = median(emclr_object$delta_by_sample[is.finite(emclr_object$delta_by_sample)]),
+  max_finite_delta_k = max(emclr_object$delta_by_sample[is.finite(emclr_object$delta_by_sample)])
+)
+
+emclr_summary
+```
+
+```{r}
+dist_emclr_object <- dist(counts_emclr, method = "euclidean")
+
+dist_emclr_object[1:10]
+```
+
+### Save distance objects
+
+```{r}
+beta_objects <- list(
+  metadata = sampdata,
+  counts_raw = counts_raw,
+  counts_rel = counts_rel,
+  emclr = emclr_object,
+  counts_emclr = counts_emclr,
+  dist_bray = dist_bray,
+  dist_emclr_object = dist_emclr_object,
+  data_summary = data_summary,
+  emclr_summary = emclr_summary
+)
+
+saveRDS(beta_objects, path_target("beta_diversity_objects.rds"))
+
+write_csv(data_summary, path_target("beta_data_summary.csv"))
+write_csv(emclr_summary, path_target("beta_emclr_summary.csv"))
+
+tibble(
+  SampleID = rownames(counts_raw),
+  delta_k = emclr_object$delta_by_sample
+) %>%
+  write_csv(path_target("beta_emclr_sample_offsets.csv"))
+```
+
+## Ordination
+
+### Compute PCoA coordinates
+
+```{r}
+pcoa_bray <- compute_pcoa(dist_bray, n_axes = 5)
+pcoa_emclr_object <- compute_pcoa(dist_emclr_object, n_axes = 5)
+
+pcoa_bray_df <- pcoa_bray$coords %>%
+  mutate(distance = "Bray--Curtis")
+
+pcoa_emclr_df <- pcoa_emclr_object$coords %>%
+  mutate(distance = "emCLR Euclidean")
+
+bind_rows(pcoa_bray_df, pcoa_emclr_df) %>%
+  write_csv(path_target("beta_pcoa_coordinates.csv"))
+```
+
+### Uncolored PCoA plots
+
+```{r PCoA_uncolored, fig.width=10, fig.height=5}
+p_bray <- plot_pcoa(
+  pcoa_res = pcoa_bray,
+  metadata = sampdata,
+  title = "Bray-Curtis dissimilarity"
+)
+
+p_emclr <- plot_pcoa(
+  pcoa_res = pcoa_emclr_object,
+  metadata = sampdata,
+  title = "Euclidean distance after emCLR transformation"
+)
+
+p_bray + p_emclr
+```
+
+The Bray-Curtis PCoA (PCo1: 29.5%, PCo2: 8.9%) displays the characteristic arch shape common to PCoA on compositional count data, where the cloud folds back on itself along PCo2. This is an ordination artifact rather than a biological signal and reflects how Bray-Curtis dissimilarity handles the full gradient of community turnover. 
+
+The emCLR-based PCoA (PCo1: 8.2%, PCo2: 5.9%) produces a more symmetric, roughly elliptical cloud with variance spread more evenly across axes — a consequence of the log-ratio transformation removing compositional constraints. Note that the first two axes together explain considerably less total variation for emCLR, which is expected given its more Euclidean structure.
+
+### PCoA plots colored by selected variables
+
+Set the variables to inspect here. Unknown or misspelled variables are ignored.
+
+```{r}
+# Each entry: raw column name -> list(label = display name, levels = named vector of level renames)
+# levels = NULL means keep existing levels as-is (just coerce to factor).
+var_map <- list(
+  Country = list(
+    label  = "Country",
+    levels = NULL
+  ),
+  Sex = list(
+    label  = "Sex",
+    levels = c(f = "Female", m = "Male")
+  ),
+  cesarean = list(
+    label  = "Delivery mode",
+    levels = c(`0` = "Vaginal", `1` = "Cesarean")
+  ),
+  breast_dur_cat1 = list(
+    label  = "BF duration",
+    levels = c(`0` = "0 months", `1` = "1 month", `>=2` = "\u22652 months")
+  ),
+  breast_excl_cat1 = list(
+    label  = "Exclusive BF",
+    levels = c(`0` = "0 months", `1` = "1 month", `>=2` = "\u22652 months")
+  ),
+  pregsmoke = list(
+    label  = "Prenatal smoking",
+    levels = c(`0` = "No", `1` = "Yes")
+  ),
+  sibs_numb_cat = list(
+    label  = "No. of siblings",
+    levels = c(`0` = "0", `1` = "1", `>1` = ">1")
+  )
+)
+
+# Keep only variables present in sampdata
+var_map <- var_map[intersect(names(var_map), names(sampdata))]
+
+# Build a plotting copy of sampdata with display-name columns as ordered factors
+sampdata_plot <- sampdata
+for (raw_name in names(var_map)) {
+  cfg   <- var_map[[raw_name]]
+  col   <- sampdata[[raw_name]]
+  
+  if (!is.null(cfg$levels)) {
+    # Recode and set factor level order from the named vector
+    col <- factor(
+      as.character(col),
+      levels = names(cfg$levels),
+      labels = unname(cfg$levels)
+    )
+  } else {
+    col <- factor(col)
+  }
+  
+  sampdata_plot[[cfg$label]] <- col
+}
+
+variables_to_plot <- vapply(var_map, `[[`, character(1), "label")
+variables_to_plot
+```
+
+```{r PCoA_colored, fig.width=10, fig.height=5}
+if (length(variables_to_plot) > 0) {
+  for (var in variables_to_plot) {
+    p_bray_var <- plot_pcoa(
+      pcoa_res = pcoa_bray,
+      metadata = sampdata_plot,
+      color_var = var,
+      title = paste0("Bray-Curtis dissimilarity: ", var)
+    )
+    
+    p_emclr_var <- plot_pcoa(
+      pcoa_res = pcoa_emclr_object,
+      metadata = sampdata_plot,
+      color_var = var,
+      title = paste0("Euclidean distance after emCLR: ", var)
+    )
+    
+    print((p_bray_var | p_emclr_var) +
+      plot_layout(guides = 'collect'))
+  }
+}
+```
+
+None of the variables examined produce visually discernible separation in either ordination. Specifically:
+
+* Country (Austria, Germany, Switzerland): The three groups are thoroughly intermixed along both axes in both ordinations. If country-level effects on microbiome composition exist, they do not dominate the major axes of variation captured here.
+* Sex: No separation is visible. Male and female samples overlap completely.
+* Delivery mode: Cesarean samples are scattered across the same space as vaginal births. The relatively small number of cesarean samples limits visual detection of any potential signal.
+* BF duration / Exclusive BF: Both breastfeeding variables show the same mixed pattern. Samples from all duration categories are intermingled, with no gradient along PCo1 or PCo2. This does not rule out a breastfeeding effect, but suggests it is not among the dominant sources of between-sample variation.
+* Prenatal smoking / No. of siblings: No visual structure.
+
+### Distance matrix heatmaps
+
+These heatmaps are mainly diagnostic. For several hundred samples, they become visually dense, but they are useful for checking whether strong blocks or outlying samples occur.
+
+```{r heatmap_bray, fig.width=9, fig.height=7}
+variables_heat <- variables_to_plot[
+  c("cesarean", "breast_dur_cat1", "breast_excl_cat1", "pregsmoke", "sibs_numb_cat")
+]
+
+p_heat_bray <- plot_distance_heatmap(
+  dist_obj = dist_bray,
+  metadata = sampdata_plot,
+  ann_vars = variables_heat,
+  title    = "Bray-Curtis distance matrix"
+)
+
+ComplexHeatmap::draw(p_heat_bray)
+```
+
+The Bray-Curtis distance heatmap reveals a block of samples in the upper-left cluster (after hierarchical reordering) that are substantially more similar to each other than to the rest of the cohort — visible as a lighter region against the predominantly dark-blue background. This suggests some subgroup of samples shares a notably similar community composition. The annotation bars do not immediately reveal a single metadata variable that cleanly aligns with this block, so the driver of this cluster is not apparent from the variables available here.
+
+```{r heatmap_euclid, fig.width=9, fig.height=7}
+p_heat_emclr <- plot_distance_heatmap(
+  dist_obj = dist_emclr_object,
+  metadata = sampdata_plot,
+  ann_vars = variables_heat,
+  title    = "emCLR Euclidean distance matrix"
+)
+
+ComplexHeatmap::draw(p_heat_emclr)
+```
+
+The emCLR heatmap is considerably more homogeneous: distances are more uniformly distributed with less pronounced block structure, which is consistent with the more diffuse spread seen in its ordination.
+
+## PERMANOVA and PERMDISP
+
+The following analyses are performed for both beta-diversity representations: Bray-Curtis dissimilarity on relative abundance profiles and Euclidean distance after emCLR transformation. PERMANOVA is used to test for differences in group centroids, while PERMDISP assesses differences in within-group dispersion.
+
+```{r beta_test_setup}
+# Use the same variables as for the PCoA plots.
+variables_to_test <- variables_to_plot
+
+distance_list <- list(
+  bray = list(
+    label = "Bray-Curtis",
+    dist = dist_bray
+  ),
+  emclr = list(
+    label = "emCLR Euclidean",
+    dist = dist_emclr_object
+  )
+)
+
+# Keep only variables with at least two non-missing groups.
+variables_to_test <- variables_to_test[
+  vapply(
+    variables_to_test,
+    function(var) {
+      x <- sampdata_plot[[var]]
+      length(unique(stats::na.omit(x))) >= 2
+    },
+    logical(1)
+  )
+]
+
+variables_to_test
+```
+
+### Helper functions for permutation-based testing
+
+```{r}
+subset_dist_and_group <- function(dist_obj, metadata, group_var) {
+  dist_mat <- as.matrix(dist_obj)
+  
+  dat <- metadata |>
+    filter(SampleID %in% rownames(dist_mat)) |>
+    select(SampleID, group = all_of(group_var)) |>
+    filter(!is.na(group)) |>
+    mutate(group = factor(group))
+  
+  dat <- dat |>
+    filter(!is.na(group)) |>
+    droplevels()
+  
+  sample_ids <- dat$SampleID
+  
+  dist_sub <- as.dist(dist_mat[sample_ids, sample_ids, drop = FALSE])
+  
+  list(
+    dist = dist_sub,
+    data = dat,
+    group = dat$group
+  )
+}
+
+permanova_stat <- function(dist_obj, group) {
+  dat <- data.frame(group = group)
+  
+  fit <- vegan::adonis2(
+    dist_obj ~ group,
+    data = dat,
+    permutations = 0,
+    by = NULL
+  )
+  
+  as.numeric(fit$F[1])
+}
+
+permdisp_stat <- function(dist_obj, group) {
+  bd <- vegan::betadisper(dist_obj, group = group, type = "centroid")
+  fit <- stats::anova(bd)
+  
+  as.numeric(fit$`F value`[1])
+}
+
+empirical_pvalue <- function(obs_stat, perm_stats) {
+  (1 + sum(perm_stats >= obs_stat, na.rm = TRUE)) / (1 + length(perm_stats))
+}
+
+run_beta_permutation_test <- function(dist_obj, group, statistic_fun, n_perm = 999) {
+  obs_stat <- statistic_fun(dist_obj = dist_obj, group = group)
+  
+  perm_stats <- replicate(
+    n_perm,
+    statistic_fun(
+      dist_obj = dist_obj,
+      group = sample(group, size = length(group), replace = FALSE)
+    )
+  )
+  
+  tibble(
+    statistic_obs = obs_stat,
+    p_empirical = empirical_pvalue(obs_stat, perm_stats),
+    n_perm = n_perm,
+    n_exceed = sum(perm_stats >= obs_stat, na.rm = TRUE)
+  ) |>
+    mutate(
+      perm_stats = list(as.numeric(perm_stats))
+    )
+}
+
+run_official_adonis2 <- function(dist_obj, group, n_perm = 999) {
+  dat <- data.frame(group = group)
+  
+  fit <- vegan::adonis2(
+    dist_obj ~ group,
+    data = dat,
+    permutations = n_perm,
+    by = NULL
+  )
+  
+  tibble(
+    statistic_adonis2 = as.numeric(fit$F[1]),
+    r2_adonis2 = as.numeric(fit$R2[1]),
+    p_adonis2 = as.numeric(fit$`Pr(>F)`[1])
+  )
+}
+
+run_official_betadisper <- function(dist_obj, group, n_perm = 999) {
+  bd <- vegan::betadisper(dist_obj, group = group, type = "centroid")
+  pt <- vegan::permutest(bd, permutations = n_perm)
+  
+  tibble(
+    statistic_betadisper = as.numeric(pt$tab$F[1]),
+    p_betadisper = as.numeric(pt$tab$`Pr(>F)`[1])
+  )
+}
+```
+
+### PERMANOVA
+
+```{r permanova}
+set.seed(permutation_seed)
+
+permanova_results <- purrr::imap_dfr(distance_list, function(dist_info, dist_name) {
+  purrr::map_dfr(variables_to_test, function(var) {
+    obj <- subset_dist_and_group(
+      dist_obj = dist_info$dist,
+      metadata = sampdata_plot,
+      group_var = var
+    )
+    
+    custom_res <- run_beta_permutation_test(
+      dist_obj = obj$dist,
+      group = obj$group,
+      statistic_fun = permanova_stat,
+      n_perm = n_perm
+    )
+    
+    official_res <- run_official_adonis2(
+      dist_obj = obj$dist,
+      group = obj$group,
+      n_perm = n_perm
+    )
+    
+    tibble(
+      analysis = "PERMANOVA",
+      distance_id = dist_name,
+      distance = dist_info$label,
+      variable = var,
+      n_samples = length(obj$group),
+      n_groups = nlevels(obj$group)
+    ) |>
+      bind_cols(custom_res, official_res)
+  })
+})
+
+permanova_results |>
+  select(
+    analysis, distance, variable, n_samples, n_groups,
+    statistic_obs, p_empirical, statistic_adonis2, r2_adonis2, p_adonis2,
+    n_exceed, n_perm
+  )
+```
+
+### PERMDISP
+
+```{r}
+set.seed(permutation_seed + 1)
+
+permdisp_results <- purrr::imap_dfr(distance_list, function(dist_info, dist_name) {
+  purrr::map_dfr(variables_to_test, function(var) {
+    obj <- subset_dist_and_group(
+      dist_obj = dist_info$dist,
+      metadata = sampdata_plot,
+      group_var = var
+    )
+    
+    custom_res <- run_beta_permutation_test(
+      dist_obj = obj$dist,
+      group = obj$group,
+      statistic_fun = permdisp_stat,
+      n_perm = n_perm
+    )
+    
+    official_res <- run_official_betadisper(
+      dist_obj = obj$dist,
+      group = obj$group,
+      n_perm = n_perm
+    )
+    
+    tibble(
+      analysis = "PERMDISP",
+      distance_id = dist_name,
+      distance = dist_info$label,
+      variable = var,
+      n_samples = length(obj$group),
+      n_groups = nlevels(obj$group)
+    ) |>
+      bind_cols(custom_res, official_res)
+  })
+})
+
+permdisp_results |>
+  select(
+    analysis, distance, variable, n_samples, n_groups,
+    statistic_obs, p_empirical, statistic_betadisper, p_betadisper,
+    n_exceed, n_perm
+  )
+```
+
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
