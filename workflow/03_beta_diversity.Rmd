@@ -43,6 +43,7 @@ library(permApprox)
 library(future)
 library(future.apply)
 library(progressr)
+library(furrr)
 
 conflicts_prefer(dplyr::filter)
 conflicts_prefer(dplyr::select)
@@ -642,6 +643,26 @@ variables_to_test <- variables_to_test[
 variables_to_test
 ```
 
+### Parallel backend and progress reporting
+
+```{r parallel_setup}
+cores <- 10
+
+future::plan(
+  future::multisession,
+  workers = cores
+)
+
+progressr::handlers("txtprogressbar")
+options(progressr.enable = TRUE)
+
+# Flat grid of all (distance, variable) combinations to parallelize over
+test_combos <- tidyr::expand_grid(
+  dist_name = names(distance_list),
+  variable  = variables_to_test
+)
+```
+
 ### Helper functions for permutation-based testing
 
 ```{r}
@@ -700,15 +721,15 @@ run_beta_permutation_test <- function(dist_obj, group, statistic_fun, n_perm = 9
     n_perm,
     statistic_fun(
       dist_obj = dist_obj,
-      group = sample(group, size = length(group), replace = FALSE)
+      group    = sample(group, size = length(group), replace = FALSE)
     )
   )
   
   tibble(
     statistic_obs = obs_stat,
-    p_empirical = empirical_pvalue(obs_stat, perm_stats),
-    n_perm = n_perm,
-    n_exceed = sum(perm_stats >= obs_stat, na.rm = TRUE)
+    p_empirical   = empirical_pvalue(obs_stat, perm_stats),
+    n_perm        = n_perm,
+    n_exceed      = sum(perm_stats >= obs_stat, na.rm = TRUE)
   ) |>
     mutate(
       perm_stats = list(as.numeric(perm_stats))
@@ -746,41 +767,62 @@ run_official_betadisper <- function(dist_obj, group, n_perm = 999) {
 ### PERMANOVA
 
 ```{r permanova}
-set.seed(permutation_seed)
+path_permanova <- path_target("permanova_results.rds")
 
-permanova_results <- purrr::imap_dfr(distance_list, function(dist_info, dist_name) {
-  purrr::map_dfr(variables_to_test, function(var) {
-    obj <- subset_dist_and_group(
-      dist_obj = dist_info$dist,
-      metadata = sampdata_plot,
-      group_var = var
-    )
+if (!file.exists(path_permanova)) {
+  permanova_results <- progressr::with_progress({
+    p <- progressr::progressor(steps = nrow(test_combos))
     
-    custom_res <- run_beta_permutation_test(
-      dist_obj = obj$dist,
-      group = obj$group,
-      statistic_fun = permanova_stat,
-      n_perm = n_perm
+    furrr::future_map_dfr(
+      seq_len(nrow(test_combos)),
+      function(i) {
+        dist_name <- test_combos$dist_name[[i]]
+        var       <- test_combos$variable[[i]]
+        dist_info <- distance_list[[dist_name]]
+        
+        obj <- subset_dist_and_group(
+          dist_obj  = dist_info$dist,
+          metadata  = sampdata_plot,
+          group_var = var
+        )
+        
+        custom_res <- run_beta_permutation_test(
+          dist_obj      = obj$dist,
+          group         = obj$group,
+          statistic_fun = permanova_stat,
+          n_perm        = n_perm
+        )
+        
+        official_res <- run_official_adonis2(
+          dist_obj = obj$dist,
+          group    = obj$group,
+          n_perm   = n_perm
+        )
+        
+        p(message = sprintf("PERMANOVA: %s | %s", dist_info$label, var))
+        
+        tibble(
+          analysis    = "PERMANOVA",
+          distance_id = dist_name,
+          distance    = dist_info$label,
+          variable    = var,
+          n_samples   = length(obj$group),
+          n_groups    = nlevels(obj$group)
+        ) |>
+          bind_cols(custom_res, official_res)
+      },
+      .options = furrr::furrr_options(seed = permutation_seed)
     )
-    
-    official_res <- run_official_adonis2(
-      dist_obj = obj$dist,
-      group = obj$group,
-      n_perm = n_perm
-    )
-    
-    tibble(
-      analysis = "PERMANOVA",
-      distance_id = dist_name,
-      distance = dist_info$label,
-      variable = var,
-      n_samples = length(obj$group),
-      n_groups = nlevels(obj$group)
-    ) |>
-      bind_cols(custom_res, official_res)
   })
-})
+  saveRDS(permanova_results, file = path_permanova)
+  
+} else {
+  permanova_results <- readRDS(path_permanova)
+}
+```
 
+
+```{r permanova}
 permanova_results |>
   select(
     analysis, distance, variable, n_samples, n_groups,
@@ -789,43 +831,92 @@ permanova_results |>
   )
 ```
 
+```{r permanova_perm_dist, fig.width=14, fig.height=5}
+perm_dist_df <- permanova_results |>
+  select(distance, variable, statistic_obs, p_empirical, perm_stats) |>
+  tidyr::unnest(perm_stats)
+
+obs_df <- permanova_results |>
+  select(distance, variable, statistic_obs, p_empirical) |>
+  mutate(label = paste0("p = ", p_empirical))
+
+ggplot(perm_dist_df, aes(x = perm_stats)) +
+  geom_histogram(bins = 40, fill = "grey75", color = "white") +
+  geom_vline(data = obs_df, aes(xintercept = statistic_obs),
+             color = "tomato", linewidth = 0.9) +
+  geom_text(data = obs_df, aes(x = Inf, y = Inf, label = label),
+            hjust = 1.1, vjust = 1.5, size = 2.5, inherit.aes = FALSE) +
+  facet_grid(distance ~ variable, scales = "free_x") +
+  labs(
+    x     = "Permuted F statistic",
+    y     = "Count",
+    title = "PERMANOVA permutation distributions"
+  ) +
+  theme_bw(base_size = 9)
+```
+
+### PERMANOVA p-value refinement with permApprox
+
+```{r}
+
+```
+
+
 ### PERMDISP
 
 ```{r}
-set.seed(permutation_seed + 1)
+path_permdisp <- path_target("permdisp_results.rds")
 
-permdisp_results <- purrr::imap_dfr(distance_list, function(dist_info, dist_name) {
-  purrr::map_dfr(variables_to_test, function(var) {
-    obj <- subset_dist_and_group(
-      dist_obj = dist_info$dist,
-      metadata = sampdata_plot,
-      group_var = var
-    )
+if (!file.exists(path_permdisp)) {
+  permdisp_results <- progressr::with_progress({
+    p <- progressr::progressor(steps = nrow(test_combos))
     
-    custom_res <- run_beta_permutation_test(
-      dist_obj = obj$dist,
-      group = obj$group,
-      statistic_fun = permdisp_stat,
-      n_perm = n_perm
+    furrr::future_map_dfr(
+      seq_len(nrow(test_combos)),
+      function(i) {
+        dist_name <- test_combos$dist_name[[i]]
+        var       <- test_combos$variable[[i]]
+        dist_info <- distance_list[[dist_name]]
+        
+        obj <- subset_dist_and_group(
+          dist_obj  = dist_info$dist,
+          metadata  = sampdata_plot,
+          group_var = var
+        )
+        
+        custom_res <- run_beta_permutation_test(
+          dist_obj      = obj$dist,
+          group         = obj$group,
+          statistic_fun = permdisp_stat,
+          n_perm        = n_perm
+        )
+        
+        official_res <- run_official_betadisper(
+          dist_obj = obj$dist,
+          group    = obj$group,
+          n_perm   = n_perm
+        )
+        
+        p(message = sprintf("PERMDISP: %s | %s", dist_info$label, var))
+        
+        tibble(
+          analysis    = "PERMDISP",
+          distance_id = dist_name,
+          distance    = dist_info$label,
+          variable    = var,
+          n_samples   = length(obj$group),
+          n_groups    = nlevels(obj$group)
+        ) |>
+          bind_cols(custom_res, official_res)
+      },
+      .options = furrr::furrr_options(seed = permutation_seed + 1L)
     )
-    
-    official_res <- run_official_betadisper(
-      dist_obj = obj$dist,
-      group = obj$group,
-      n_perm = n_perm
-    )
-    
-    tibble(
-      analysis = "PERMDISP",
-      distance_id = dist_name,
-      distance = dist_info$label,
-      variable = var,
-      n_samples = length(obj$group),
-      n_groups = nlevels(obj$group)
-    ) |>
-      bind_cols(custom_res, official_res)
   })
-})
+  saveRDS(permdisp_results, file = path_permdisp)
+  
+} else {
+  permdisp_results <- readRDS(path_permdisp)
+}
 
 permdisp_results |>
   select(
