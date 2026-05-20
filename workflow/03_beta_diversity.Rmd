@@ -1213,6 +1213,74 @@ ggplot(perm_dist_df_disp, aes(x = perm_stats)) +
 ```
 
 
+## Within-group dispersion
+
+Each sample's distance to its group centroid, as used by PERMDISP. Unequal box heights across groups indicate heterogeneous dispersion (PERMDISP signal). PERMANOVA tests whether the centroids themselves are at different positions in composition space — a complementary question that requires an ordination plot to visualise directly.
+
+Panels are annotated with permApprox-refined p-values for PERMANOVA (PERM) and PERMDISP (DISP).
+
+```{r beta_centroid_dist, fig.width=12, fig.height=6}
+centroid_df <- purrr::map_dfr(
+  seq_len(nrow(test_combos)),
+  function(i) {
+    dist_name <- test_combos$dist_name[[i]]
+    var       <- test_combos$variable[[i]]
+    dist_info <- distance_list[[dist_name]]
+
+    obj <- subset_dist_and_group(dist_info$dist, sampdata_plot, var)
+    bd  <- vegan::betadisper(obj$dist, group = obj$group, type = "centroid")
+
+    tibble(
+      distance         = dist_info$label,
+      variable         = var,
+      group            = as.character(obj$group),
+      dist_to_centroid = bd$distances
+    )
+  }
+)
+
+annot_df <- permanova_results |>
+  select(distance, variable) |>
+  mutate(p_perm = permanova_permapprox$p_unadjusted) |>
+  left_join(
+    permdisp_results |>
+      select(distance, variable) |>
+      mutate(p_disp = permdisp_permapprox$p_unadjusted),
+    by = c("distance", "variable")
+  ) |>
+  mutate(label = paste0(
+    "PERM: ", formatC(p_perm, format = "e", digits = 2),
+    ifelse(p_perm < alpha_perm_approx, "*", ""), "\n",
+    "DISP: ", formatC(p_disp, format = "e", digits = 2),
+    ifelse(p_disp < alpha_perm_approx, "*", "")
+  ))
+
+ggplot(centroid_df, aes(x = group, y = dist_to_centroid, fill = "lightgray")) +
+  geom_jitter(aes(color = "darkgray"), width = 0.2, size = 0.8, alpha = 0.35,
+              show.legend = FALSE) +
+  geom_boxplot(outlier.shape = NA, alpha = 0, linewidth = 0.5) +
+  geom_text(data = annot_df, aes(x = Inf, y = Inf, label = label),
+            hjust = 1.05, vjust = 1.3, size = 2.2,
+            family = "mono", inherit.aes = FALSE) +
+  scale_fill_grey(start = 0.8, end = 0.8) +
+  scale_color_grey(start = 0.5, end = 0.5) +
+  facet_grid(distance ~ variable, scales = "free", space = "free_x",
+             labeller = labeller(variable = label_wrap_gen(10))) +
+  labs(
+    x     = NULL,
+    y     = "Distance to group centroid",
+    fill  = NULL,
+    title = "Within-group dispersion: distance to group centroid"
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    axis.text.x     = element_text(angle = 40, hjust = 1),
+    legend.position = "none"
+    #strip.text.x    = element_text(size = 7)
+  )
+```
+
+
 ## Files written
 
 These files have been written to the target directory, ```r paste0("data/", params$name)```:
