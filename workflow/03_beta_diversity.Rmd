@@ -70,6 +70,10 @@ path_source <- projthis::proj_path_source(params$name)
 emclr_epsilon <- 1e-4
 n_perm <- 999
 permutation_seed <- 42
+alpha_perm_approx <- 0.05
+
+var_order_beta <- c("Country", "Sex", "Delivery mode", "BF duration",
+                    "Exclusive BF", "Prenatal smoking", "No. of siblings")
 ```
 
 
@@ -287,6 +291,13 @@ plot_pcoa <- function(pcoa_res, metadata, color_var = NULL, title = NULL) {
   p
 }
 
+# Generate n shades from a light tint to a dark shade of base_color
+make_shades <- function(base_color, n) {
+  light <- grDevices::colorRampPalette(c("white", base_color))(4)[2]  # 33% towards white
+  dark  <- grDevices::colorRampPalette(c(base_color, "black"))(3)[2]  # 50% towards black
+  grDevices::colorRampPalette(c(light, base_color, dark))(n)
+}
+
 plot_distance_heatmap <- function(dist_obj, metadata, ann_vars = NULL, title = NULL) {
   dist_mat <- as.matrix(dist_obj)
   
@@ -299,23 +310,29 @@ plot_distance_heatmap <- function(dist_obj, metadata, ann_vars = NULL, title = N
     c("white", "#4393C3", "#2166AC")
   )
   
-  # Build top (column) and left (row) annotations from metadata variables
+  # Base color per variable; shades go light -> base -> dark for level values
+  var_base_colors <- c(
+    "Country"          = "#2166AC",  # blue
+    "Sex"              = "#CB181D",  # red
+    "Delivery mode"    = "#238B45",  # green
+    "BF duration"      = "#D94801",  # orange
+    "Exclusive BF"     = "#6A51A3",  # purple
+    "Prenatal smoking" = "gold",  # teal
+    "No. of siblings"  = "#8C510A"   # brown
+  )
+  
+  # Build top annotation
   valid_ann <- ann_vars[ann_vars %in% names(metadata)]
   if (length(valid_ann) > 0) {
     ann_df <- metadata[rownames(dist_mat), valid_ann, drop = FALSE]
     
-    # Each variable gets a distinct qualitative palette
-    qual_palettes <- c("Set2", "Dark2", "Set1", "Accent", "Paired", "Set3", "Pastel1")
-    ann_colors <- mapply(function(v, pal) {
+    ann_colors <- lapply(valid_ann, function(v) {
       vals <- ann_df[[v]]
       lvls <- levels(droplevels(vals))
-      n    <- length(lvls)
-      cols <- if (n <= RColorBrewer::brewer.pal.info[pal, "maxcolors"])
-                RColorBrewer::brewer.pal(max(3, n), pal)[seq_len(n)]
-              else
-                grDevices::hcl.colors(n, palette = "Dynamic")
-      setNames(cols, lvls)
-    }, valid_ann, qual_palettes[seq_along(valid_ann)], SIMPLIFY = FALSE)
+      base <- if (v %in% names(var_base_colors)) var_base_colors[[v]] else "#555555"
+      setNames(make_shades(base, length(lvls)), lvls)
+    })
+    names(ann_colors) <- valid_ann
     
     col_ann <- ComplexHeatmap::HeatmapAnnotation(
       df                   = ann_df,
@@ -333,6 +350,8 @@ plot_distance_heatmap <- function(dist_obj, metadata, ann_vars = NULL, title = N
     col                = col_fun,
     cluster_rows       = hc,
     cluster_columns    = hc,
+    show_row_dend      = TRUE,
+    show_column_dend   = FALSE,
     top_annotation     = col_ann,
     show_row_names     = FALSE,
     show_column_names  = FALSE,
@@ -580,14 +599,10 @@ None of the variables examined produce visually discernible separation in either
 These heatmaps are mainly diagnostic. For several hundred samples, they become visually dense, but they are useful for checking whether strong blocks or outlying samples occur.
 
 ```{r heatmap_bray, fig.width=9, fig.height=7}
-variables_heat <- variables_to_plot[
-  c("cesarean", "breast_dur_cat1", "breast_excl_cat1", "pregsmoke", "sibs_numb_cat")
-]
-
 p_heat_bray <- plot_distance_heatmap(
   dist_obj = dist_bray,
   metadata = sampdata_plot,
-  ann_vars = variables_heat,
+  ann_vars = variables_to_plot,
   title    = "Bray-Curtis distance matrix"
 )
 
@@ -600,7 +615,7 @@ The Bray-Curtis distance heatmap reveals a block of samples in the upper-left cl
 p_heat_emclr <- plot_distance_heatmap(
   dist_obj = dist_emclr_object,
   metadata = sampdata_plot,
-  ann_vars = variables_heat,
+  ann_vars = variables_to_plot,
   title    = "emCLR Euclidean distance matrix"
 )
 
@@ -819,98 +834,19 @@ if (!file.exists(path_permanova)) {
 } else {
   permanova_results <- readRDS(path_permanova)
 }
+
+permanova_results <- permanova_results |>
+  mutate(variable = factor(variable, levels = var_order_beta))
 ```
 
 
-```{r permanova}
+```{r}
 permanova_results %>%
   select(
     analysis, distance, variable, n_samples, n_groups,
     statistic_obs, p_empirical, statistic_adonis2, r2_adonis2, p_adonis2,
     n_exceed, n_perm
   )
-```
-
-```{r permanova_latex}
-var_order_beta <- c("Country", "Sex", "Delivery mode", "BF duration",
-                    "Exclusive BF", "Prenatal smoking", "No. of siblings")
-dist_order     <- c("Bray-Curtis", "emCLR Euclidean")
-
-sig_stars_beta <- function(p) {
-  dplyr::case_when(
-    p < 0.001 ~ "***",
-    p < 0.01  ~ "**",
-    p < 0.05  ~ "*",
-    p < 0.1   ~ ".",
-    TRUE      ~ ""
-  )
-}
-
-fmt_p_latex <- function(p_num) {
-  p_str <- formatC(p_num, format = "e", digits = 2)
-  stars <- sig_stars_beta(p_num)
-  ifelse(stars != "", paste0(p_str, "$^{", stars, "}$"), p_str)
-}
-
-permanova_tex_df <- permanova_results %>%
-  mutate(
-    p_permapprox = permanova_permapprox$p_unadjusted,
-    variable     = factor(variable, levels = var_order_beta),
-    distance     = factor(distance, levels = dist_order)
-  ) %>%
-  arrange(variable, distance) %>%
-  transmute(
-    Measure  = as.character(distance),
-    F        = round(statistic_obs, 2),
-    n_exceed = n_exceed,
-    p_emp    = fmt_p_latex(p_empirical),
-    p_papp   = fmt_p_latex(p_permapprox)
-  )
-
-group_starts <- seq(1, by = length(dist_order), length.out = length(var_order_beta))
-group_ends   <- group_starts + length(dist_order) - 1L
-
-# Helper: replace the tabular column spec via direct string substitution,
-# avoiding kableExtra's column_spec() which inserts the spec as cell content.
-fix_col_spec <- function(tbl, old, new) {
-  s <- sub(old, new, as.character(tbl), fixed = TRUE)
-  structure(s, class = class(tbl), format = attr(tbl, "format"))
-}
-
-tex_permanova <- kbl(
-  permanova_tex_df,
-  format    = "latex",
-  booktabs  = TRUE,
-  escape    = FALSE,
-  col.names = c("Measure", "$F$", "\\# exceed",
-                "$p$ (emp.)", "$p$ (GPD-refined)"),
-  align     = "lrrrr",
-  caption   = paste(
-    "PERMANOVA results for beta diversity across cohort variables.",
-    "$F$ is the observed pseudo-$F$ statistic (adonis2).",
-    "\\# exceed: number of permuted statistics $\\geq$ observed.",
-    "$p$ (emp.): empirical permutation $p$-value ($999$ permutations);",
-    "$p$ (GPD-refined): $p$-value refined with \\texttt{permApprox} (GPD tail approximation)."
-  ),
-  label     = "beta:permanova"
-) %>%
-  (\(t) {
-    for (i in seq_along(var_order_beta)) {
-      t <- pack_rows(t, var_order_beta[i], group_starts[i], group_ends[i], bold = TRUE)
-    }
-    t
-  })() %>%
-  kable_styling(latex_options = c("hold_position")) %>%
-  footnote(
-    general        = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
-    general_title  = "",
-    escape         = FALSE,
-    threeparttable = TRUE
-  ) %>%
-  fix_col_spec("{lrrrr}", "{l@{\\hspace*{1.5em}}rrrr}")
-
-tex_permanova
-save_kable(tex_permanova, file = path_target("permanova_table.tex"))
 ```
 
 ```{r permanova_perm_dist, fig.width=12, fig.height=5}
@@ -994,6 +930,86 @@ permanova_results %>%
   )
 ```
 
+```{r permanova_latex}
+dist_order <- c("Bray-Curtis", "emCLR Euclidean")
+
+sig_stars_beta <- function(p) {
+  dplyr::case_when(
+    p < 0.001 ~ "***",
+    p < 0.01  ~ "**",
+    p < 0.05  ~ "*",
+    p < 0.1   ~ ".",
+    TRUE      ~ ""
+  )
+}
+
+fmt_p_latex <- function(p_num) {
+  p_str <- formatC(p_num, format = "e", digits = 2)
+  stars <- sig_stars_beta(p_num)
+  ifelse(stars != "", paste0(p_str, "$^{", stars, "}$"), p_str)
+}
+
+permanova_tex_df <- permanova_results %>%
+  mutate(
+    p_permapprox = permanova_permapprox$p_unadjusted,
+    variable     = factor(variable, levels = var_order_beta),
+    distance     = factor(distance, levels = dist_order)
+  ) %>%
+  arrange(variable, distance) %>%
+  transmute(
+    Measure  = as.character(distance),
+    F        = round(statistic_obs, 2),
+    n_exceed = n_exceed,
+    p_emp    = fmt_p_latex(p_empirical),
+    p_papp   = fmt_p_latex(p_permapprox)
+  )
+
+group_starts <- seq(1, by = length(dist_order), length.out = length(var_order_beta))
+group_ends   <- group_starts + length(dist_order) - 1L
+
+# Helper: replace the tabular column spec via direct string substitution,
+# avoiding kableExtra's column_spec() which inserts the spec as cell content.
+fix_col_spec <- function(tbl, old, new) {
+  s <- sub(old, new, as.character(tbl), fixed = TRUE)
+  structure(s, class = class(tbl), format = attr(tbl, "format"))
+}
+
+tex_permanova <- kbl(
+  permanova_tex_df,
+  format    = "latex",
+  booktabs  = TRUE,
+  escape    = FALSE,
+  col.names = c("Measure", "$F$", "\\# exceed",
+                "$p$ (emp.)", "$p$ (GPD-refined)"),
+  align     = "lrrrr",
+  caption   = paste(
+    "PERMANOVA results for beta diversity across cohort variables.",
+    "$F$ is the observed pseudo-$F$ statistic (adonis2).",
+    "\\# exceed: number of permuted statistics $\\geq$ observed.",
+    "$p$ (emp.): empirical permutation $p$-value ($999$ permutations);",
+    "$p$ (GPD-refined): $p$-value refined with \\texttt{permApprox} (GPD tail approximation)."
+  ),
+  label     = "beta:permanova"
+) %>%
+  (\(t) {
+    for (i in seq_along(var_order_beta)) {
+      t <- pack_rows(t, var_order_beta[i], group_starts[i], group_ends[i], bold = TRUE)
+    }
+    t
+  })() %>%
+  kable_styling(latex_options = c("hold_position")) %>%
+  footnote(
+    general        = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
+    general_title  = "",
+    escape         = FALSE,
+    threeparttable = TRUE
+  ) %>%
+  fix_col_spec("{lrrrr}", "{l@{\\hspace*{1.5em}}rrrr}")
+
+tex_permanova
+save_kable(tex_permanova, file = path_target("permanova_table.tex"))
+```
+
 ```{r permanova_permapprox_perm_dist, fig.width=12, fig.height=5}
 obs_df_pa <- permanova_results %>%
   select(distance, variable, statistic_obs, p_empirical) %>%
@@ -1019,7 +1035,7 @@ ggplot(perm_dist_df, aes(x = perm_stats)) +
   labs(
     x     = "Permuted F statistic",
     y     = "Count",
-    title = "PERMANOVA permutation distributions with permApprox-refined p-values"
+    #title = "PERMANOVA permutation distributions with permApprox-refined p-values"
   ) +
   theme_bw(base_size = 12)
 ```
@@ -1081,11 +1097,52 @@ if (!file.exists(path_permdisp)) {
   permdisp_results <- readRDS(path_permdisp)
 }
 
+permdisp_results <- permdisp_results |>
+  mutate(variable = factor(variable, levels = var_order_beta))
+
 permdisp_results %>%
   select(
     analysis, distance, variable, n_samples, n_groups,
     statistic_obs, p_empirical, statistic_betadisper, p_betadisper,
     n_exceed, n_perm
+  )
+```
+
+### PERMDISP p-value refinement with permApprox
+
+```{r permdisp_permapprox}
+path_permdisp_permapprox <- path_target("permdisp_permapprox_results.rds")
+
+permdisp_obs_stats  <- permdisp_results$statistic_obs
+permdisp_perm_stats <- do.call(cbind, permdisp_results$perm_stats)
+
+if (!file.exists(path_permdisp_permapprox)) {
+  permdisp_permapprox <- perm_approx(
+    obs_stats     = permdisp_obs_stats,
+    perm_stats    = permdisp_perm_stats,
+    method        = "gpd",
+    alternative   = "greater",
+    null_center   = "median",
+    approx_thresh = 0.1,
+    adjust_method = "none",
+    gpd_ctrl      = gpd_ctrl,
+    cores         = cores,
+    verbose       = TRUE
+  )
+  saveRDS(permdisp_permapprox, file = path_permdisp_permapprox)
+} else {
+  permdisp_permapprox <- readRDS(path_permdisp_permapprox)
+}
+
+permdisp_permapprox
+```
+
+```{r permdisp_permapprox_table}
+permdisp_results %>%
+  select(distance, variable, n_samples, statistic_obs, n_exceed, n_perm, p_empirical) %>%
+  mutate(
+    p_permapprox = permdisp_permapprox$p_unadjusted,
+    method_used  = permdisp_permapprox$method_used
   )
 ```
 
@@ -1141,44 +1198,6 @@ tex_permdisp
 save_kable(tex_permdisp, file = path_target("permdisp_table.tex"))
 ```
 
-### PERMDISP p-value refinement with permApprox
-
-```{r permdisp_permapprox}
-path_permdisp_permapprox <- path_target("permdisp_permapprox_results.rds")
-
-permdisp_obs_stats  <- permdisp_results$statistic_obs
-permdisp_perm_stats <- do.call(cbind, permdisp_results$perm_stats)
-
-if (!file.exists(path_permdisp_permapprox)) {
-  permdisp_permapprox <- perm_approx(
-    obs_stats     = permdisp_obs_stats,
-    perm_stats    = permdisp_perm_stats,
-    method        = "gpd",
-    alternative   = "greater",
-    null_center   = "median",
-    approx_thresh = 0.1,
-    adjust_method = "none",
-    gpd_ctrl      = gpd_ctrl,
-    cores         = cores,
-    verbose       = TRUE
-  )
-  saveRDS(permdisp_permapprox, file = path_permdisp_permapprox)
-} else {
-  permdisp_permapprox <- readRDS(path_permdisp_permapprox)
-}
-
-permdisp_permapprox
-```
-
-```{r permdisp_permapprox_table}
-permdisp_results %>%
-  select(distance, variable, n_samples, statistic_obs, n_exceed, n_perm, p_empirical) %>%
-  mutate(
-    p_permapprox = permdisp_permapprox$p_unadjusted,
-    method_used  = permdisp_permapprox$method_used
-  )
-```
-
 ```{r permdisp_permapprox_perm_dist, fig.width=12, fig.height=5}
 perm_dist_df_disp <- permdisp_results %>%
   select(distance, variable, statistic_obs, p_empirical, perm_stats) %>%
@@ -1207,7 +1226,7 @@ ggplot(perm_dist_df_disp, aes(x = perm_stats)) +
   labs(
     x     = "Permuted F statistic",
     y     = "Count",
-    title = "PERMDISP permutation distributions with permApprox-refined p-values"
+    #title = "PERMDISP permutation distributions with permApprox-refined p-values"
   ) +
   theme_bw(base_size = 12)
 ```
@@ -1237,7 +1256,8 @@ centroid_df <- purrr::map_dfr(
       dist_to_centroid = bd$distances
     )
   }
-)
+) |>
+  mutate(variable = factor(variable, levels = var_order_beta))
 
 annot_df <- permanova_results |>
   select(distance, variable) |>
@@ -1249,7 +1269,7 @@ annot_df <- permanova_results |>
     by = c("distance", "variable")
   ) |>
   mutate(label = paste0(
-    "PERM: ", formatC(p_perm, format = "e", digits = 2),
+    "ANOVA: ", formatC(p_perm, format = "e", digits = 2),
     ifelse(p_perm < alpha_perm_approx, "*", ""), "\n",
     "DISP: ", formatC(p_disp, format = "e", digits = 2),
     ifelse(p_disp < alpha_perm_approx, "*", "")
@@ -1260,8 +1280,8 @@ ggplot(centroid_df, aes(x = group, y = dist_to_centroid, fill = "lightgray")) +
               show.legend = FALSE) +
   geom_boxplot(outlier.shape = NA, alpha = 0, linewidth = 0.5) +
   geom_text(data = annot_df, aes(x = Inf, y = Inf, label = label),
-            hjust = 1.05, vjust = 1.3, size = 2.2,
-            family = "mono", inherit.aes = FALSE) +
+            hjust = 1.05, vjust = 1.3, size = 3,
+            inherit.aes = FALSE) +
   scale_fill_grey(start = 0.8, end = 0.8) +
   scale_color_grey(start = 0.5, end = 0.5) +
   facet_grid(distance ~ variable, scales = "free", space = "free_x",
@@ -1270,7 +1290,7 @@ ggplot(centroid_df, aes(x = group, y = dist_to_centroid, fill = "lightgray")) +
     x     = NULL,
     y     = "Distance to group centroid",
     fill  = NULL,
-    title = "Within-group dispersion: distance to group centroid"
+    #title = "Within-group dispersion: distance to group centroid"
   ) +
   theme_bw(base_size = 12) +
   theme(
