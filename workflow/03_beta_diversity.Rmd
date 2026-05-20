@@ -38,6 +38,7 @@ library(patchwork)
 library(vegan)
 library(pheatmap)
 library(permApprox)
+library(kableExtra)
 
 # Parallel computing
 library(future)
@@ -69,7 +70,6 @@ path_source <- projthis::proj_path_source(params$name)
 emclr_epsilon <- 1e-4
 n_perm <- 999
 permutation_seed <- 42
-alpha_perm_approx <- 0.05
 ```
 
 
@@ -669,14 +669,14 @@ test_combos <- tidyr::expand_grid(
 subset_dist_and_group <- function(dist_obj, metadata, group_var) {
   dist_mat <- as.matrix(dist_obj)
   
-  dat <- metadata |>
-    filter(SampleID %in% rownames(dist_mat)) |>
-    select(SampleID, group = all_of(group_var)) |>
-    filter(!is.na(group)) |>
+  dat <- metadata %>%
+    filter(SampleID %in% rownames(dist_mat)) %>%
+    select(SampleID, group = all_of(group_var)) %>%
+    filter(!is.na(group)) %>%
     mutate(group = factor(group))
   
-  dat <- dat |>
-    filter(!is.na(group)) |>
+  dat <- dat %>%
+    filter(!is.na(group)) %>%
     droplevels()
   
   sample_ids <- dat$SampleID
@@ -730,7 +730,7 @@ run_beta_permutation_test <- function(dist_obj, group, statistic_fun, n_perm = 9
     p_empirical   = empirical_pvalue(obs_stat, perm_stats),
     n_perm        = n_perm,
     n_exceed      = sum(perm_stats >= obs_stat, na.rm = TRUE)
-  ) |>
+  ) %>%
     mutate(
       perm_stats = list(as.numeric(perm_stats))
     )
@@ -808,7 +808,7 @@ if (!file.exists(path_permanova)) {
           variable    = var,
           n_samples   = length(obj$group),
           n_groups    = nlevels(obj$group)
-        ) |>
+        ) %>%
           bind_cols(custom_res, official_res)
       },
       .options = furrr::furrr_options(seed = permutation_seed)
@@ -823,7 +823,7 @@ if (!file.exists(path_permanova)) {
 
 
 ```{r permanova}
-permanova_results |>
+permanova_results %>%
   select(
     analysis, distance, variable, n_samples, n_groups,
     statistic_obs, p_empirical, statistic_adonis2, r2_adonis2, p_adonis2,
@@ -831,13 +831,95 @@ permanova_results |>
   )
 ```
 
-```{r permanova_perm_dist, fig.width=14, fig.height=5}
-perm_dist_df <- permanova_results |>
-  select(distance, variable, statistic_obs, p_empirical, perm_stats) |>
+```{r permanova_latex}
+var_order_beta <- c("Country", "Sex", "Delivery mode", "BF duration",
+                    "Exclusive BF", "Prenatal smoking", "No. of siblings")
+dist_order     <- c("Bray-Curtis", "emCLR Euclidean")
+
+sig_stars_beta <- function(p) {
+  dplyr::case_when(
+    p < 0.001 ~ "***",
+    p < 0.01  ~ "**",
+    p < 0.05  ~ "*",
+    p < 0.1   ~ ".",
+    TRUE      ~ ""
+  )
+}
+
+fmt_p_latex <- function(p_num) {
+  p_str <- formatC(p_num, format = "e", digits = 2)
+  stars <- sig_stars_beta(p_num)
+  ifelse(stars != "", paste0(p_str, "$^{", stars, "}$"), p_str)
+}
+
+permanova_tex_df <- permanova_results %>%
+  mutate(
+    p_permapprox = permanova_permapprox$p_unadjusted,
+    variable     = factor(variable, levels = var_order_beta),
+    distance     = factor(distance, levels = dist_order)
+  ) %>%
+  arrange(variable, distance) %>%
+  transmute(
+    Measure  = as.character(distance),
+    F        = round(statistic_obs, 2),
+    n_exceed = n_exceed,
+    p_emp    = fmt_p_latex(p_empirical),
+    p_papp   = fmt_p_latex(p_permapprox)
+  )
+
+group_starts <- seq(1, by = length(dist_order), length.out = length(var_order_beta))
+group_ends   <- group_starts + length(dist_order) - 1L
+
+# Helper: replace the tabular column spec via direct string substitution,
+# avoiding kableExtra's column_spec() which inserts the spec as cell content.
+fix_col_spec <- function(tbl, old, new) {
+  s <- sub(old, new, as.character(tbl), fixed = TRUE)
+  structure(s, class = class(tbl), format = attr(tbl, "format"))
+}
+
+tex_permanova <- kbl(
+  permanova_tex_df,
+  format    = "latex",
+  booktabs  = TRUE,
+  escape    = FALSE,
+  col.names = c("Measure", "$F$", "\\# exceed",
+                "$p$ (emp.)", "$p$ (GPD-refined)"),
+  align     = "lrrrr",
+  caption   = paste(
+    "PERMANOVA results for beta diversity across cohort variables.",
+    "$F$ is the observed pseudo-$F$ statistic (adonis2).",
+    "\\# exceed: number of permuted statistics $\\geq$ observed.",
+    "$p$ (emp.): empirical permutation $p$-value ($999$ permutations);",
+    "$p$ (GPD-refined): $p$-value refined with \\texttt{permApprox} (GPD tail approximation)."
+  ),
+  label     = "beta:permanova"
+) %>%
+  (\(t) {
+    for (i in seq_along(var_order_beta)) {
+      t <- pack_rows(t, var_order_beta[i], group_starts[i], group_ends[i], bold = TRUE)
+    }
+    t
+  })() %>%
+  kable_styling(latex_options = c("hold_position")) %>%
+  footnote(
+    general        = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
+    general_title  = "",
+    escape         = FALSE,
+    threeparttable = TRUE
+  ) %>%
+  fix_col_spec("{lrrrr}", "{l@{\\hspace*{1.5em}}rrrr}")
+
+tex_permanova
+save_kable(tex_permanova, file = path_target("permanova_table.tex"))
+```
+
+```{r permanova_perm_dist, fig.width=12, fig.height=5}
+perm_dist_df <- permanova_results %>%
+  select(distance, variable, statistic_obs, p_empirical, perm_stats) %>%
   tidyr::unnest(perm_stats)
 
-obs_df <- permanova_results |>
-  select(distance, variable, statistic_obs, p_empirical) |>
+obs_df <- permanova_results %>%
+  select(distance, variable, statistic_obs, p_empirical) %>%
   mutate(label = paste0("p = ", p_empirical))
 
 ggplot(perm_dist_df, aes(x = perm_stats)) +
@@ -852,13 +934,94 @@ ggplot(perm_dist_df, aes(x = perm_stats)) +
     y     = "Count",
     title = "PERMANOVA permutation distributions"
   ) +
-  theme_bw(base_size = 9)
+  theme_bw(base_size = 12)
 ```
+
+**Mean and median of permutation distributions**
+
+```{r}
+perm_dist_df %>%
+  group_by(distance, variable) %>%
+  summarise(mean = mean(perm_stats),
+            median = median(perm_stats))
+```
+
 
 ### PERMANOVA p-value refinement with permApprox
 
-```{r}
+```{r permanova_permapprox}
+path_permanova_permapprox <- path_target("permanova_permapprox_results.rds")
 
+permanova_obs_stats  <- permanova_results$statistic_obs
+permanova_perm_stats <- do.call(cbind, permanova_results$perm_stats)
+
+gpd_ctrl <- make_gpd_ctrl(
+  constraint  = "support_at_obs",
+  sample_size = min(permanova_results$n_samples)
+)
+
+if (!file.exists(path_permanova_permapprox)) {
+  permanova_permapprox <- perm_approx(
+    obs_stats     = permanova_obs_stats,
+    perm_stats    = permanova_perm_stats,
+    method        = "gpd",
+    alternative   = "greater",
+    null_center   = "median",
+    approx_thresh = 0.1,
+    adjust_method = "none",
+    gpd_ctrl      = gpd_ctrl,
+    cores         = cores,
+    verbose       = TRUE
+  )
+  saveRDS(permanova_permapprox, file = path_permanova_permapprox)
+} else {
+  permanova_permapprox <- readRDS(path_permanova_permapprox)
+}
+
+permanova_permapprox
+```
+
+```{r}
+summary(permanova_permapprox)
+```
+
+```{r permanova_permapprox_table}
+permanova_results %>%
+  select(distance, variable, n_samples, statistic_obs, n_exceed, n_perm, p_empirical) %>%
+  mutate(
+    p_permapprox = permanova_permapprox$p_unadjusted,
+    method_used  = permanova_permapprox$method_used
+  )
+```
+
+```{r permanova_permapprox_perm_dist, fig.width=12, fig.height=5}
+obs_df_pa <- permanova_results %>%
+  select(distance, variable, statistic_obs, p_empirical) %>%
+  mutate(
+    p_permapprox = permanova_permapprox$p_unadjusted,
+    label = paste0(
+      "p_emp = ", formatC(p_empirical,  format = "e", digits = 2),
+      ifelse(p_empirical  < alpha_perm_approx, "*", ""), "\n",
+      "p_pApp  = ", formatC(p_permapprox, format = "e", digits = 2),
+      ifelse(p_permapprox < alpha_perm_approx, "*", "")
+    )
+  )
+
+ggplot(perm_dist_df, aes(x = perm_stats)) +
+  geom_histogram(bins = 40, fill = "grey75", color = "white") +
+  geom_vline(data = obs_df_pa, aes(xintercept = statistic_obs),
+             color = "tomato", linewidth = 0.9) +
+  geom_text(data = obs_df_pa, aes(x = Inf, y = Inf, label = label),
+            hjust = 1.05, vjust = 1.3, size = 3,
+            #family = "mono", 
+            inherit.aes = FALSE) +
+  facet_grid(distance ~ variable, scales = "free_x") +
+  labs(
+    x     = "Permuted F statistic",
+    y     = "Count",
+    title = "PERMANOVA permutation distributions with permApprox-refined p-values"
+  ) +
+  theme_bw(base_size = 12)
 ```
 
 
@@ -906,7 +1069,7 @@ if (!file.exists(path_permdisp)) {
           variable    = var,
           n_samples   = length(obj$group),
           n_groups    = nlevels(obj$group)
-        ) |>
+        ) %>%
           bind_cols(custom_res, official_res)
       },
       .options = furrr::furrr_options(seed = permutation_seed + 1L)
@@ -918,12 +1081,135 @@ if (!file.exists(path_permdisp)) {
   permdisp_results <- readRDS(path_permdisp)
 }
 
-permdisp_results |>
+permdisp_results %>%
   select(
     analysis, distance, variable, n_samples, n_groups,
     statistic_obs, p_empirical, statistic_betadisper, p_betadisper,
     n_exceed, n_perm
   )
+```
+
+```{r permdisp_latex}
+permdisp_tex_df <- permdisp_results %>%
+  mutate(
+    p_permapprox = permdisp_permapprox$p_unadjusted,
+    variable     = factor(variable, levels = var_order_beta),
+    distance     = factor(distance, levels = dist_order)
+  ) %>%
+  arrange(variable, distance) %>%
+  transmute(
+    Measure  = as.character(distance),
+    F        = round(statistic_obs, 2),
+    n_exceed = n_exceed,
+    p_emp    = fmt_p_latex(p_empirical),
+    p_papp   = fmt_p_latex(p_permapprox)
+  )
+
+tex_permdisp <- kbl(
+  permdisp_tex_df,
+  format    = "latex",
+  booktabs  = TRUE,
+  escape    = FALSE,
+  col.names = c("Measure", "$F$", "\\# exceed",
+                "$p$ (emp.)", "$p$ (GPD-refined)"),
+  align     = "lrrrr",
+  caption   = paste(
+    "PERMDISP results for beta diversity dispersion across cohort variables.",
+    "$F$ is the observed $F$-statistic from the ANOVA on betadisper distances to group centroids.",
+    "\\# exceed: number of permuted statistics $\\geq$ observed.",
+    "$p$ (emp.): empirical permutation $p$-value ($999$ permutations);",
+    "$p$ (GPD-refined): $p$-value refined with \\texttt{permApprox} (GPD tail approximation)."
+  ),
+  label     = "beta:permdisp"
+) %>%
+  (\(t) {
+    for (i in seq_along(var_order_beta)) {
+      t <- pack_rows(t, var_order_beta[i], group_starts[i], group_ends[i], bold = TRUE)
+    }
+    t
+  })() %>%
+  kable_styling(latex_options = c("hold_position")) %>%
+  footnote(
+    general        = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
+    general_title  = "",
+    escape         = FALSE,
+    threeparttable = TRUE
+  ) %>%
+  fix_col_spec("{lrrrr}", "{l@{\\hspace*{1.5em}}rrrr}")
+
+tex_permdisp
+save_kable(tex_permdisp, file = path_target("permdisp_table.tex"))
+```
+
+### PERMDISP p-value refinement with permApprox
+
+```{r permdisp_permapprox}
+path_permdisp_permapprox <- path_target("permdisp_permapprox_results.rds")
+
+permdisp_obs_stats  <- permdisp_results$statistic_obs
+permdisp_perm_stats <- do.call(cbind, permdisp_results$perm_stats)
+
+if (!file.exists(path_permdisp_permapprox)) {
+  permdisp_permapprox <- perm_approx(
+    obs_stats     = permdisp_obs_stats,
+    perm_stats    = permdisp_perm_stats,
+    method        = "gpd",
+    alternative   = "greater",
+    null_center   = "median",
+    approx_thresh = 0.1,
+    adjust_method = "none",
+    gpd_ctrl      = gpd_ctrl,
+    cores         = cores,
+    verbose       = TRUE
+  )
+  saveRDS(permdisp_permapprox, file = path_permdisp_permapprox)
+} else {
+  permdisp_permapprox <- readRDS(path_permdisp_permapprox)
+}
+
+permdisp_permapprox
+```
+
+```{r permdisp_permapprox_table}
+permdisp_results %>%
+  select(distance, variable, n_samples, statistic_obs, n_exceed, n_perm, p_empirical) %>%
+  mutate(
+    p_permapprox = permdisp_permapprox$p_unadjusted,
+    method_used  = permdisp_permapprox$method_used
+  )
+```
+
+```{r permdisp_permapprox_perm_dist, fig.width=12, fig.height=5}
+perm_dist_df_disp <- permdisp_results %>%
+  select(distance, variable, statistic_obs, p_empirical, perm_stats) %>%
+  tidyr::unnest(perm_stats)
+
+obs_df_disp_pa <- permdisp_results %>%
+  select(distance, variable, statistic_obs, p_empirical) %>%
+  mutate(
+    p_permapprox = permdisp_permapprox$p_unadjusted,
+    label = paste0(
+      "p_emp = ", formatC(p_empirical,  format = "e", digits = 2),
+      ifelse(p_empirical  < alpha_perm_approx, "*", ""), "\n",
+      "p_pApp  = ", formatC(p_permapprox, format = "e", digits = 2),
+      ifelse(p_permapprox < alpha_perm_approx, "*", "")
+    )
+  )
+
+ggplot(perm_dist_df_disp, aes(x = perm_stats)) +
+  geom_histogram(bins = 40, fill = "grey75", color = "white") +
+  geom_vline(data = obs_df_disp_pa, aes(xintercept = statistic_obs),
+             color = "tomato", linewidth = 0.9) +
+  geom_text(data = obs_df_disp_pa, aes(x = Inf, y = Inf, label = label),
+            hjust = 1.05, vjust = 1.3, size = 3,
+            inherit.aes = FALSE) +
+  facet_grid(distance ~ variable, scales = "free_x") +
+  labs(
+    x     = "Permuted F statistic",
+    y     = "Count",
+    title = "PERMDISP permutation distributions with permApprox-refined p-values"
+  ) +
+  theme_bw(base_size = 12)
 ```
 
 

@@ -1,0 +1,44 @@
+\begin{table}[!h]
+\centering
+\caption{\label{tab:beta:permanova}PERMANOVA results for beta diversity across cohort variables. $F$ is the observed pseudo-$F$ statistic (adonis2). \# exceed: number of permuted statistics $\geq$ observed. $p$ (emp.): empirical permutation $p$-value ($999$ permutations); $p$ (GPD-refined): $p$-value refined with \texttt{permApprox} (GPD tail approximation).}
+\centering
+\begin{threeparttable}
+\begin{tabular}[t]{l@{\hspace*{1.5em}}rrrr}
+\toprule
+Measure & $F$ & \# exceed & $p$ (emp.) & $p$ (GPD-refined)\\
+\midrule
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Country}}\\
+\hspace{1em}Bray-Curtis & 4.56 & 0 & 1.00e-03$^{**}$ & 1.30e-04$^{***}$\\
+\hspace{1em}emCLR Euclidean & 2.76 & 0 & 1.00e-03$^{**}$ & 1.36e-19$^{***}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Sex}}\\
+\hspace{1em}Bray-Curtis & 1.36 & 187 & 1.88e-01 & 1.88e-01\\
+\hspace{1em}emCLR Euclidean & 1.27 & 89 & 9.00e-02$^{.}$ & 9.00e-02$^{.}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Delivery mode}}\\
+\hspace{1em}Bray-Curtis & 3.67 & 10 & 1.10e-02$^{*}$ & 7.73e-03$^{**}$\\
+\hspace{1em}emCLR Euclidean & 1.53 & 12 & 1.30e-02$^{*}$ & 1.48e-02$^{*}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{BF duration}}\\
+\hspace{1em}Bray-Curtis & 14.37 & 0 & 1.00e-03$^{**}$ & 1.87e-12$^{***}$\\
+\hspace{1em}emCLR Euclidean & 3.70 & 0 & 1.00e-03$^{**}$ & 2.23e-42$^{***}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Exclusive BF}}\\
+\hspace{1em}Bray-Curtis & 10.20 & 0 & 1.00e-03$^{**}$ & 1.59e-06$^{***}$\\
+\hspace{1em}emCLR Euclidean & 3.45 & 0 & 1.00e-03$^{**}$ & 3.65e-22$^{***}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Prenatal smoking}}\\
+\hspace{1em}Bray-Curtis & 5.66 & 1 & 2.00e-03$^{**}$ & 6.59e-04$^{***}$\\
+\hspace{1em}emCLR Euclidean & 2.15 & 0 & 1.00e-03$^{**}$ & 2.08e-04$^{***}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{No. of siblings}}\\
+\hspace{1em}Bray-Curtis & 2.22 & 20 & 2.10e-02$^{*}$ & 2.04e-02$^{*}$\\
+\hspace{1em}emCLR Euclidean & 1.19 & 118 & 1.19e-01 & 1.19e-01\\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item $^{***}:p<0.001$; $^{**}:p<0.01$; $^{*}:p<0.05$; $^{.}:p<0.1$.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

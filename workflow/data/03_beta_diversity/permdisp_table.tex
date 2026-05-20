@@ -1,0 +1,44 @@
+\begin{table}[!h]
+\centering
+\caption{\label{tab:beta:permdisp}PERMDISP results for beta diversity dispersion across cohort variables. $F$ is the observed $F$-statistic from the ANOVA on betadisper distances to group centroids. \# exceed: number of permuted statistics $\geq$ observed. $p$ (emp.): empirical permutation $p$-value ($999$ permutations); $p$ (GPD-refined): $p$-value refined with \texttt{permApprox} (GPD tail approximation).}
+\centering
+\begin{threeparttable}
+\begin{tabular}[t]{l@{\hspace*{1.5em}}rrrr}
+\toprule
+Measure & $F$ & \# exceed & $p$ (emp.) & $p$ (GPD-refined)\\
+\midrule
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Country}}\\
+\hspace{1em}Bray-Curtis & 10.66 & 4 & 5.00e-03$^{**}$ & 2.65e-03$^{**}$\\
+\hspace{1em}emCLR Euclidean & 10.67 & 0 & 1.00e-03$^{**}$ & 2.97e-07$^{***}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Sex}}\\
+\hspace{1em}Bray-Curtis & 2.66 & 220 & 2.21e-01 & 2.21e-01\\
+\hspace{1em}emCLR Euclidean & 0.62 & 444 & 4.45e-01 & 4.45e-01\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Delivery mode}}\\
+\hspace{1em}Bray-Curtis & 8.72 & 34 & 3.50e-02$^{*}$ & 2.92e-02$^{*}$\\
+\hspace{1em}emCLR Euclidean & 0.97 & 334 & 3.35e-01 & 3.35e-01\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{BF duration}}\\
+\hspace{1em}Bray-Curtis & 15.20 & 1 & 2.00e-03$^{**}$ & 5.28e-04$^{***}$\\
+\hspace{1em}emCLR Euclidean & 19.66 & 0 & 1.00e-03$^{**}$ & 3.43e-06$^{***}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Exclusive BF}}\\
+\hspace{1em}Bray-Curtis & 8.60 & 4 & 5.00e-03$^{**}$ & 3.78e-03$^{**}$\\
+\hspace{1em}emCLR Euclidean & 16.39 & 0 & 1.00e-03$^{**}$ & 7.77e-08$^{***}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{Prenatal smoking}}\\
+\hspace{1em}Bray-Curtis & 6.67 & 47 & 4.80e-02$^{*}$ & 4.64e-02$^{*}$\\
+\hspace{1em}emCLR Euclidean & 8.05 & 3 & 4.00e-03$^{**}$ & 4.49e-03$^{**}$\\
+\addlinespace[0.3em]
+\multicolumn{5}{l}{\textbf{No. of siblings}}\\
+\hspace{1em}Bray-Curtis & 5.79 & 42 & 4.30e-02$^{*}$ & 4.87e-02$^{*}$\\
+\hspace{1em}emCLR Euclidean & 0.34 & 724 & 7.25e-01 & 7.25e-01\\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item $^{***}:p<0.001$; $^{**}:p<0.01$; $^{*}:p<0.05$; $^{.}:p<0.1$.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
