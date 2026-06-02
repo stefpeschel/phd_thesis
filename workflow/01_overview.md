@@ -1,6 +1,6 @@
 Data overview
 ================
-Compiled at 2026-04-29 13:10:20 UTC
+Compiled at 2026-06-01 16:18:16 UTC
 
 ## Load data
 
@@ -410,6 +410,170 @@ NA
 ![](figures/01_overview/overview_seq-depth-1.png)<!-- -->
 
 ## ASV prevalence and sparsity
+
+### Zero counts
+
+<table class="table table-striped table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
+
+<caption>
+
+Sparsity of the ASV count matrix
+</caption>
+
+<thead>
+
+<tr>
+
+<th style="text-align:right;">
+
+Total ASV-sample entries
+</th>
+
+<th style="text-align:right;">
+
+Zero entries
+</th>
+
+<th style="text-align:left;">
+
+Zero entries (%)
+</th>
+
+<th style="text-align:right;">
+
+Non-zero entries
+</th>
+
+<th style="text-align:left;">
+
+Non-zero entries (%)
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:right;">
+
+1210640
+</td>
+
+<td style="text-align:right;">
+
+1188571
+</td>
+
+<td style="text-align:left;">
+
+98.2%
+</td>
+
+<td style="text-align:right;">
+
+22069
+</td>
+
+<td style="text-align:left;">
+
+1.8%
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+### Prevalence vs. total abundance
+
+![](figures/01_overview/overview_prevalence_text_asv-1.png)<!-- -->
+
+![](figures/01_overview/overview_prevalence_asv-1.png)<!-- -->
+
+## Genus prevalence and sparsity
+
+### Zero counts
+
+<table class="table table-striped table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
+
+<caption>
+
+Sparsity of the genus count matrix
+</caption>
+
+<thead>
+
+<tr>
+
+<th style="text-align:right;">
+
+Total ASV-sample entries
+</th>
+
+<th style="text-align:right;">
+
+Zero entries
+</th>
+
+<th style="text-align:left;">
+
+Zero entries (%)
+</th>
+
+<th style="text-align:right;">
+
+Non-zero entries
+</th>
+
+<th style="text-align:left;">
+
+Non-zero entries (%)
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:right;">
+
+139120
+</td>
+
+<td style="text-align:right;">
+
+124780
+</td>
+
+<td style="text-align:left;">
+
+89.7%
+</td>
+
+<td style="text-align:right;">
+
+14340
+</td>
+
+<td style="text-align:left;">
+
+10.3%
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+### Prevalence vs. total abundance
 
 ![](figures/01_overview/overview_prevalence_text-1.png)<!-- -->
 
@@ -832,4 +996,4 @@ These files have been written to the target directory,
     ## # A tibble: 1 × 4
     ##   path                           type         size modification_time  
     ##   <fs::path>                     <fct> <fs::bytes> <dttm>             
-    ## 1 tbl_sample_characteristics.tex file        1.34K 2026-04-29 13:10:21
+    ## 1 tbl_sample_characteristics.tex file        1.34K 2026-06-01 16:18:20
