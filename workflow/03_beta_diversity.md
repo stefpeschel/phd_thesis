@@ -1,13 +1,14 @@
 Beta diversity analysis
 ================
-Compiled at 2026-05-20 14:03:54 UTC
+Compiled at 2026-06-03 15:22:34 UTC
 
 ## Load packages
 
 ## Set global parameters
 
 ``` r
-emclr_epsilon <- 1e-4
+min_taxon_prevalence <- 0.10
+zero_replacement_fraction <- 0.65
 n_perm <- 999
 permutation_seed <- 42
 alpha_perm_approx <- 0.05
@@ -27,40 +28,45 @@ var_order_beta <- c("Country", "Sex", "Delivery mode", "BF duration",
 
 ## Helper functions
 
-**Note on the emCLR transformation:**
+**Note on the CLR transformation:**
 
-We use the **emCLR** version from Chapter 2, where sample-specific
-offsets are first computed from the tolerance criterion and then the
-global offset is chosen as the minimum of these offsets. That keeps all
-samples on the same transformed scale for distances.
+Counts are first transformed to relative abundances. Zeros are then
+replaced using multiplicative replacement from
+`zCompositions::multRepl()`, with the global minimum non-zero relative
+abundance used as the detection limit and `frac = 0.65`. The CLR
+transformation is applied after replacement.
 
 ## Prepare genus-level data
 
 For the PASTURE application, beta-diversity analyses are performed at
-genus level. Bray-Curtis dissimilarity is computed on relative abundance
-profiles, whereas Euclidean distance is computed after common-offset
-emCLR transformation.
+genus level. Taxa observed in less than 10% of samples are removed
+before the beta-diversity matrices are computed. Bray-Curtis
+dissimilarity is computed on relative abundance profiles, whereas
+Euclidean distance is computed after multiplicative replacement and CLR
+transformation.
 
-    ## # A tibble: 1 × 6
-    ##   n_samples n_taxa min_library_size median_library_size max_library_size zero_fraction
-    ##       <int>  <int>            <dbl>               <dbl>            <dbl>         <dbl>
-    ## 1       592    235             1456              21914.            69556         0.897
+    ## # A tibble: 1 × 9
+    ##   n_samples n_taxa_before_filter n_taxa_after_filter n_taxa_removed min_taxon_prevalence min_library_size
+    ##       <int>                <int>               <int>          <int>                <dbl>            <dbl>
+    ## 1       592                  235                  41            194                  0.1             1438
+    ## # ℹ 3 more variables: median_library_size <dbl>, max_library_size <dbl>, zero_fraction <dbl>
 
 ## Compute dissimilarity matrices
 
 ### Bray-Curtis dissimilarity
 
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-    ## 0.005646 0.231099 0.422604 0.457091 0.664417 0.987332
+    ## 0.005478 0.217522 0.411612 0.448515 0.647734 0.987328
 
-### Euclidean distance after emCLR transformation
+### Euclidean distance after multiplicative replacement and CLR transformation
 
     ## # A tibble: 1 × 7
-    ##   epsilon delta_global n_finite_delta_k n_infinite_delta_k min_delta_k median_delta_k max_finite_delta_k
-    ##     <dbl>        <dbl>            <int>              <int>       <dbl>          <dbl>              <dbl>
-    ## 1  0.0001     0.000610              592                  0    0.000610        0.00176            0.00635
+    ##   replacement_method      input_scale  detection_limit replacement_fraction replacement_value n_zeros_replaced
+    ##   <chr>                   <chr>                  <dbl>                <dbl>             <dbl>            <int>
+    ## 1 zCompositions::multRepl relative ab…       0.0000315                 0.65         0.0000205            11749
+    ## # ℹ 1 more variable: zero_fraction <dbl>
 
-    ##  [1] 50.24805 53.89612 55.09472 49.75292 53.90464 54.52180 57.65013 60.23613 55.08222 57.56344
+    ##  [1] 13.11239 15.40842 18.90061 16.10400 18.27695 16.88383 19.97237 18.99845 20.75608 19.21515
 
 ### Save distance objects
 
@@ -78,20 +84,21 @@ where the cloud folds back on itself along PCo2. This is an ordination
 artifact rather than a biological signal and reflects how Bray-Curtis
 dissimilarity handles the full gradient of community turnover.
 
-The emCLR-based PCoA (PCo1: 8.2%, PCo2: 5.9%) produces a more symmetric,
-roughly elliptical cloud with variance spread more evenly across axes —
-a consequence of the log-ratio transformation removing compositional
-constraints. Note that the first two axes together explain considerably
-less total variation for emCLR, which is expected given its more
-Euclidean structure.
+The CLR-based PCoA produces a more symmetric, roughly elliptical cloud
+with variance spread more evenly across axes — a consequence of the
+log-ratio transformation removing compositional constraints. Note that
+the first two axes together may explain considerably less total
+variation for CLR, which is expected given its more Euclidean structure.
 
 ### PCoA plots colored by selected variables
 
 Set the variables to inspect here. Unknown or misspelled variables are
 ignored.
 
-    ##            Country                Sex           cesarean    breast_dur_cat1   breast_excl_cat1          pregsmoke      sibs_numb_cat 
-    ##          "Country"              "Sex"    "Delivery mode"      "BF duration"     "Exclusive BF" "Prenatal smoking"  "No. of siblings"
+    ##            Country                Sex           cesarean    breast_dur_cat1   breast_excl_cat1 
+    ##          "Country"              "Sex"    "Delivery mode"      "BF duration"     "Exclusive BF" 
+    ##          pregsmoke      sibs_numb_cat 
+    ## "Prenatal smoking"  "No. of siblings"
 
 ![](figures/03_beta_diversity/beta_PCoA_colored-1.png)<!-- -->![](figures/03_beta_diversity/beta_PCoA_colored-2.png)<!-- -->![](figures/03_beta_diversity/beta_PCoA_colored-3.png)<!-- -->![](figures/03_beta_diversity/beta_PCoA_colored-4.png)<!-- -->![](figures/03_beta_diversity/beta_PCoA_colored-5.png)<!-- -->![](figures/03_beta_diversity/beta_PCoA_colored-6.png)<!-- -->![](figures/03_beta_diversity/beta_PCoA_colored-7.png)<!-- -->
 
@@ -134,7 +141,7 @@ available here.
 
 ![](figures/03_beta_diversity/beta_heatmap_euclid-1.png)<!-- -->
 
-The emCLR heatmap is considerably more homogeneous: distances are more
+The CLR heatmap is considerably more homogeneous: distances are more
 uniformly distributed with less pronounced block structure, which is
 consistent with the more diffuse spread seen in its ordination.
 
@@ -142,12 +149,15 @@ consistent with the more diffuse spread seen in its ordination.
 
 The following analyses are performed for both beta-diversity
 representations: Bray-Curtis dissimilarity on relative abundance
-profiles and Euclidean distance after emCLR transformation. PERMANOVA is
-used to test for differences in group centroids, while PERMDISP assesses
-differences in within-group dispersion.
+profiles and Euclidean distance after multiplicative replacement and CLR
+transformation. PERMANOVA is used to test for differences in group
+centroids, while PERMDISP assesses differences in within-group
+dispersion.
 
-    ##            Country                Sex           cesarean    breast_dur_cat1   breast_excl_cat1          pregsmoke      sibs_numb_cat 
-    ##          "Country"              "Sex"    "Delivery mode"      "BF duration"     "Exclusive BF" "Prenatal smoking"  "No. of siblings"
+    ##            Country                Sex           cesarean    breast_dur_cat1   breast_excl_cat1 
+    ##          "Country"              "Sex"    "Delivery mode"      "BF duration"     "Exclusive BF" 
+    ##          pregsmoke      sibs_numb_cat 
+    ## "Prenatal smoking"  "No. of siblings"
 
 ### Parallel backend and progress reporting
 
@@ -156,70 +166,70 @@ differences in within-group dispersion.
 ### PERMANOVA
 
     ## # A tibble: 14 × 12
-    ##    analysis  distance        variable        n_samples n_groups statistic_obs p_empirical statistic_adonis2 r2_adonis2 p_adonis2 n_exceed n_perm
-    ##    <chr>     <chr>           <fct>               <int>    <int>         <dbl>       <dbl>             <dbl>      <dbl>     <dbl>    <int>  <dbl>
-    ##  1 PERMANOVA Bray-Curtis     Country               592        3          4.56       0.001              4.56    0.0152      0.001        0    999
-    ##  2 PERMANOVA Bray-Curtis     Sex                   592        2          1.36       0.188              1.36    0.00229     0.163      187    999
-    ##  3 PERMANOVA Bray-Curtis     Delivery mode         589        2          3.67       0.011              3.67    0.00621     0.005       10    999
-    ##  4 PERMANOVA Bray-Curtis     BF duration           580        3         14.4        0.001             14.4     0.0474      0.001        0    999
-    ##  5 PERMANOVA Bray-Curtis     Exclusive BF          557        3         10.2        0.001             10.2     0.0355      0.001        0    999
-    ##  6 PERMANOVA Bray-Curtis     Prenatal smoki…       592        2          5.66       0.002              5.66    0.00950     0.001        1    999
-    ##  7 PERMANOVA Bray-Curtis     No. of siblings       503        3          2.22       0.021              2.22    0.00879     0.021       20    999
-    ##  8 PERMANOVA emCLR Euclidean Country               592        3          2.76       0.001              2.76    0.00930     0.001        0    999
-    ##  9 PERMANOVA emCLR Euclidean Sex                   592        2          1.27       0.09               1.27    0.00214     0.098       89    999
-    ## 10 PERMANOVA emCLR Euclidean Delivery mode         589        2          1.53       0.013              1.53    0.00261     0.018       12    999
-    ## 11 PERMANOVA emCLR Euclidean BF duration           580        3          3.70       0.001              3.70    0.0127      0.001        0    999
-    ## 12 PERMANOVA emCLR Euclidean Exclusive BF          557        3          3.45       0.001              3.45    0.0123      0.001        0    999
-    ## 13 PERMANOVA emCLR Euclidean Prenatal smoki…       592        2          2.15       0.001              2.15    0.00364     0.001        0    999
-    ## 14 PERMANOVA emCLR Euclidean No. of siblings       503        3          1.19       0.119              1.19    0.00472     0.109      118    999
+    ##    analysis  distance       variable n_samples n_groups statistic_obs p_empirical statistic_adonis2 r2_adonis2
+    ##    <chr>     <chr>          <fct>        <int>    <int>         <dbl>       <dbl>             <dbl>      <dbl>
+    ##  1 PERMANOVA Bray-Curtis    Country        592        3          4.61       0.001              4.61    0.0154 
+    ##  2 PERMANOVA Bray-Curtis    Sex            592        2          1.49       0.154              1.49    0.00252
+    ##  3 PERMANOVA Bray-Curtis    Deliver…       589        2          3.76       0.012              3.76    0.00636
+    ##  4 PERMANOVA Bray-Curtis    BF dura…       580        3         14.4        0.001             14.4     0.0475 
+    ##  5 PERMANOVA Bray-Curtis    Exclusi…       557        3         10.2        0.001             10.2     0.0354 
+    ##  6 PERMANOVA Bray-Curtis    Prenata…       592        2          5.66       0.002              5.66    0.00951
+    ##  7 PERMANOVA Bray-Curtis    No. of …       503        3          2.33       0.018              2.33    0.00923
+    ##  8 PERMANOVA multRepl + CL… Country        592        3          2.76       0.001              2.76    0.00929
+    ##  9 PERMANOVA multRepl + CL… Sex            592        2          1.45       0.053              1.45    0.00245
+    ## 10 PERMANOVA multRepl + CL… Deliver…       589        2          3.03       0.001              3.03    0.00514
+    ## 11 PERMANOVA multRepl + CL… BF dura…       580        3          7.03       0.001              7.03    0.0238 
+    ## 12 PERMANOVA multRepl + CL… Exclusi…       557        3          6.64       0.001              6.64    0.0234 
+    ## 13 PERMANOVA multRepl + CL… Prenata…       592        2          3.19       0.001              3.19    0.00537
+    ## 14 PERMANOVA multRepl + CL… No. of …       503        3          1.78       0.003              1.78    0.00706
+    ## # ℹ 3 more variables: p_adonis2 <dbl>, n_exceed <int>, n_perm <dbl>
 
 ![](figures/03_beta_diversity/beta_permanova_perm_dist-1.png)<!-- -->
 
 **Mean and median of permutation distributions**
 
-    ## `summarise()` has regrouped the output.
-    ## ℹ Summaries were computed grouped by distance and variable.
-    ## ℹ Output is grouped by distance.
-    ## ℹ Use `summarise(.groups = "drop_last")` to silence this message.
-    ## ℹ Use `summarise(.by = c(distance, variable))` for per-operation grouping (`?dplyr::dplyr_by`) instead.
-
     ## # A tibble: 14 × 4
     ## # Groups:   distance [2]
-    ##    distance        variable          mean median
-    ##    <chr>           <fct>            <dbl>  <dbl>
-    ##  1 Bray-Curtis     Country          1.02   0.911
-    ##  2 Bray-Curtis     Sex              0.974  0.850
-    ##  3 Bray-Curtis     Delivery mode    1.00   0.848
-    ##  4 Bray-Curtis     BF duration      0.984  0.887
-    ##  5 Bray-Curtis     Exclusive BF     0.994  0.840
-    ##  6 Bray-Curtis     Prenatal smoking 0.993  0.854
-    ##  7 Bray-Curtis     No. of siblings  1.00   0.926
-    ##  8 emCLR Euclidean Country          1.00   0.995
-    ##  9 emCLR Euclidean Sex              0.992  0.980
-    ## 10 emCLR Euclidean Delivery mode    0.995  0.974
-    ## 11 emCLR Euclidean BF duration      0.999  0.989
-    ## 12 emCLR Euclidean Exclusive BF     1.01   0.990
-    ## 13 emCLR Euclidean Prenatal smoking 1.01   0.986
-    ## 14 emCLR Euclidean No. of siblings  1.00   0.986
+    ##    distance                 variable          mean median
+    ##    <chr>                    <fct>            <dbl>  <dbl>
+    ##  1 Bray-Curtis              Country          1.02   0.919
+    ##  2 Bray-Curtis              Sex              0.973  0.850
+    ##  3 Bray-Curtis              Delivery mode    1.00   0.848
+    ##  4 Bray-Curtis              BF duration      0.984  0.884
+    ##  5 Bray-Curtis              Exclusive BF     0.994  0.839
+    ##  6 Bray-Curtis              Prenatal smoking 0.993  0.844
+    ##  7 Bray-Curtis              No. of siblings  1.000  0.919
+    ##  8 multRepl + CLR Euclidean Country          1.00   0.984
+    ##  9 multRepl + CLR Euclidean Sex              0.977  0.949
+    ## 10 multRepl + CLR Euclidean Delivery mode    1.00   0.974
+    ## 11 multRepl + CLR Euclidean BF duration      0.999  0.978
+    ## 12 multRepl + CLR Euclidean Exclusive BF     1.01   0.992
+    ## 13 multRepl + CLR Euclidean Prenatal smoking 1.01   0.964
+    ## 14 multRepl + CLR Euclidean No. of siblings  0.996  0.977
 
 ### PERMANOVA p-value refinement with permApprox
+
+    ## Run threshold detection ...
+    ## Done.
+    ## Run GPD fit ...
+    ## Done.
 
     ## permApprox result
     ## -----------------
     ## Number of tests             : 14
     ## Approximation method        : GPD tail approximation
-    ## Approximation threshold     : p-values <0.05
+    ## Approximation threshold     : p-values < 0.1
     ## Multiple testing adjustment : none
     ## 
-    ## Successful fits          : 11
+    ## Successful fits          : 13
     ## GOF rejections           : 0
     ## Fit failed               : 0
     ## No threshold found       : 0
     ## Discrete distributions   : 0
-    ## Not selected for fitting : 3
+    ## Not selected for fitting : 1
     ## 
     ## Final p-values:
-    ##   min = 2.233e-42, median = 4.334e-04, max = 1.880e-01
+    ##   min = 3.454e-86, median = 8.231e-05, max = 1.540e-01
     ## 
     ## Use summary() for detailed fit diagnostics.
 
@@ -227,114 +237,120 @@ differences in within-group dispersion.
     ## ----------------------------
     ## Number of tests             : 14
     ## Approximation method        : GPD tail approximation
-    ## Approximation threshold     : p-values <0.05
+    ## Approximation threshold     : p-values < 0.1
     ## Multiple testing adjustment : none
     ## 
     ## Fit status counts:
-    ##   Successful fits          : 11
+    ##   Successful fits          : 13
     ##   GOF rejections           : 0
     ##   Fit failed               : 0
     ##   No threshold found       : 0
     ##   Discrete distributions   : 0
-    ##   Not selected for fitting : 3
+    ##   Not selected for fitting : 1
     ## 
     ## GPD parameter summary (successful fits)
     ## --------------------------------------
     ##   shape:
-    ##     min = -0.0841, median = -0.0121, mean = 0.00458, max = 0.155
+    ##     min = -0.181, median = -0.0302, mean = -0.0295, max = 0.139
     ##   scale:
-    ##     min = 0.108, median = 0.375, mean = 0.321, max = 0.556
+    ##     min = 0.141, median = 0.268, mean = 0.333, max = 0.629
     ##   n_exceed:
-    ##     min =  220, median =  250, mean =  246, max =  250
+    ##     min =  170, median =  250, mean =  244, max =  250
     ## 
     ## P-value summary
     ## ---------------
     ## Empirical p-values:
     ##   empirical:
-    ##     min = 1.000e-03, median = 1.500e-03, mean = 3.221e-02, max = 1.880e-01
+    ##     min = 1.000e-03, median = 1.000e-03, mean = 1.786e-02, max = 1.540e-01
     ## 
     ## Final p-values (unadjusted):
     ##   unadjusted:
-    ##     min = 2.233e-42, median = 4.334e-04, mean = 3.150e-02, max = 1.880e-01
+    ##     min = 3.454e-86, median = 8.231e-05, mean = 1.705e-02, max = 1.540e-01
 
     ## # A tibble: 14 × 9
-    ##    distance        variable         n_samples statistic_obs n_exceed n_perm p_empirical p_permapprox method_used
-    ##    <chr>           <fct>                <int>         <dbl>    <int>  <dbl>       <dbl>        <dbl> <chr>      
-    ##  1 Bray-Curtis     Country                592          4.56        0    999       0.001     1.30e- 4 gpd        
-    ##  2 Bray-Curtis     Sex                    592          1.36      187    999       0.188     1.88e- 1 empirical  
-    ##  3 Bray-Curtis     Delivery mode          589          3.67       10    999       0.011     7.73e- 3 gpd        
-    ##  4 Bray-Curtis     BF duration            580         14.4         0    999       0.001     1.87e-12 gpd        
-    ##  5 Bray-Curtis     Exclusive BF           557         10.2         0    999       0.001     1.59e- 6 gpd        
-    ##  6 Bray-Curtis     Prenatal smoking       592          5.66        1    999       0.002     6.59e- 4 gpd        
-    ##  7 Bray-Curtis     No. of siblings        503          2.22       20    999       0.021     2.04e- 2 gpd        
-    ##  8 emCLR Euclidean Country                592          2.76        0    999       0.001     1.36e-19 gpd        
-    ##  9 emCLR Euclidean Sex                    592          1.27       89    999       0.09      9   e- 2 empirical  
-    ## 10 emCLR Euclidean Delivery mode          589          1.53       12    999       0.013     1.48e- 2 gpd        
-    ## 11 emCLR Euclidean BF duration            580          3.70        0    999       0.001     2.23e-42 gpd        
-    ## 12 emCLR Euclidean Exclusive BF           557          3.45        0    999       0.001     3.65e-22 gpd        
-    ## 13 emCLR Euclidean Prenatal smoking       592          2.15        0    999       0.001     2.08e- 4 gpd        
-    ## 14 emCLR Euclidean No. of siblings        503          1.19      118    999       0.119     1.19e- 1 empirical
+    ##    distance              variable n_samples statistic_obs n_exceed n_perm p_empirical p_permapprox method_used
+    ##    <chr>                 <fct>        <int>         <dbl>    <int>  <dbl>       <dbl>        <dbl> <chr>      
+    ##  1 Bray-Curtis           Country        592          4.61        0    999       0.001     1.65e- 4 gpd        
+    ##  2 Bray-Curtis           Sex            592          1.49      153    999       0.154     1.54e- 1 empirical  
+    ##  3 Bray-Curtis           Deliver…       589          3.76       11    999       0.012     7.44e- 3 gpd        
+    ##  4 Bray-Curtis           BF dura…       580         14.4         0    999       0.001     1.99e-12 gpd        
+    ##  5 Bray-Curtis           Exclusi…       557         10.2         0    999       0.001     8.15e- 8 gpd        
+    ##  6 Bray-Curtis           Prenata…       592          5.66        1    999       0.002     7.49e- 4 gpd        
+    ##  7 Bray-Curtis           No. of …       503          2.33       17    999       0.018     1.60e- 2 gpd        
+    ##  8 multRepl + CLR Eucli… Country        592          2.76        0    999       0.001     2.76e-12 gpd        
+    ##  9 multRepl + CLR Eucli… Sex            592          1.45       52    999       0.053     5.98e- 2 gpd        
+    ## 10 multRepl + CLR Eucli… Deliver…       589          3.03        0    999       0.001     2.75e- 8 gpd        
+    ## 11 multRepl + CLR Eucli… BF dura…       580          7.03        0    999       0.001     3.45e-86 gpd        
+    ## 12 multRepl + CLR Eucli… Exclusi…       557          6.64        0    999       0.001     4.06e-68 gpd        
+    ## 13 multRepl + CLR Eucli… Prenata…       592          3.19        0    999       0.001     6.59e- 8 gpd        
+    ## 14 multRepl + CLR Eucli… No. of …       503          1.78        2    999       0.003     6.28e- 4 gpd
 
 ![](figures/03_beta_diversity/beta_permanova_permapprox_perm_dist-1.png)<!-- -->
 
 ### PERMDISP
 
     ## # A tibble: 14 × 11
-    ##    analysis distance        variable         n_samples n_groups statistic_obs p_empirical statistic_betadisper p_betadisper n_exceed n_perm
-    ##    <chr>    <chr>           <fct>                <int>    <int>         <dbl>       <dbl>                <dbl>        <dbl>    <int>  <dbl>
-    ##  1 PERMDISP Bray-Curtis     Country                592        3        10.7         0.005               10.7          0.001        4    999
-    ##  2 PERMDISP Bray-Curtis     Sex                    592        2         2.66        0.221                2.66         0.111      220    999
-    ##  3 PERMDISP Bray-Curtis     Delivery mode          589        2         8.72        0.035                8.72         0.003       34    999
-    ##  4 PERMDISP Bray-Curtis     BF duration            580        3        15.2         0.002               15.2          0.001        1    999
-    ##  5 PERMDISP Bray-Curtis     Exclusive BF           557        3         8.60        0.005                8.60         0.001        4    999
-    ##  6 PERMDISP Bray-Curtis     Prenatal smoking       592        2         6.67        0.048                6.67         0.011       47    999
-    ##  7 PERMDISP Bray-Curtis     No. of siblings        503        3         5.79        0.043                5.79         0.006       42    999
-    ##  8 PERMDISP emCLR Euclidean Country                592        3        10.7         0.001               10.7          0.001        0    999
-    ##  9 PERMDISP emCLR Euclidean Sex                    592        2         0.618       0.445                0.618        0.431      444    999
-    ## 10 PERMDISP emCLR Euclidean Delivery mode          589        2         0.967       0.335                0.967        0.313      334    999
-    ## 11 PERMDISP emCLR Euclidean BF duration            580        3        19.7         0.001               19.7          0.001        0    999
-    ## 12 PERMDISP emCLR Euclidean Exclusive BF           557        3        16.4         0.001               16.4          0.001        0    999
-    ## 13 PERMDISP emCLR Euclidean Prenatal smoking       592        2         8.05        0.004                8.05         0.007        3    999
-    ## 14 PERMDISP emCLR Euclidean No. of siblings        503        3         0.343       0.725                0.343        0.732      724    999
+    ##    analysis distance   variable n_samples n_groups statistic_obs p_empirical statistic_betadisper p_betadisper
+    ##    <chr>    <chr>      <fct>        <int>    <int>         <dbl>       <dbl>                <dbl>        <dbl>
+    ##  1 PERMDISP Bray-Curt… Country        592        3         10.7        0.004                10.7         0.001
+    ##  2 PERMDISP Bray-Curt… Sex            592        2          3.39       0.17                  3.39        0.069
+    ##  3 PERMDISP Bray-Curt… Deliver…       589        2          8.85       0.034                 8.85        0.003
+    ##  4 PERMDISP Bray-Curt… BF dura…       580        3         14.4        0.002                14.4         0.001
+    ##  5 PERMDISP Bray-Curt… Exclusi…       557        3          7.49       0.007                 7.49        0.002
+    ##  6 PERMDISP Bray-Curt… Prenata…       592        2          6.11       0.06                  6.11        0.013
+    ##  7 PERMDISP Bray-Curt… No. of …       503        3          6.38       0.037                 6.38        0.004
+    ##  8 PERMDISP multRepl … Country        592        3         14.5        0.001                14.5         0.001
+    ##  9 PERMDISP multRepl … Sex            592        2          1.54       0.224                 1.54        0.201
+    ## 10 PERMDISP multRepl … Deliver…       589        2          6.22       0.017                 6.22        0.013
+    ## 11 PERMDISP multRepl … BF dura…       580        3         19.6        0.001                19.6         0.001
+    ## 12 PERMDISP multRepl … Exclusi…       557        3         20.3        0.001                20.3         0.001
+    ## 13 PERMDISP multRepl … Prenata…       592        2          9.22       0.001                 9.22        0.003
+    ## 14 PERMDISP multRepl … No. of …       503        3          5.51       0.011                 5.51        0.005
+    ## # ℹ 2 more variables: n_exceed <int>, n_perm <dbl>
 
 ### PERMDISP p-value refinement with permApprox
+
+    ## Run threshold detection ...
+    ## Done.
+    ## Run GPD fit ...
+    ## Done.
 
     ## permApprox result
     ## -----------------
     ## Number of tests             : 14
     ## Approximation method        : GPD tail approximation
-    ## Approximation threshold     : p-values <0.05
+    ## Approximation threshold     : p-values < 0.1
     ## Multiple testing adjustment : none
     ## 
-    ## Successful fits          : 10
+    ## Successful fits          : 12
     ## GOF rejections           : 0
     ## Fit failed               : 0
     ## No threshold found       : 0
     ## Discrete distributions   : 0
-    ## Not selected for fitting : 4
+    ## Not selected for fitting : 2
     ## 
     ## Final p-values:
-    ##   min = 7.769e-08, median = 1.685e-02, max = 7.250e-01
+    ##   min = 2.292e-12, median = 7.624e-03, max = 2.240e-01
     ## 
     ## Use summary() for detailed fit diagnostics.
 
     ## # A tibble: 14 × 9
-    ##    distance        variable         n_samples statistic_obs n_exceed n_perm p_empirical p_permapprox method_used
-    ##    <chr>           <fct>                <int>         <dbl>    <int>  <dbl>       <dbl>        <dbl> <chr>      
-    ##  1 Bray-Curtis     Country                592        10.7          4    999       0.005 0.00265      gpd        
-    ##  2 Bray-Curtis     Sex                    592         2.66       220    999       0.221 0.221        empirical  
-    ##  3 Bray-Curtis     Delivery mode          589         8.72        34    999       0.035 0.0292       gpd        
-    ##  4 Bray-Curtis     BF duration            580        15.2          1    999       0.002 0.000528     gpd        
-    ##  5 Bray-Curtis     Exclusive BF           557         8.60         4    999       0.005 0.00378      gpd        
-    ##  6 Bray-Curtis     Prenatal smoking       592         6.67        47    999       0.048 0.0464       gpd        
-    ##  7 Bray-Curtis     No. of siblings        503         5.79        42    999       0.043 0.0487       gpd        
-    ##  8 emCLR Euclidean Country                592        10.7          0    999       0.001 0.000000297  gpd        
-    ##  9 emCLR Euclidean Sex                    592         0.618      444    999       0.445 0.445        empirical  
-    ## 10 emCLR Euclidean Delivery mode          589         0.967      334    999       0.335 0.335        empirical  
-    ## 11 emCLR Euclidean BF duration            580        19.7          0    999       0.001 0.00000343   gpd        
-    ## 12 emCLR Euclidean Exclusive BF           557        16.4          0    999       0.001 0.0000000777 gpd        
-    ## 13 emCLR Euclidean Prenatal smoking       592         8.05         3    999       0.004 0.00449      gpd        
-    ## 14 emCLR Euclidean No. of siblings        503         0.343      724    999       0.725 0.725        empirical
+    ##    distance              variable n_samples statistic_obs n_exceed n_perm p_empirical p_permapprox method_used
+    ##    <chr>                 <fct>        <int>         <dbl>    <int>  <dbl>       <dbl>        <dbl> <chr>      
+    ##  1 Bray-Curtis           Country        592         10.7         3    999       0.004     2.56e- 3 gpd        
+    ##  2 Bray-Curtis           Sex            592          3.39      169    999       0.17      1.7 e- 1 empirical  
+    ##  3 Bray-Curtis           Deliver…       589          8.85       33    999       0.034     2.90e- 2 gpd        
+    ##  4 Bray-Curtis           BF dura…       580         14.4         1    999       0.002     6.27e- 4 gpd        
+    ##  5 Bray-Curtis           Exclusi…       557          7.49        6    999       0.007     8.11e- 3 gpd        
+    ##  6 Bray-Curtis           Prenata…       592          6.11       59    999       0.06      6.09e- 2 gpd        
+    ##  7 Bray-Curtis           No. of …       503          6.38       36    999       0.037     3.68e- 2 gpd        
+    ##  8 multRepl + CLR Eucli… Country        592         14.5         0    999       0.001     2.29e-12 gpd        
+    ##  9 multRepl + CLR Eucli… Sex            592          1.54      223    999       0.224     2.24e- 1 empirical  
+    ## 10 multRepl + CLR Eucli… Deliver…       589          6.22       16    999       0.017     1.93e- 2 gpd        
+    ## 11 multRepl + CLR Eucli… BF dura…       580         19.6         0    999       0.001     1.77e-10 gpd        
+    ## 12 multRepl + CLR Eucli… Exclusi…       557         20.3         0    999       0.001     4.70e-12 gpd        
+    ## 13 multRepl + CLR Eucli… Prenata…       592          9.22        0    999       0.001     2.01e- 3 gpd        
+    ## 14 multRepl + CLR Eucli… No. of …       503          5.51       10    999       0.011     7.14e- 3 gpd
 
 ![](figures/03_beta_diversity/beta_permdisp_permapprox_perm_dist-1.png)<!-- -->
 
@@ -356,17 +372,24 @@ Panels are annotated with permApprox-refined p-values for PERMANOVA
 These files have been written to the target directory,
 `data/03_beta_diversity`:
 
-    ## # A tibble: 11 × 4
-    ##    path                             type         size modification_time  
-    ##    <fs::path>                       <fct> <fs::bytes> <dttm>             
-    ##  1 beta_data_summary.csv            file          131 2026-05-20 14:03:58
-    ##  2 beta_diversity_objects.rds       file        2.95M 2026-05-20 14:03:58
-    ##  3 beta_emclr_sample_offsets.csv    file       17.16K 2026-05-20 14:03:58
-    ##  4 beta_emclr_summary.csv           file          199 2026-05-20 14:03:58
-    ##  5 beta_pcoa_coordinates.csv        file      140.73K 2026-05-20 14:03:59
-    ##  6 permanova_permapprox_results.rds file       72.59K 2026-05-20 06:36:20
-    ##  7 permanova_results.rds            file      103.81K 2026-05-19 14:29:56
-    ##  8 permanova_table.tex              file        2.18K 2026-05-20 14:04:53
-    ##  9 permdisp_permapprox_results.rds  file       71.08K 2026-05-20 09:24:56
-    ## 10 permdisp_results.rds             file      105.52K 2026-05-20 09:20:41
-    ## 11 permdisp_table.tex               file        2.21K 2026-05-20 14:04:58
+    ## # A tibble: 18 × 4
+    ##    path                                          type         size modification_time  
+    ##    <fs::path>                                    <fct> <fs::bytes> <dttm>             
+    ##  1 beta_clr_summary.csv                          file          233 2026-06-03 15:22:39
+    ##  2 beta_data_summary.csv                         file          210 2026-06-03 15:22:39
+    ##  3 beta_diversity_objects.rds                    file        3.01M 2026-06-03 15:22:39
+    ##  4 beta_emclr_sample_offsets.csv                 file       17.16K 2026-05-20 14:05:22
+    ##  5 beta_emclr_summary.csv                        file          199 2026-05-20 14:05:22
+    ##  6 beta_pcoa_coordinates.csv                     file      146.63K 2026-06-03 15:22:40
+    ##  7 beta_taxa_filter_summary.csv                  file          106 2026-06-03 15:22:39
+    ##  8 beta_taxa_prevalence_summary.csv              file       10.25K 2026-06-03 15:22:39
+    ##  9 permanova_permapprox_results.rds              file       72.59K 2026-05-20 06:36:20
+    ## 10 permanova_permapprox_results_multrepl_clr.rds file       75.86K 2026-06-03 15:42:00
+    ## 11 permanova_results.rds                         file      103.81K 2026-05-19 14:29:56
+    ## 12 permanova_results_multrepl_clr.rds            file      103.95K 2026-06-03 15:39:11
+    ## 13 permanova_table.tex                           file        2.26K 2026-06-03 15:42:02
+    ## 14 permdisp_permapprox_results.rds               file       71.08K 2026-05-20 09:24:56
+    ## 15 permdisp_permapprox_results_multrepl_clr.rds  file       74.98K 2026-06-03 20:51:06
+    ## 16 permdisp_results.rds                          file      105.52K 2026-05-20 09:20:41
+    ## 17 permdisp_results_multrepl_clr.rds             file      105.52K 2026-06-03 20:49:15
+    ## 18 permdisp_table.tex                            file        2.29K 2026-06-03 20:51:06

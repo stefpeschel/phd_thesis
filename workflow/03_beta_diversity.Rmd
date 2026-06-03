@@ -39,6 +39,7 @@ library(vegan)
 library(pheatmap)
 library(permApprox)
 library(kableExtra)
+library(zCompositions)
 
 # Parallel computing
 library(future)
@@ -67,7 +68,8 @@ path_source <- projthis::proj_path_source(params$name)
 ## Set global parameters
 
 ```{r, echo = TRUE}
-emclr_epsilon <- 1e-4
+min_taxon_prevalence <- 0.10
+zero_replacement_fraction <- 0.65
 n_perm <- 999
 permutation_seed <- 42
 alpha_perm_approx <- 0.05
@@ -93,9 +95,9 @@ phylo_genus
 
 ## Helper functions
 
-**Note on the emCLR transformation:**
+**Note on the CLR transformation:**
 
-We use the **emCLR** version from Chapter 2, where sample-specific offsets are first computed from the tolerance criterion and then the global offset is chosen as the minimum of these offsets. That keeps all samples on the same transformed scale for distances.
+Counts are first transformed to relative abundances. Zeros are then replaced using multiplicative replacement from `zCompositions::multRepl()`, with the global minimum non-zero relative abundance used as the detection limit and `frac = 0.65`. The CLR transformation is applied after replacement.
 
 ```{r}
 # Extract taxonomic table with samples in rows and taxa in columns
@@ -123,93 +125,44 @@ counts_to_rel_abund <- function(count_mat) {
   sweep(count_mat, 1, lib_size, "/")
 }
 
-# Ordinary geometric mean of positive values
-geom_mean <- function(x) {
-  if (any(x <= 0)) {
-    stop("geom_mean() requires strictly positive values.")
+# Multiplicative replacement followed by CLR transformation.
+compute_multrepl_clr <- function(rel_abund_mat, frac = 0.65) {
+  positive_values <- rel_abund_mat[rel_abund_mat > 0]
+  
+  if (length(positive_values) == 0) {
+    stop("No positive relative abundances found.")
   }
   
-  exp(mean(log(x)))
-}
-
-# Extended geometric mean according to Chapter 2:
-# gtilde_delta(x) = exp(mean(log(x + delta))) - delta
-extended_geom_mean <- function(x, delta) {
-  exp(mean(log(x + delta))) - delta
-}
-
-# Compute the largest sample-specific offset delta_k for which
-# |gtilde_delta(x_positive) - g(x_positive)| <= epsilon * g(x_positive)
-compute_delta_k <- function(x, epsilon = 1e-4, max_expand = 60) {
-  x_pos <- x[x > 0]
-  
-  if (length(x_pos) == 0) {
-    return(NA_real_)
-  }
-  
-  # If there is only one positive component, the extended geometric mean
-  # of the positive part equals the observed positive value for all delta.
-  # This sample does not constrain the global offset.
-  if (length(x_pos) == 1) {
-    return(Inf)
-  }
-  
-  g_pos <- geom_mean(x_pos)
-  
-  f <- function(delta) {
-    abs(extended_geom_mean(x_pos, delta) - g_pos) - epsilon * g_pos
-  }
-  
-  lower <- 0
-  upper <- max(1, min(x_pos))
-  
-  # Increase upper until the tolerance condition is violated.
-  # If no crossing is found, return Inf so the sample does not constrain
-  # the global minimum offset.
-  for (i in seq_len(max_expand)) {
-    if (f(upper) > 0) {
-      break
-    }
-    upper <- upper * 2
-  }
-  
-  if (f(upper) <= 0) {
-    return(Inf)
-  }
-  
-  uniroot(f, lower = lower, upper = upper)$root
-}
-
-# Common-offset emCLR transformation.
-# The global offset is the minimum finite sample-specific offset.
-compute_emclr <- function(count_mat, epsilon = 1e-4) {
-  delta_by_sample <- apply(
-    count_mat,
-    1,
-    compute_delta_k,
-    epsilon = epsilon
+  detection_limit <- min(positive_values, na.rm = TRUE)
+  detection_limit_mat <- matrix(
+    detection_limit,
+    nrow = nrow(rel_abund_mat),
+    ncol = ncol(rel_abund_mat),
+    dimnames = dimnames(rel_abund_mat)
   )
   
-  finite_delta <- delta_by_sample[is.finite(delta_by_sample)]
+  rel_abund_repl <- zCompositions::multRepl(
+    rel_abund_mat,
+    label = 0,
+    dl = detection_limit_mat,
+    frac = frac,
+    z.warning = 0.9,
+    z.delete = FALSE
+  )
   
-  if (length(finite_delta) == 0) {
-    stop("No finite sample-specific emCLR offset could be computed.")
-  }
+  rel_abund_repl <- as.matrix(rel_abund_repl)
+  rownames(rel_abund_repl) <- rownames(rel_abund_mat)
+  colnames(rel_abund_repl) <- colnames(rel_abund_mat)
   
-  delta_global <- min(finite_delta, na.rm = TRUE)
-  
-  # emCLR with common offset:
-  # log((x + delta) / (gtilde_delta(x) + delta)).
-  # Since gtilde_delta(x) + delta = exp(mean(log(x + delta))),
-  # this is equivalent to row-centering log(x + delta).
-  log_shifted <- log(count_mat + delta_global)
-  z <- sweep(log_shifted, 1, rowMeans(log_shifted), "-")
+  log_repl <- log(rel_abund_repl)
+  z <- sweep(log_repl, 1, rowMeans(log_repl), "-")
   
   list(
     z = z,
-    delta_global = delta_global,
-    delta_by_sample = delta_by_sample,
-    epsilon = epsilon
+    rel_abund_repl = rel_abund_repl,
+    detection_limit = detection_limit,
+    replacement_value = frac * detection_limit,
+    frac = frac
   )
 }
 
@@ -363,7 +316,7 @@ plot_distance_heatmap <- function(dist_obj, metadata, ann_vars = NULL, title = N
 
 ## Prepare genus-level data
 
-For the PASTURE application, beta-diversity analyses are performed at genus level. Bray-Curtis dissimilarity is computed on relative abundance profiles, whereas Euclidean distance is computed after common-offset emCLR transformation.
+For the PASTURE application, beta-diversity analyses are performed at genus level. Taxa observed in less than 10% of samples are removed before the beta-diversity matrices are computed. Bray-Curtis dissimilarity is computed on relative abundance profiles, whereas Euclidean distance is computed after multiplicative replacement and CLR transformation.
 
 ```{r}
 counts_raw <- get_sample_by_taxa(phylo_genus)
@@ -377,11 +330,39 @@ counts_raw <- counts_raw[sampdata$SampleID, , drop = FALSE]
 
 stopifnot(identical(rownames(counts_raw), sampdata$SampleID))
 
+counts_raw_unfiltered <- counts_raw
+
+taxa_prevalence <- colMeans(counts_raw_unfiltered > 0)
+taxa_keep <- taxa_prevalence >= min_taxon_prevalence
+
+if (!any(taxa_keep)) {
+  stop("No taxa remain after prevalence filtering.")
+}
+
+taxa_filter_summary <- tibble(
+  min_taxon_prevalence = min_taxon_prevalence,
+  n_samples = nrow(counts_raw_unfiltered),
+  n_taxa_before_filter = ncol(counts_raw_unfiltered),
+  n_taxa_after_filter = sum(taxa_keep),
+  n_taxa_removed = sum(!taxa_keep)
+)
+
+taxa_prevalence_summary <- tibble(
+  taxon = names(taxa_prevalence),
+  prevalence = unname(taxa_prevalence),
+  n_samples_present = as.integer(colSums(counts_raw_unfiltered > 0)),
+  keep = unname(taxa_keep)
+)
+
+counts_raw <- counts_raw_unfiltered[, taxa_keep, drop = FALSE]
 counts_rel <- counts_to_rel_abund(counts_raw)
 
 data_summary <- tibble(
   n_samples = nrow(counts_raw),
-  n_taxa = ncol(counts_raw),
+  n_taxa_before_filter = ncol(counts_raw_unfiltered),
+  n_taxa_after_filter = ncol(counts_raw),
+  n_taxa_removed = ncol(counts_raw_unfiltered) - ncol(counts_raw),
+  min_taxon_prevalence = min_taxon_prevalence,
   min_library_size = min(rowSums(counts_raw)),
   median_library_size = median(rowSums(counts_raw)),
   max_library_size = max(rowSums(counts_raw)),
@@ -402,33 +383,33 @@ dist_bray <- vegan::vegdist(counts_rel, method = "bray")
 summary(as.vector(dist_bray))
 ```
 
-### Euclidean distance after emCLR transformation
+### Euclidean distance after multiplicative replacement and CLR transformation
 
 ```{r}
-emclr_object <- compute_emclr(
-  count_mat = counts_raw,
-  epsilon = emclr_epsilon
+clr_object <- compute_multrepl_clr(
+  rel_abund_mat = counts_rel,
+  frac = zero_replacement_fraction
 )
 
-counts_emclr <- emclr_object$z
+counts_clr <- clr_object$z
 
-emclr_summary <- tibble(
-  epsilon = emclr_object$epsilon,
-  delta_global = emclr_object$delta_global,
-  n_finite_delta_k = sum(is.finite(emclr_object$delta_by_sample)),
-  n_infinite_delta_k = sum(is.infinite(emclr_object$delta_by_sample)),
-  min_delta_k = min(emclr_object$delta_by_sample[is.finite(emclr_object$delta_by_sample)]),
-  median_delta_k = median(emclr_object$delta_by_sample[is.finite(emclr_object$delta_by_sample)]),
-  max_finite_delta_k = max(emclr_object$delta_by_sample[is.finite(emclr_object$delta_by_sample)])
+clr_summary <- tibble(
+  replacement_method = "zCompositions::multRepl",
+  input_scale = "relative abundance",
+  detection_limit = clr_object$detection_limit,
+  replacement_fraction = clr_object$frac,
+  replacement_value = clr_object$replacement_value,
+  n_zeros_replaced = sum(counts_rel == 0),
+  zero_fraction = mean(counts_rel == 0)
 )
 
-emclr_summary
+clr_summary
 ```
 
 ```{r}
-dist_emclr_object <- dist(counts_emclr, method = "euclidean")
+dist_clr_object <- dist(counts_clr, method = "euclidean")
 
-dist_emclr_object[1:10]
+dist_clr_object[1:10]
 ```
 
 ### Save distance objects
@@ -436,26 +417,25 @@ dist_emclr_object[1:10]
 ```{r}
 beta_objects <- list(
   metadata = sampdata,
+  counts_raw_unfiltered = counts_raw_unfiltered,
   counts_raw = counts_raw,
   counts_rel = counts_rel,
-  emclr = emclr_object,
-  counts_emclr = counts_emclr,
+  taxa_filter_summary = taxa_filter_summary,
+  taxa_prevalence_summary = taxa_prevalence_summary,
+  clr = clr_object,
+  counts_clr = counts_clr,
   dist_bray = dist_bray,
-  dist_emclr_object = dist_emclr_object,
+  dist_clr_object = dist_clr_object,
   data_summary = data_summary,
-  emclr_summary = emclr_summary
+  clr_summary = clr_summary
 )
 
 saveRDS(beta_objects, path_target("beta_diversity_objects.rds"))
 
 write_csv(data_summary, path_target("beta_data_summary.csv"))
-write_csv(emclr_summary, path_target("beta_emclr_summary.csv"))
-
-tibble(
-  SampleID = rownames(counts_raw),
-  delta_k = emclr_object$delta_by_sample
-) %>%
-  write_csv(path_target("beta_emclr_sample_offsets.csv"))
+write_csv(taxa_filter_summary, path_target("beta_taxa_filter_summary.csv"))
+write_csv(taxa_prevalence_summary, path_target("beta_taxa_prevalence_summary.csv"))
+write_csv(clr_summary, path_target("beta_clr_summary.csv"))
 ```
 
 ## Ordination
@@ -464,15 +444,15 @@ tibble(
 
 ```{r}
 pcoa_bray <- compute_pcoa(dist_bray, n_axes = 5)
-pcoa_emclr_object <- compute_pcoa(dist_emclr_object, n_axes = 5)
+pcoa_clr_object <- compute_pcoa(dist_clr_object, n_axes = 5)
 
 pcoa_bray_df <- pcoa_bray$coords %>%
   mutate(distance = "Bray--Curtis")
 
-pcoa_emclr_df <- pcoa_emclr_object$coords %>%
-  mutate(distance = "emCLR Euclidean")
+pcoa_clr_df <- pcoa_clr_object$coords %>%
+  mutate(distance = "multRepl + CLR Euclidean")
 
-bind_rows(pcoa_bray_df, pcoa_emclr_df) %>%
+bind_rows(pcoa_bray_df, pcoa_clr_df) %>%
   write_csv(path_target("beta_pcoa_coordinates.csv"))
 ```
 
@@ -485,18 +465,18 @@ p_bray <- plot_pcoa(
   title = "Bray-Curtis dissimilarity"
 )
 
-p_emclr <- plot_pcoa(
-  pcoa_res = pcoa_emclr_object,
+p_clr <- plot_pcoa(
+  pcoa_res = pcoa_clr_object,
   metadata = sampdata,
-  title = "Euclidean distance after emCLR transformation"
+  title = "Euclidean distance after multRepl + CLR"
 )
 
-p_bray + p_emclr
+p_bray + p_clr
 ```
 
 The Bray-Curtis PCoA (PCo1: 29.5%, PCo2: 8.9%) displays the characteristic arch shape common to PCoA on compositional count data, where the cloud folds back on itself along PCo2. This is an ordination artifact rather than a biological signal and reflects how Bray-Curtis dissimilarity handles the full gradient of community turnover. 
 
-The emCLR-based PCoA (PCo1: 8.2%, PCo2: 5.9%) produces a more symmetric, roughly elliptical cloud with variance spread more evenly across axes — a consequence of the log-ratio transformation removing compositional constraints. Note that the first two axes together explain considerably less total variation for emCLR, which is expected given its more Euclidean structure.
+The CLR-based PCoA produces a more symmetric, roughly elliptical cloud with variance spread more evenly across axes — a consequence of the log-ratio transformation removing compositional constraints. Note that the first two axes together may explain considerably less total variation for CLR, which is expected given its more Euclidean structure.
 
 ### PCoA plots colored by selected variables
 
@@ -573,14 +553,14 @@ if (length(variables_to_plot) > 0) {
       title = paste0("Bray-Curtis dissimilarity: ", var)
     )
     
-    p_emclr_var <- plot_pcoa(
-      pcoa_res = pcoa_emclr_object,
+    p_clr_var <- plot_pcoa(
+      pcoa_res = pcoa_clr_object,
       metadata = sampdata_plot,
       color_var = var,
-      title = paste0("Euclidean distance after emCLR: ", var)
+      title = paste0("Euclidean distance after multRepl + CLR: ", var)
     )
     
-    print((p_bray_var | p_emclr_var) +
+    print((p_bray_var | p_clr_var) +
       plot_layout(guides = 'collect'))
   }
 }
@@ -612,21 +592,21 @@ ComplexHeatmap::draw(p_heat_bray)
 The Bray-Curtis distance heatmap reveals a block of samples in the upper-left cluster (after hierarchical reordering) that are substantially more similar to each other than to the rest of the cohort — visible as a lighter region against the predominantly dark-blue background. This suggests some subgroup of samples shares a notably similar community composition. The annotation bars do not immediately reveal a single metadata variable that cleanly aligns with this block, so the driver of this cluster is not apparent from the variables available here.
 
 ```{r heatmap_euclid, fig.width=9, fig.height=7}
-p_heat_emclr <- plot_distance_heatmap(
-  dist_obj = dist_emclr_object,
+p_heat_clr <- plot_distance_heatmap(
+  dist_obj = dist_clr_object,
   metadata = sampdata_plot,
   ann_vars = variables_to_plot,
-  title    = "emCLR Euclidean distance matrix"
+  title    = "multRepl + CLR Euclidean distance matrix"
 )
 
-ComplexHeatmap::draw(p_heat_emclr)
+ComplexHeatmap::draw(p_heat_clr)
 ```
 
-The emCLR heatmap is considerably more homogeneous: distances are more uniformly distributed with less pronounced block structure, which is consistent with the more diffuse spread seen in its ordination.
+The CLR heatmap is considerably more homogeneous: distances are more uniformly distributed with less pronounced block structure, which is consistent with the more diffuse spread seen in its ordination.
 
 ## PERMANOVA and PERMDISP
 
-The following analyses are performed for both beta-diversity representations: Bray-Curtis dissimilarity on relative abundance profiles and Euclidean distance after emCLR transformation. PERMANOVA is used to test for differences in group centroids, while PERMDISP assesses differences in within-group dispersion.
+The following analyses are performed for both beta-diversity representations: Bray-Curtis dissimilarity on relative abundance profiles and Euclidean distance after multiplicative replacement and CLR transformation. PERMANOVA is used to test for differences in group centroids, while PERMDISP assesses differences in within-group dispersion.
 
 ```{r beta_test_setup}
 # Use the same variables as for the PCoA plots.
@@ -637,9 +617,9 @@ distance_list <- list(
     label = "Bray-Curtis",
     dist = dist_bray
   ),
-  emclr = list(
-    label = "emCLR Euclidean",
-    dist = dist_emclr_object
+  clr = list(
+    label = "multRepl + CLR Euclidean",
+    dist = dist_clr_object
   )
 )
 
@@ -782,7 +762,7 @@ run_official_betadisper <- function(dist_obj, group, n_perm = 999) {
 ### PERMANOVA
 
 ```{r permanova}
-path_permanova <- path_target("permanova_results.rds")
+path_permanova <- path_target("permanova_results_multrepl_clr.rds")
 
 if (!file.exists(path_permanova)) {
   permanova_results <- progressr::with_progress({
@@ -886,7 +866,7 @@ perm_dist_df %>%
 ### PERMANOVA p-value refinement with permApprox
 
 ```{r permanova_permapprox}
-path_permanova_permapprox <- path_target("permanova_permapprox_results.rds")
+path_permanova_permapprox <- path_target("permanova_permapprox_results_multrepl_clr.rds")
 
 permanova_obs_stats  <- permanova_results$statistic_obs
 permanova_perm_stats <- do.call(cbind, permanova_results$perm_stats)
@@ -931,7 +911,7 @@ permanova_results %>%
 ```
 
 ```{r permanova_latex}
-dist_order <- c("Bray-Curtis", "emCLR Euclidean")
+dist_order <- c("Bray-Curtis", "multRepl + CLR Euclidean")
 
 sig_stars_beta <- function(p) {
   dplyr::case_when(
@@ -1044,7 +1024,7 @@ ggplot(perm_dist_df, aes(x = perm_stats)) +
 ### PERMDISP
 
 ```{r}
-path_permdisp <- path_target("permdisp_results.rds")
+path_permdisp <- path_target("permdisp_results_multrepl_clr.rds")
 
 if (!file.exists(path_permdisp)) {
   permdisp_results <- progressr::with_progress({
@@ -1111,7 +1091,7 @@ permdisp_results %>%
 ### PERMDISP p-value refinement with permApprox
 
 ```{r permdisp_permapprox}
-path_permdisp_permapprox <- path_target("permdisp_permapprox_results.rds")
+path_permdisp_permapprox <- path_target("permdisp_permapprox_results_multrepl_clr.rds")
 
 permdisp_obs_stats  <- permdisp_results$statistic_obs
 permdisp_perm_stats <- do.call(cbind, permdisp_results$perm_stats)

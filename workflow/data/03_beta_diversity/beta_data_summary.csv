@@ -1,2 +1,2 @@
-n_samples,n_taxa,min_library_size,median_library_size,max_library_size,zero_fraction
-592,235,1456,21913.5,69556,0.8969235192639448
+n_samples,n_taxa_before_filter,n_taxa_after_filter,n_taxa_removed,min_taxon_prevalence,min_library_size,median_library_size,max_library_size,zero_fraction
+592,235,41,194,0.1,1438,21850,69437,0.4840557020435069
