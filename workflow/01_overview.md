@@ -1,6 +1,6 @@
 Data overview
 ================
-Compiled at 2026-06-01 16:18:16 UTC
+Compiled at 2026-06-08 14:25:54 UTC
 
 ## Load data
 
@@ -61,20 +61,6 @@ Country
 
 <td style="text-align:left;">
 
-Austria
-</td>
-
-<td style="text-align:left;">
-
-173 (29.2%)
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
 Germany
 </td>
 
@@ -95,6 +81,20 @@ Switzerland
 <td style="text-align:left;">
 
 222 (37.5%)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Austria
+</td>
+
+<td style="text-align:left;">
+
+173 (29.2%)
 </td>
 
 </tr>
@@ -134,9 +134,56 @@ Male
 
 <tr>
 
+<td style="text-align:left;vertical-align: top !important;" rowspan="3">
+
+C-section
+</td>
+
+<td style="text-align:left;">
+
+No
+</td>
+
+<td style="text-align:left;">
+
+468 (79.1%)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Yes
+</td>
+
+<td style="text-align:left;">
+
+121 (20.4%)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+NA
+</td>
+
+<td style="text-align:left;">
+
+3 (0.5%)
+</td>
+
+</tr>
+
+<tr>
+
 <td style="text-align:left;vertical-align: top !important;" rowspan="4">
 
-Breastfeeding duration (months)
+BF duration
 </td>
 
 <td style="text-align:left;">
@@ -188,7 +235,7 @@ NA
 
 <td style="text-align:left;">
 
-12 (missing)
+12 (2%)
 </td>
 
 </tr>
@@ -197,7 +244,7 @@ NA
 
 <td style="text-align:left;vertical-align: top !important;" rowspan="4">
 
-Exclusive breastfeeding (months)
+EBF duration
 </td>
 
 <td style="text-align:left;">
@@ -249,54 +296,7 @@ NA
 
 <td style="text-align:left;">
 
-35 (missing)
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;vertical-align: top !important;" rowspan="3">
-
-Cesarean delivery
-</td>
-
-<td style="text-align:left;">
-
-No
-</td>
-
-<td style="text-align:left;">
-
-468 (79.1%)
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Yes
-</td>
-
-<td style="text-align:left;">
-
-121 (20.4%)
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-NA
-</td>
-
-<td style="text-align:left;">
-
-3 (missing)
+35 (5.9%)
 </td>
 
 </tr>
@@ -305,7 +305,7 @@ NA
 
 <td style="text-align:left;vertical-align: top !important;" rowspan="2">
 
-Prenatal smoking
+Smoking
 </td>
 
 <td style="text-align:left;">
@@ -338,7 +338,7 @@ Yes
 
 <td style="text-align:left;vertical-align: top !important;" rowspan="4">
 
-Number of siblings
+Siblings
 </td>
 
 <td style="text-align:left;">
@@ -390,7 +390,7 @@ NA
 
 <td style="text-align:left;">
 
-89 (missing)
+89 (15%)
 </td>
 
 </tr>
@@ -409,585 +409,6 @@ NA
 
 ![](figures/01_overview/overview_seq-depth-1.png)<!-- -->
 
-## ASV prevalence and sparsity
-
-### Zero counts
-
-<table class="table table-striped table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
-
-<caption>
-
-Sparsity of the ASV count matrix
-</caption>
-
-<thead>
-
-<tr>
-
-<th style="text-align:right;">
-
-Total ASV-sample entries
-</th>
-
-<th style="text-align:right;">
-
-Zero entries
-</th>
-
-<th style="text-align:left;">
-
-Zero entries (%)
-</th>
-
-<th style="text-align:right;">
-
-Non-zero entries
-</th>
-
-<th style="text-align:left;">
-
-Non-zero entries (%)
-</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-<tr>
-
-<td style="text-align:right;">
-
-1210640
-</td>
-
-<td style="text-align:right;">
-
-1188571
-</td>
-
-<td style="text-align:left;">
-
-98.2%
-</td>
-
-<td style="text-align:right;">
-
-22069
-</td>
-
-<td style="text-align:left;">
-
-1.8%
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-### Prevalence vs. total abundance
-
-![](figures/01_overview/overview_prevalence_text_asv-1.png)<!-- -->
-
-![](figures/01_overview/overview_prevalence_asv-1.png)<!-- -->
-
-## Genus prevalence and sparsity
-
-### Zero counts
-
-<table class="table table-striped table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
-
-<caption>
-
-Sparsity of the genus count matrix
-</caption>
-
-<thead>
-
-<tr>
-
-<th style="text-align:right;">
-
-Total ASV-sample entries
-</th>
-
-<th style="text-align:right;">
-
-Zero entries
-</th>
-
-<th style="text-align:left;">
-
-Zero entries (%)
-</th>
-
-<th style="text-align:right;">
-
-Non-zero entries
-</th>
-
-<th style="text-align:left;">
-
-Non-zero entries (%)
-</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-<tr>
-
-<td style="text-align:right;">
-
-139120
-</td>
-
-<td style="text-align:right;">
-
-124780
-</td>
-
-<td style="text-align:left;">
-
-89.7%
-</td>
-
-<td style="text-align:right;">
-
-14340
-</td>
-
-<td style="text-align:left;">
-
-10.3%
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-### Prevalence vs. total abundance
-
-![](figures/01_overview/overview_prevalence_text-1.png)<!-- -->
-
-![](figures/01_overview/overview_prevalence-1.png)<!-- -->
-
-## Taxonomic composition
-
-### Phylum-level relative abundance by covariate
-
-![](figures/01_overview/overview_phylum-by-covariate-1.png)<!-- -->
-
-### Top 15 genera
-
-<table class="table table-striped table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
-
-<caption>
-
-Top 15 genera by mean relative abundance
-</caption>
-
-<thead>
-
-<tr>
-
-<th style="text-align:left;">
-
-Genus
-</th>
-
-<th style="text-align:right;">
-
-Mean rel. abundance (%)
-</th>
-
-<th style="text-align:right;">
-
-Median rel. abundance (%)
-</th>
-
-<th style="text-align:right;">
-
-Prevalence (%)
-</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-<tr>
-
-<td style="text-align:left;">
-
-Bifidobacterium
-</td>
-
-<td style="text-align:right;">
-
-63.813
-</td>
-
-<td style="text-align:right;">
-
-71.923
-</td>
-
-<td style="text-align:right;">
-
-100.0
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Escherichia-Shigella
-</td>
-
-<td style="text-align:right;">
-
-5.941
-</td>
-
-<td style="text-align:right;">
-
-1.039
-</td>
-
-<td style="text-align:right;">
-
-97.3
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Streptococcus
-</td>
-
-<td style="text-align:right;">
-
-4.940
-</td>
-
-<td style="text-align:right;">
-
-1.746
-</td>
-
-<td style="text-align:right;">
-
-99.3
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Bacteroides
-</td>
-
-<td style="text-align:right;">
-
-4.551
-</td>
-
-<td style="text-align:right;">
-
-0.190
-</td>
-
-<td style="text-align:right;">
-
-90.5
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-24_Enterobacteriaceae(F)
-</td>
-
-<td style="text-align:right;">
-
-2.942
-</td>
-
-<td style="text-align:right;">
-
-0.095
-</td>
-
-<td style="text-align:right;">
-
-73.8
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Enterococcus
-</td>
-
-<td style="text-align:right;">
-
-2.802
-</td>
-
-<td style="text-align:right;">
-
-0.292
-</td>
-
-<td style="text-align:right;">
-
-90.2
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-\[Ruminococcus\]\_gnavugroup
-</td>
-
-<td style="text-align:right;">
-
-2.308
-</td>
-
-<td style="text-align:right;">
-
-0.272
-</td>
-
-<td style="text-align:right;">
-
-97.6
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Blautia
-</td>
-
-<td style="text-align:right;">
-
-2.044
-</td>
-
-<td style="text-align:right;">
-
-0.476
-</td>
-
-<td style="text-align:right;">
-
-99.2
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Collinsella
-</td>
-
-<td style="text-align:right;">
-
-1.334
-</td>
-
-<td style="text-align:right;">
-
-0.074
-</td>
-
-<td style="text-align:right;">
-
-85.0
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Lactobacillus
-</td>
-
-<td style="text-align:right;">
-
-1.284
-</td>
-
-<td style="text-align:right;">
-
-0.027
-</td>
-
-<td style="text-align:right;">
-
-54.2
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Erysipelatoclostridium
-</td>
-
-<td style="text-align:right;">
-
-1.191
-</td>
-
-<td style="text-align:right;">
-
-0.088
-</td>
-
-<td style="text-align:right;">
-
-89.4
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Clostridium_sensu_strict1
-</td>
-
-<td style="text-align:right;">
-
-1.052
-</td>
-
-<td style="text-align:right;">
-
-0.076
-</td>
-
-<td style="text-align:right;">
-
-80.2
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Veillonella
-</td>
-
-<td style="text-align:right;">
-
-0.456
-</td>
-
-<td style="text-align:right;">
-
-0.023
-</td>
-
-<td style="text-align:right;">
-
-55.1
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Actinomyces
-</td>
-
-<td style="text-align:right;">
-
-0.392
-</td>
-
-<td style="text-align:right;">
-
-0.056
-</td>
-
-<td style="text-align:right;">
-
-65.4
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-Parabacteroides
-</td>
-
-<td style="text-align:right;">
-
-0.349
-</td>
-
-<td style="text-align:right;">
-
-0.000
-</td>
-
-<td style="text-align:right;">
-
-18.8
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
 ## Files written
 
 These files have been written to the target directory,
@@ -996,4 +417,4 @@ These files have been written to the target directory,
     ## # A tibble: 1 × 4
     ##   path                           type         size modification_time  
     ##   <fs::path>                     <fct> <fs::bytes> <dttm>             
-    ## 1 tbl_sample_characteristics.tex file        1.34K 2026-06-01 16:18:20
+    ## 1 tbl_sample_characteristics.tex file        1.26K 2026-06-08 14:25:56

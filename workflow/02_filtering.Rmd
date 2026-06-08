@@ -1,0 +1,507 @@
+---
+title: "Taxonomic aggregation and filtering"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output: 
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+params:
+  name: "02_filtering" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "7426994c-47c1-4984-bc1e-aeb070dbe32b")
+```
+
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params, "/filter_"),
+  echo = FALSE)
+```
+
+## Load packages
+
+```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
+library(phyloseq)
+library(tidyverse)
+library(kableExtra)
+library(ggtext)
+library(patchwork)
+
+conflicts_prefer(dplyr::filter)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+#projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Load data
+
+```{r load_data}
+phylo_asv   <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_asv.rds"))
+phylo_genus <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_genus.rds"))
+sampdata    <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
+otutab_asv  <- as(otu_table(phylo_asv), "matrix")
+```
+
+## Helper functions
+
+```{r}
+otu_matrix_samples_by_taxa <- function(phylo_obj) {
+  mat <- otu_table(phylo_obj) |> 
+    as("matrix")
+  
+  if (taxa_are_rows(phylo_obj)) {
+    mat <- t(mat)
+  }
+  
+  mat
+}
+
+zero_prop <- function(phylo_obj) {
+  mat <- otu_matrix_samples_by_taxa(phylo_obj)
+  mean(mat == 0)
+}
+
+taxon_prevalence <- function(phylo_obj) {
+  mat <- otu_matrix_samples_by_taxa(phylo_obj)
+  colMeans(mat > 0)
+}
+
+safe_tax_glom <- function(phylo_obj, taxrank) {
+  if (!taxrank %in% rank_names(phylo_obj)) {
+    return(NULL)
+  }
+  
+  out <- phyloseq::tax_glom(
+    phylo_obj,
+    taxrank = taxrank,
+    NArm = FALSE
+  )
+  
+  out <- prune_taxa(taxa_sums(out) > 0, out)
+  
+  out
+}
+
+format_prevalence_threshold <- function(threshold) {
+  if (threshold == 0) {
+    "No prevalence filtering"
+  } else {
+    paste0("$\\geq ", threshold * 100, "\\%$ of samples")
+  }
+}
+```
+
+
+## Number of taxa across taxonomic levels
+
+```{r}
+tax_levels <- c("Phylum", "Class", "Order", "Family", "Genus")
+
+taxonomic_overview_levels <- map_dfr(
+  tax_levels,
+  function(level) {
+    phylo_level <- safe_tax_glom(phylo_asv, taxrank = level)
+    
+    if (is.null(phylo_level)) {
+      tibble(
+        taxonomic_level = level,
+        n_taxa = NA_integer_,
+        zero_entries = NA_real_
+      )
+    } else {
+      tibble(
+        taxonomic_level = level,
+        n_taxa = ntaxa(phylo_level),
+        zero_entries = 100 * zero_prop(phylo_level)
+      )
+    }
+  }
+)
+
+taxonomic_overview <- bind_rows(
+  taxonomic_overview_levels,
+  tibble(
+    taxonomic_level = "ASV",
+    n_taxa = ntaxa(phylo_asv),
+    zero_entries = 100 * zero_prop(phylo_asv)
+  )
+) |>
+  mutate(
+    zero_entries = round(zero_entries, 1)
+  )
+
+taxonomic_overview
+```
+
+```{r}
+write_csv(
+  taxonomic_overview,
+  path_target("taxonomic_overview.csv")
+)
+
+taxonomic_overview_tex <- knitr::kable(
+  taxonomic_overview,
+  format = "latex",
+  booktabs = TRUE,
+  escape = FALSE,
+  col.names = c("Taxonomic level", "Number of taxa", "Zero entries (\\%)"),
+  caption = "\\textbf{Number of taxa across taxonomic levels.} Number of taxa obtained at different taxonomic levels after restricting the data to the reduced analysis subset and removing taxa with zero total counts."
+)
+
+writeLines(
+  taxonomic_overview_tex,
+  path_target("taxonomic_overview.tex")
+)
+```
+
+```{r}
+knitr::kable(
+  taxonomic_overview,
+  col.names = c("Taxonomic level", "Number of taxa", "Zero entries (%)")
+)
+```
+
+## Phylum-level relative abundance by covariate
+
+```{r phylum-data-prep}
+# Melt phylum-level phyloseq, keep top 5 phyla, lump rest as "Other"
+phylum_melt <- phylo_asv %>%
+  tax_glom("Phylum") %>%
+  transform_sample_counts(function(x) x / sum(x)) %>%
+  psmelt() %>%
+  mutate(Phylum = str_remove(Phylum, "^p__"))
+
+top5_phyla <- phylum_melt %>%
+  group_by(Phylum) %>%
+  summarise(m = mean(Abundance), .groups = "drop") %>%
+  slice_max(m, n = 5) %>%
+  pull(Phylum)
+
+# Merge with nicely-labelled metadata
+phylum_meta <- phylum_melt %>%
+  mutate(Phylum = if_else(Phylum %in% top5_phyla, Phylum, "Other")) %>%
+  group_by(Sample, Phylum) %>%
+  summarise(Abundance = sum(Abundance), .groups = "drop") %>%
+  left_join(
+    sampdata %>%
+      rownames_to_column("Sample"),
+    by = "Sample"
+  )
+```
+
+```{r phylum-plot-function}
+phylum_colors <- c(
+  Actinobacteriota  = "#44BFA3",
+  Bacteroidota      = "#F28E2B",
+  Firmicutes        = "#7B9FC7",
+  Proteobacteria    = "#F1959B",
+  Verrucomicrobiota = "#8DB86B",
+  Other             = "#F2E750"
+)
+
+# Stack order: Actinobacteriota on top, matching reference style
+phylum_stack_levels <- c("Firmicutes", "Proteobacteria", "Bacteroidota",
+                         "Verrucomicrobiota", "Other", "Actinobacteriota")
+
+phylum_labels <- c(
+  Actinobacteriota  = "*Actinobacteriota*",
+  Bacteroidota      = "*Bacteroidota*",
+  Firmicutes        = "*Firmicutes*",
+  Proteobacteria    = "*Proteobacteria*",
+  Verrucomicrobiota = "*Verrucomicrobiota*",
+  Other             = "Other"
+)
+
+plot_phylum_by_group <- function(data, var, x_label) {
+  data %>%
+    dplyr::filter(!is.na(.data[[var]])) %>%
+    group_by(.data[[var]], Phylum) %>%
+    summarise(mean_abund = mean(Abundance), .groups = "drop") %>%
+    mutate(Phylum = factor(Phylum, levels = phylum_stack_levels)) %>%
+    ggplot(aes(x = .data[[var]], y = mean_abund, fill = Phylum)) +
+    geom_col(width = 0.6) +
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+    scale_fill_manual(values = phylum_colors, labels = phylum_labels) +
+    labs(x = x_label, y = "Mean Relative Abundance (%)", fill = "Phylum",
+         title = x_label) +
+    theme(legend.text = element_markdown(),
+          legend.position = "bottom")
+}
+```
+
+```{r phylum-by-covariate, fig.width=12, fig.height=12}
+vars <- list(
+  list(var = "Country",      label = "Country"),
+  list(var = "Sex",          label = "Sex"),
+  list(var = "C-section",    label = "C-section"),
+  list(var = "BF duration",  label = "BF duration"),
+  list(var = "EBF duration", label = "EBF duration"),
+  list(var = "Smoking",      label = "Smoking"),
+  list(var = "Siblings",     label = "Siblings")
+)
+
+plots <- lapply(vars, function(v) plot_phylum_by_group(phylum_meta, v$var, v$label))
+
+# Remove y-axis from all but the leftmost column (every 3rd plot starting at index 1)
+plots <- lapply(seq_along(plots), function(i) {
+  if (i %% 3 == 1) plots[[i]]
+  else plots[[i]] + theme(axis.title.y = element_blank(),
+                          axis.text.y  = element_blank(),
+                          axis.ticks.y = element_blank())
+})
+
+wrap_plots(plots, ncol = 3, guides = "collect") +
+  plot_annotation(
+    title = "Phylum-level composition by covariate",
+    theme = theme(plot.title = element_text(size = 16))
+  ) &
+  theme(
+    legend.position   = "right",
+    legend.title      = element_text(size = 14),
+    legend.text       = element_markdown(size = 14),
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 12),
+    plot.title        = element_text(size = 14)
+  )
+```
+
+## ASV prevalence vs. total abundance
+
+```{r prevalence_text_asv, fig.width=7, fig.height=4}
+data.frame(
+  prevalence   = rowSums(otutab_asv > 0) / ncol(otutab_asv),
+  total_counts = rowSums(otutab_asv)
+) %>%
+  ggplot(aes(x = prevalence, y = total_counts)) +
+  geom_point(alpha = 0.3, size = 0.8) +
+  scale_y_log10(labels = scales::comma) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(
+    x        = "Prevalence (fraction of samples)",
+    y        = "Total counts",
+    title    = "ASV prevalence vs. total abundance",
+    subtitle = paste0(
+      sum(rowSums(otutab_asv > 0) != 0), " ASVs in total; ",
+      sum(rowSums(otutab_asv > 0) / ncol(otutab_asv) < 0.1),
+      " ASVs present in <10% of samples"
+    )
+  ) +
+  theme(
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 11),
+    plot.title        = element_text(size = 14)
+  ) +
+  theme_bw()
+```
+
+```{r prevalence_asv, fig.width=7, fig.height=3}
+data.frame(
+  prevalence   = rowSums(otutab_asv > 0) / ncol(otutab_asv),
+  total_counts = rowSums(otutab_asv)
+) %>%
+  ggplot(aes(x = prevalence, y = total_counts)) +
+  geom_point(alpha = 0.3, size = 0.8) +
+  scale_y_log10(labels = scales::comma) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(
+    x        = "Prevalence (fraction of samples)",
+    y        = "Total counts"
+  ) +
+  theme(
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 12),
+    plot.title        = element_text(size = 14)
+  ) +
+  theme_bw()
+```
+
+## Most abundant genera
+
+```{r}
+genus_mat <- otu_matrix_samples_by_taxa(phylo_genus)
+
+genus_rel_mat <- genus_mat / rowSums(genus_mat)
+
+genus_tax <- tax_table(phylo_genus) |> 
+  as("matrix") |> 
+  as.data.frame() |> 
+  rownames_to_column("taxon_id")
+
+genus_labels <- genus_tax |>
+  transmute(
+    taxon_id,
+    genus = if_else(
+      is.na(Genus) | Genus == "",
+      taxon_id,
+      Genus
+    )
+  )
+
+top_genera <- tibble(
+  taxon_id = colnames(genus_mat),
+  mean_rel_abundance = colMeans(genus_rel_mat, na.rm = TRUE) * 100,
+  prevalence = colMeans(genus_mat > 0) * 100
+) |>
+  left_join(genus_labels, by = "taxon_id") |>
+  arrange(desc(mean_rel_abundance)) |>
+  slice_head(n = 10) |>
+  transmute(
+    genus,
+    mean_rel_abundance = round(mean_rel_abundance, 1),
+    prevalence = round(prevalence, 1)
+  )
+
+top_genera
+```
+
+```{r}
+write_csv(
+  top_genera,
+  path_target("top_genera.csv")
+)
+
+top_genera_tex <- top_genera |>
+  mutate(
+    genus = paste0("\\emph{", genus, "}")
+  ) |>
+  knitr::kable(
+    format = "latex",
+    booktabs = TRUE,
+    escape = FALSE,
+    col.names = c("Genus", "Mean rel. abundance (\\%)", "Prevalence (\\%)"),
+    caption = "\\textbf{Most abundant genera.} Genera in the reduced PASTURE data set ranked by mean relative abundance across samples. For each genus, the mean relative abundance and prevalence are reported."
+  )
+
+writeLines(
+  top_genera_tex,
+  path_target("top_genera.tex")
+)
+```
+
+```{r}
+top_genera |>
+  knitr::kable(
+    col.names = c("Genus", "Mean rel. abundance (%)", "Prevalence (%)")
+  )
+```
+
+## Prevalence filtering at genus level
+
+For all analyses except alpha diversity, genera observed in less than 1% of samples are removed. The table below summarizes the effect of different prevalence thresholds on the number of retained genera and the proportion of zero entries.
+
+```{r}
+prevalence_thresholds <- c(0, 0.01, 0.05, 0.10, 0.20)
+
+genus_prev <- taxon_prevalence(phylo_genus)
+
+prevalence_filtering <- map_dfr(
+  prevalence_thresholds,
+  function(threshold) {
+    keep_taxa <- names(genus_prev)[genus_prev >= threshold]
+    
+    phylo_filtered <- prune_taxa(
+      keep_taxa,
+      phylo_genus
+    )
+    
+    tibble(
+      prevalence_threshold = threshold,
+      prevalence_threshold_label = format_prevalence_threshold(threshold),
+      n_genera = ntaxa(phylo_filtered),
+      zero_entries = 100 * zero_prop(phylo_filtered)
+    )
+  }
+) |>
+  mutate(
+    zero_entries = round(zero_entries, 1)
+  )
+
+prevalence_filtering
+```
+
+```{r}
+write_csv(
+  prevalence_filtering,
+  path_target("prevalence_filtering.csv")
+)
+
+prevalence_filtering_tex <- prevalence_filtering |>
+  select(
+    prevalence_threshold_label,
+    n_genera,
+    zero_entries
+  ) |>
+  knitr::kable(
+    format = "latex",
+    booktabs = TRUE,
+    escape = FALSE,
+    col.names = c("Prevalence threshold", "Number of genera", "Zero entries (\\%)"),
+    caption = "\\textbf{Effect of prevalence filtering on the genus-level count table.} Number of retained genera and proportion of zero entries for different prevalence thresholds. Prevalence is defined as the proportion of samples in which a genus has positive counts."
+  )
+
+writeLines(
+  prevalence_filtering_tex,
+  path_target("prevalence_filtering.tex")
+)
+```
+
+```{r}
+prevalence_filtering |>
+  select(
+    prevalence_threshold_label,
+    n_genera,
+    zero_entries
+  ) |>
+  knitr::kable(
+    col.names = c("Prevalence threshold", "Number of genera", "Zero entries (%)")
+  )
+```
+
+```{r}
+genus_prev_threshold <- 0.01
+
+phylo_genus_prev10 <- prune_taxa(
+  names(genus_prev)[genus_prev >= genus_prev_threshold],
+  phylo_genus
+)
+
+saveRDS(
+  phylo_genus,
+  path_target("bact_phylo_2m_genus_unfiltered.rds")
+)
+
+saveRDS(
+  phylo_genus_prev10,
+  path_target("bact_phylo_2m_genus_prev10.rds")
+)
+```
+
+
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
+
+

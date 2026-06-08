@@ -40,8 +40,9 @@ render_file <- function(folder, subfolder = NULL, file, output_format = "all") {
 
 render_file("workflow", NULL, "00_build_dataset")
 render_file("workflow", NULL, "01_overview")
-render_file("workflow", NULL, "02_alpha_diversity")
-render_file("workflow", NULL, "03_beta_diversity")
+render_file("workflow", NULL, "02_filtering")
+render_file("workflow", NULL, "03_alpha_diversity")
+render_file("workflow", NULL, "04_beta_diversity")
 
 render_file("workflow", NULL, "CLR_example")
 render_file("workflow", NULL, "CLR_mini_example")

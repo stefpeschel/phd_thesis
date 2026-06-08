@@ -1,0 +1,1951 @@
+---
+title: "Alpha diversity analysis"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output: 
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+params:
+  name: "03_alpha_diversity" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "41b33e9b-a351-49eb-bdc8-cdeddd77796c")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params, "/alpha_"),
+  echo = FALSE)
+```
+
+## Load packages
+
+```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
+library(phyloseq)
+library(tidyverse)
+library(ggtext)
+library(ggpubr)
+library(patchwork)
+
+# Diversity packages
+library(breakaway)
+library(DivNet)
+library(progress)
+library(permApprox)
+
+# Parallel computing
+library(future)
+library(future.apply)
+library(progressr)
+conflicts_prefer(dplyr::filter)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+#projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Load data
+
+```{r load_data}
+phylo_asv   <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_asv.rds"))
+phylo_genus <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_genus.rds"))
+sampdata    <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
+otutab_asv   <- as(otu_table(phylo_asv), "matrix")
+otutab_genus <- as(otu_table(phylo_genus), "matrix")
+```
+
+### ASV level
+
+```{r}
+phylo_asv
+```
+
+### Genus level
+
+```{r}
+phylo_genus
+```
+
+
+## Functions
+
+### Function for significance plot
+
+```{r, echo=TRUE}
+modify_div_plot <- function(strip_chart, xlab = "", breaks = NULL, labels = NULL,
+                            binwidth = 0.5, dotsize = 1, ylim = c(0, 75),
+                            ylab = "", ybreaks = NULL,
+                            textsize = 18, title = "") {
+  strip_chart <- strip_chart +
+    stat_summary(fun.data = median_hilow, fun.args=0.50, show.legend=FALSE,
+                 geom="crossbar", alpha=0.25, width=0.7) +
+    geom_dotplot(binaxis = "y", binwidth = binwidth, 
+                 stackdir = "center", width = 0.5, alpha = 0.7,
+                 show.legend = FALSE, dotsize = dotsize) +
+    labs(x=NULL,
+         y=ylab) +
+    scale_fill_manual(values = cols) +
+    scale_x_discrete(name = xlab,
+                     breaks = breaks, 
+                     labels = labels) +
+    theme_classic() +
+    theme(axis.text.x = element_markdown(),
+          axis.text.y = element_markdown(),
+          legend.text = element_markdown(),
+          text = element_text(size = textsize)) +
+    ggtitle(title)
+  
+  if (!is.null(ybreaks)) {
+    strip_chart <- strip_chart + 
+      scale_y_continuous(breaks=ybreaks, limits = ylim)
+  } else {
+    strip_chart <- strip_chart + 
+      scale_y_continuous(limits = ylim)
+  }
+  strip_chart
+}
+
+```
+
+### Function for significance line
+
+```{r, echo=TRUE}
+add_sig_line <- function(strip_chart, pval, diversity,
+                         space_line = 0.05, space_lab = 0.05, nfeat = nfeat, 
+                         linewidth = 0.8, size = 5) {
+  
+  if (nfeat == 2) {
+    pmat_x <- c(1)
+    pmat_y <- c(1)
+    line_left <- c(1)
+    line_right <- c(2)
+    lab_x <- c(1.5)
+  } else if (nfeat == 3) {
+    pmat_x <- c(1, 2, 2)
+    pmat_y <- c(1, 2, 1)
+    line_left <- c(1, 2, 1)
+    line_right <- c(2, 3, 3)
+    lab_x <- c(1.5, 2.5, 2)
+  } else {
+    pmat_x <- c(1, 2, 3, 2, 3, 3)
+    pmat_y <- c(1, 2, 3, 1, 2, 1)
+    line_left <- c(1, 2, 3, 1, 2, 1)
+    line_right <- c(2, 3, 4, 3, 4, 4)
+    lab_x <- c(1.5, 2.5, 3.5, 2, 3, 2.5)
+  }
+  
+  pos_line <- max(diversity) - space_line + 0.1 * space_line
+  pos_lab <- pos_line + space_lab
+  
+  for (i in seq_along(pmat_x)) {
+    if (is.null(dim(pval))) {
+      label <- pval
+    } else {
+      label <- pval[pmat_x[i], pmat_y[i]]
+    }
+    
+    if (label <= 0.05) {
+      pos_line <- pos_line + space_line
+      pos_lab <- pos_lab + space_line
+      
+      strip_chart <- strip_chart +
+        geom_line(data = tibble(x = c(line_left[i], line_right[i]), 
+                                y = c(pos_line, pos_line)), 
+                  aes(x=x, y=y),
+                  inherit.aes = FALSE, 
+                  linewidth = linewidth) +
+        #geom_text(x = lab_x[i], y = pos_lab, label = signif(label, digits = 3))
+        annotate("text", lab_x[i], y = pos_lab, 
+                 label = signif(label, digits = 3), size = size)
+    } 
+  }
+  strip_chart
+}
+```
+
+### Permutation test functions
+
+```{r, echo=TRUE}
+make_perm_chunks <- function(n_perm, n_chunks = NULL) {
+  if (is.null(n_chunks)) {
+    n_chunks <- min(parallelly::availableCores(), n_perm)
+  }
+  split(seq_len(n_perm), cut(seq_len(n_perm), breaks = n_chunks, labels = FALSE))
+}
+
+perm_kruskal <- function(x, g, n_perm = 9999, seed = NULL,
+                         n_chunks = NULL, progress = TRUE) {
+  g    <- droplevels(as.factor(g))
+  keep <- complete.cases(x, g)
+  x    <- x[keep]
+  g    <- droplevels(g[keep])
+
+  # Asymptotic test called once (for p_asymp only)
+  obs     <- kruskal.test(x ~ g)
+  p_asymp <- obs$p.value
+
+  # Pre-compute fixed quantities — ranks never change under permutation
+  r    <- rank(x)
+  n    <- length(x)
+  gi   <- as.integer(g)            # integer group labels, faster than factor
+  K    <- nlevels(g)
+  nj   <- tabulate(gi, nbins = K)  # group sizes
+  coef <- 12 / (n * (n + 1L))
+  adj  <- 3 * (n + 1L)
+
+  # Observed H with the same formula used in permutations (ensures fair comparison)
+  Rj_obs <- c(rowsum(r, gi))
+  obs_H  <- coef * sum(Rj_obs^2 / nj) - adj
+
+  chunks <- make_perm_chunks(n_perm, n_chunks)
+
+  if (progress) {
+    prog <- progressr::progressor(steps = length(chunks))
+  }
+
+  perm_list <- future.apply::future_lapply(
+    chunks,
+    function(idx) {
+      out <- numeric(length(idx))
+      for (b in seq_along(idx)) {
+        Rj     <- c(rowsum(r, sample(gi)))
+        out[b] <- coef * sum(Rj^2 / nj) - adj
+      }
+      if (progress) prog()
+      out
+    },
+    future.seed = if (is.null(seed)) TRUE else seed
+  )
+  
+  perm_H <- unlist(perm_list, use.names = FALSE)
+  p_perm <- (sum(perm_H >= obs_H) + 1) / (n_perm + 1)
+
+  pa <- permApprox::perm_approx(
+    obs_stats     = obs_H,
+    perm_stats    = matrix(perm_H, ncol = 1),
+    alternative   = "greater",
+    adjust_method = "none",
+    verbose       = FALSE,
+    gpd_ctrl      = permApprox::make_gpd_ctrl(
+      sample_size     = min(nj),
+      # With large n_perm the discreteness screen incorrectly flags the KW H
+      # distribution (tied ranks) and falls back to empirical; disable it.
+      discrete_screen = FALSE,
+      exceed0_min     = 250L,
+      # For large permutation numbers, the number of starting exceedances is 
+      # reduced below 25% to reduce runtime.
+      exceed0         = min(0.25, (5000 / n_perm))
+    )
+  )
+
+  list(
+    H        = obs_H,
+    H_perm   = perm_H,
+    p_asymp  = p_asymp,
+    p_perm   = p_perm,
+    p_approx = pa$p_unadjusted[1]
+  )
+}
+
+perm_pairwise <- function(x, g, n_perm = 9999, p_adjust = "BH",
+                          seed = NULL, n_chunks = NULL, progress = TRUE) {
+  g <- droplevels(as.factor(g))
+  keep <- complete.cases(x, g)
+  x <- x[keep]
+  g <- droplevels(g[keep])
+  
+  lvls  <- levels(g)
+  pairs <- combn(lvls, 2, simplify = FALSE)
+  
+  p_vals        <- numeric(length(pairs))
+  p_vals_approx <- numeric(length(pairs))
+  
+  for (i in seq_along(pairs)) {
+    pair <- pairs[[i]]
+    idx  <- g %in% pair
+
+    xi <- x[idx]
+    gi <- droplevels(g[idx])
+
+    n1 <- sum(gi == levels(gi)[1])
+    n2 <- sum(gi == levels(gi)[2])
+    EW <- n1 * n2 / 2
+
+    # Pre-compute fixed quantities for fast W calculation
+    ri     <- rank(xi)                  # ranks fixed across all permutations
+    gi_int <- as.integer(gi)            # 1 = first level, 2 = second level
+    # W = (sum of ranks in group 1) - n1*(n1+1)/2  [Mann-Whitney U convention]
+    W_obs <- sum(ri[gi_int == 1L]) - n1 * (n1 + 1) / 2
+    obs_T <- abs(W_obs - EW)
+
+    chunks <- make_perm_chunks(n_perm, n_chunks)
+
+    if (progress) {
+      message("Running pairwise permutations for: ", pair[1], " vs ", pair[2])
+      prog <- progressr::progressor(steps = length(chunks))
+    }
+
+    pair_seed <- if (is.null(seed)) TRUE else seed + i
+
+    perm_list <- future.apply::future_lapply(
+      chunks,
+      function(idx_perm) {
+        out      <- numeric(length(idx_perm))
+        rank_adj <- n1 * (n1 + 1) / 2
+        for (b in seq_along(idx_perm)) {
+          gi_perm <- sample(gi_int)
+          W_perm  <- sum(ri[gi_perm == 1L]) - rank_adj
+          out[b]  <- abs(W_perm - EW)
+        }
+        if (progress) prog()
+        out
+      },
+      future.seed = pair_seed
+    )
+    
+    perm_T <- unlist(perm_list, use.names = FALSE)
+    
+    p_vals[i] <- (sum(perm_T >= obs_T) + 1) / (n_perm + 1)
+    
+    pa <- permApprox::perm_approx(
+      obs_stats     = obs_T,
+      perm_stats    = matrix(perm_T, ncol = 1),
+      alternative   = "greater",
+      adjust_method = "none",
+      verbose       = FALSE,
+      gpd_ctrl      = permApprox::make_gpd_ctrl(
+        sample_size     = min(n1, n2),
+        discrete_screen = FALSE,
+        exceed0_min     = 250L,
+        exceed0         = min(0.25, (5000 / n_perm))
+      )
+    )
+    
+    p_vals_approx[i] <- pa$p_unadjusted[1]
+  }
+  
+  p_adj        <- p.adjust(p_vals, method = p_adjust)
+  p_adj_approx <- p.adjust(p_vals_approx, method = p_adjust)
+  
+  make_mat <- function(vals) {
+    mat <- matrix(
+      NA_real_,
+      nrow = length(lvls) - 1,
+      ncol = length(lvls) - 1,
+      dimnames = list(lvls[-1], lvls[-length(lvls)])
+    )
+    
+    for (i in seq_along(pairs)) {
+      r <- which(lvls == pairs[[i]][2]) - 1
+      c <- which(lvls == pairs[[i]][1])
+      if (r >= 1 && c <= ncol(mat)) mat[r, c] <- vals[i]
+    }
+    
+    mat
+  }
+  
+  list(
+    p_matrix         = make_mat(p_adj),
+    p_matrix_approx  = make_mat(p_adj_approx),
+    p_raw            = p_vals,
+    p_raw_approx     = p_vals_approx,
+    pairs            = pairs
+  )
+}
+```
+
+
+### Plot functions
+
+```{r}
+plot_richness <- function(div_dataframe, feature_name, 
+                          xlab = "", breaks = NULL, labels = NULL,
+                          binwidth = 0.4, dotsize = 1.2, 
+                          ylab = "Richness (breakaway)", 
+                          ybreaks = NULL, title = "",
+                          ylim = c(0, 75), textsize = 18,
+                          space_line = 2, space_lab = 5,
+                          ptest = NULL,
+                          p_type = c("p_asymp", "p_approx", "p_perm")) {
+  p_type <- match.arg(p_type)
+  
+  # Remove levels with zero observations
+  div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
+                                              names(which(table(div_dataframe$feature) > 0)), ])
+  nfeat <- nlevels(div_dataframe$feature)
+  
+  strip_chart <- div_dataframe %>%
+    ggplot(aes(x=feature, y=richness, fill=feature)) 
+  
+  strip_chart <- modify_div_plot(strip_chart, 
+                                 xlab = xlab, breaks = breaks, labels = labels,
+                                 binwidth = binwidth, dotsize = dotsize, 
+                                 ylim = ylim, ylab = ylab, ybreaks = ybreaks,
+                                 textsize = textsize, title = title) 
+  
+  # Significance test
+  if (is.null(ptest)) {
+    pval_kt <- pval <- kruskal.test(richness ~ feature,
+                                    data = div_dataframe)$p.value
+    if (pval_kt <= 0.05 && nfeat > 2) {
+      pval <- pairwise.wilcox.test(div_dataframe$richness,
+                                   g = div_dataframe$feature,
+                                   p.adjust.method = "BH")$p.value
+    }
+  } else {
+    pval_kt <- ptest[[p_type]]
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) {
+      if (p_type == "p_approx") ptest$p_pairwise$p_matrix_approx
+      else                      ptest$p_pairwise$p_matrix
+    } else pval_kt
+  }
+  
+  if (pval_kt <= 0.05) {
+    strip_chart <- add_sig_line(strip_chart, pval = pval, nfeat = nfeat,
+                                diversity = div_dataframe$richness,
+                                space_line = space_line, 
+                                space_lab = space_lab)
+  }
+  strip_chart
+}
+
+plot_shannon <- function(div_dataframe, feature_name, 
+                         xlab = "", breaks = NULL, labels = NULL,
+                         binwidth = 0.04, dotsize = 1, ylim = c(0, 4), 
+                         space_line = 0.3, space_lab = 0.15,
+                         ylab = "Shannon index (DivNet)", 
+                         ybreaks = NULL, title = "", textsize = 18,
+                         ptest = NULL,
+                         p_type = c("p_asymp", "p_approx", "p_perm")) {
+  
+  p_type <- match.arg(p_type)
+  # Remove levels with zero observations
+  div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
+                                              names(which(table(div_dataframe$feature) > 0)), ])
+  nfeat <- nlevels(div_dataframe$feature)
+  
+  strip_chart <- div_dataframe %>%
+    ggplot(aes(x=feature, y=shannon, fill=feature)) 
+  
+  strip_chart <- modify_div_plot(strip_chart, 
+                                 xlab = xlab, breaks = breaks, labels = labels,
+                                 binwidth = binwidth, dotsize = dotsize, 
+                                 ylim = ylim, ylab = ylab, ybreaks = ybreaks,
+                                 textsize = textsize, title = title) 
+  
+  # Significance test
+  if (is.null(ptest)) {
+    pval_kt <- pval <- kruskal.test(shannon ~ feature,
+                                    data = div_dataframe)$p.value
+    if (pval_kt <= 0.05 && nfeat > 2) {
+      pval <- pairwise.wilcox.test(div_dataframe$shannon,
+                                   g = div_dataframe$feature,
+                                   p.adjust.method = "BH")$p.value
+    }
+  } else {
+    pval_kt <- ptest[[p_type]]
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) {
+      if (p_type == "p_approx") ptest$p_pairwise$p_matrix_approx
+      else                      ptest$p_pairwise$p_matrix
+    } else pval_kt
+  }
+  
+  if (pval_kt <= 0.05) {
+    strip_chart <- add_sig_line(strip_chart, pval = pval, nfeat = nfeat,
+                                diversity = div_dataframe$shannon,
+                                space_line = space_line, 
+                                space_lab = space_lab)
+  }
+  strip_chart
+}
+
+plot_gini <- function(div_dataframe, feature_name, 
+                      xlab = "", breaks = NULL, labels = NULL,
+                      binwidth = 0.01, dotsize = 1, ylim = c(0, 1.1), 
+                      space_line = 0.08, space_lab = 0.04,
+                      ylab = "Gini-Simpson index (DivNet)", 
+                      ybreaks = NULL, title = "", textsize = 18,
+                      ptest = NULL,
+                      p_type = c("p_asymp", "p_approx", "p_perm")) {
+  p_type <- match.arg(p_type)
+  
+  # Remove levels with zero observations
+  div_dataframe <- droplevels(div_dataframe[div_dataframe$feature %in% 
+                                              names(which(table(div_dataframe$feature) > 0)), ])
+  nfeat <- nlevels(div_dataframe$feature)
+  
+  strip_chart <- div_dataframe %>%
+    ggplot(aes(x=feature, y=gini, fill=feature)) 
+  
+  strip_chart <- modify_div_plot(strip_chart, 
+                                 xlab = xlab, breaks = breaks, labels = labels,
+                                 binwidth = binwidth, dotsize = dotsize, 
+                                 ylim = ylim, ylab = ylab, ybreaks = ybreaks,
+                                 textsize = textsize, title = title) 
+  
+  # Significance test
+  if (is.null(ptest)) {
+    pval_kt <- pval <- kruskal.test(gini ~ feature,
+                                    data = div_dataframe)$p.value
+    if (pval_kt <= 0.05 && nfeat > 2) {
+      pval <- pairwise.wilcox.test(div_dataframe$gini,
+                                   g = div_dataframe$feature,
+                                   p.adjust.method = "BH")$p.value
+    }
+  } else {
+    pval_kt <- ptest[[p_type]]
+    pval    <- if (nfeat > 2 && pval_kt <= 0.05) {
+      if (p_type == "p_approx") ptest$p_pairwise$p_matrix_approx
+      else                      ptest$p_pairwise$p_matrix
+    } else pval_kt
+  }
+  
+  if (pval_kt <= 0.05) {
+    strip_chart <- add_sig_line(strip_chart, pval = pval, nfeat = nfeat,
+                                diversity = div_dataframe$gini,
+                                space_line = space_line, 
+                                space_lab = space_lab)
+  }
+  strip_chart
+}
+```
+
+
+## Colors
+
+```{r}
+cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00", 
+         "#CC79A7", "#F0E442", "#0072B2", "gray")
+```
+
+## Compute richness (on ASV level)
+
+### Common richness
+
+Computing alpha diversity the common way (not model-based) using the `estimate_richness` function from `phyloseq` package.
+
+```{r}
+alpha_div_common_asv <- estimate_richness(phylo_asv)
+head(alpha_div_common_asv)
+```
+
+### Breakaway richness
+
+```{r}
+frequencytablelist <- build_frequency_count_tables(otutab_asv)
+```
+
+```{r}
+breakaway_rich_asv <- 
+  data.frame(SampleID = names(frequencytablelist),
+             richness = unlist(lapply(frequencytablelist, 
+                                      function(x) breakaway(x)$estimate))) 
+```
+
+### Comparison: classical vs. breakaway
+
+Observed (classical) richness simply counts the number of non-zero ASVs in a sample,
+so it is directly inflated by sequencing depth. Breakaway estimates the true number of
+taxa by modelling unobserved low-abundance species, and should therefore be more robust
+to variation in library size. Here we compare both metrics against library size
+(total reads per sample) to assess how strongly each is confounded by sequencing depth.
+
+```{r richness_libsize_data_asv}
+lib_size_asv <- data.frame(
+  SampleID     = names(sample_sums(phylo_asv)),
+  library_size = as.numeric(sample_sums(phylo_asv))
+)
+
+obs_rich_asv <- data.frame(
+  SampleID = rownames(alpha_div_common_asv),
+  observed  = alpha_div_common_asv$Observed
+)
+
+richness_comp_asv <- lib_size_asv %>%
+  inner_join(obs_rich_asv, by = "SampleID") %>%
+  inner_join(rename(breakaway_rich_asv, breakaway = richness), by = "SampleID")
+
+head(richness_comp_asv)
+```
+
+**Spearman correlation between library size and each richness metric:**
+
+```{r richness_libsize_cor_asv}
+cor_obs_asv <- cor.test(richness_comp_asv$library_size, richness_comp_asv$observed,
+                        method = "spearman", exact = FALSE)
+cor_bw_asv  <- cor.test(richness_comp_asv$library_size, richness_comp_asv$breakaway,
+                        method = "spearman", exact = FALSE)
+
+tibble(
+  Metric   = c("Observed richness", "Richness (breakaway)"),
+  rho      = round(c(cor_obs_asv$estimate, cor_bw_asv$estimate), 3),
+  p_value  = signif(c(cor_obs_asv$p.value, cor_bw_asv$p.value), 3)
+)
+```
+
+```{r richness_vs_libsize_asv, fig.width=10, fig.height=5}
+richness_comp_asv %>%
+  pivot_longer(c(observed, breakaway),
+               names_to  = "method",
+               values_to = "richness") %>%
+  mutate(method = factor(method,
+                         levels = c("observed", "breakaway"),
+                         labels = c("Observed richness", "Richness (breakaway)"))) %>%
+  ggplot(aes(x = library_size, y = richness)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 0.8) +
+  ggpubr::stat_cor(method = "spearman",
+                   label.x.npc = "left", label.y.npc = "top", size = 4.5) +
+  facet_wrap(~method, scales = "free_y") +
+  labs(x = "Library size (reads)", y = "Richness") +
+  theme_classic(base_size = 14)
+```
+
+```{r observed_vs_breakaway_asv, fig.width=7, fig.height=5}
+ggplot(richness_comp_asv, aes(x = observed, y = breakaway, color = library_size)) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 0.8, color = "grey40") +
+  geom_point(alpha = 1, size = 3) +
+  ggpubr::stat_cor(method = "spearman",
+                   label.x.npc = "left", label.y.npc = "top", size = 4.5,
+                   color = "black") +
+  scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
+  labs(x = "Observed richness", y = "Richness (breakaway)") +
+  theme_classic(base_size = 14)
+```
+
+```{r freq_spectrum_asv, fig.width=7, fig.height=4}
+# For each read-count class 0–10, count how many genera hit that count per sample
+freq_spectrum <- map_dfr(1:10, function(k) {
+  counts_per_sample <- colSums(otutab_asv == k)
+  tibble(
+    count     = k,
+    mean_taxa = mean(counts_per_sample),
+    sd_taxa   = sd(counts_per_sample)
+  )
+})
+
+ggplot(freq_spectrum, aes(x = factor(count), y = mean_taxa)) +
+  geom_errorbar(aes(ymin = pmax(0, mean_taxa - sd_taxa),
+                    ymax = mean_taxa + sd_taxa),
+                width = 0.25, linewidth = 0.5, color = "grey40") +
+  geom_point(size = 3) +
+  scale_x_discrete(labels = 1:10) +
+  scale_y_continuous(
+    trans        = "log1p",
+    breaks       = c(0, 1, 2, 5, 10, 50, 100, 500, 1000, 2000),
+    minor_breaks = NULL
+  ) +
+  labs(x = "Read count per sample",
+       y = "Mean number of ASVs per sample") +
+  theme_bw(base_size = 13) +
+  theme(plot.caption = element_text(hjust = 0, size = 10))
+```
+
+## Compute richness (on genus level)
+
+### Common richness
+
+Computing richness the common way (not model-based) using the `estimate_richness` function from `phyloseq` package.
+
+```{r}
+alpha_div_common <- estimate_richness(phylo_genus)
+head(alpha_div_common)
+```
+
+### Breakaway richness
+
+```{r}
+frequencytablelist <- build_frequency_count_tables(otutab_genus)
+```
+
+```{r}
+breakaway_rich <- 
+  data.frame(SampleID = names(frequencytablelist),
+             richness = unlist(lapply(frequencytablelist, 
+                                      function(x) breakaway(x)$estimate))) 
+
+alpha_diversity_rich <- breakaway_rich
+head(alpha_diversity_rich)
+```
+
+### Comparison: classical vs. breakaway 
+
+```{r richness_libsize_data}
+lib_size <- data.frame(
+  SampleID     = names(sample_sums(phylo_genus)),
+  library_size = as.numeric(sample_sums(phylo_genus))
+)
+
+obs_rich <- data.frame(
+  SampleID = rownames(alpha_div_common),
+  observed  = alpha_div_common$Observed
+)
+
+richness_comp <- lib_size %>%
+  inner_join(obs_rich, by = "SampleID") %>%
+  inner_join(rename(breakaway_rich, breakaway = richness), by = "SampleID")
+
+head(richness_comp)
+```
+
+```{r seq_depth}
+richness_comp %>%
+  ggplot(aes(x = library_size)) +
+  geom_histogram(bins = 40, fill = "gray", colour = "white") +
+  geom_vline(xintercept = median(sample_sums(phylo_asv)), linetype = "dashed", 
+             colour = "black", linewidth = 0.9) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    x     = "Read depth (counts)",
+    y     = "Number of samples",
+    title = "Per-sample sequencing depth",
+    subtitle = paste0("Median: ", scales::comma(median(sample_sums(phylo_asv))),
+                      "  |  Range: ", scales::comma(min(sample_sums(phylo_asv))),
+                      " – ", scales::comma(max(sample_sums(phylo_asv))))
+  ) +
+  theme(
+    axis.title        = element_text(size = 13),
+    axis.text         = element_text(size = 11),
+    plot.title        = element_text(size = 14)
+  ) +
+  theme_bw()
+```
+
+**Spearman correlation between library size and each richness metric:**
+
+```{r richness_libsize_cor}
+cor_obs <- cor.test(richness_comp$library_size, richness_comp$observed,
+                    method = "spearman", exact = FALSE)
+cor_bw  <- cor.test(richness_comp$library_size, richness_comp$breakaway,
+                    method = "spearman", exact = FALSE)
+
+tibble(
+  Metric   = c("Observed richness", "Richness (breakaway)"),
+  rho      = round(c(cor_obs$estimate, cor_bw$estimate), 3),
+  p_value  = signif(c(cor_obs$p.value, cor_bw$p.value), 3)
+)
+```
+
+```{r richness_vs_libsize, fig.width=10, fig.height=5}
+richness_comp %>%
+  pivot_longer(c(observed, breakaway),
+               names_to  = "method",
+               values_to = "richness") %>%
+  mutate(method = factor(method,
+                         levels = c("observed", "breakaway"),
+                         labels = c("Observed richness", "Richness (breakaway)"))) %>%
+  ggplot(aes(x = library_size, y = richness)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 0.8) +
+  ggpubr::stat_cor(method = "spearman",
+                   label.x.npc = "left", label.y.npc = "top", size = 4.5) +
+  facet_wrap(~method, scales = "free_y") +
+  labs(x = "Library size (reads)", y = "Richness") +
+  theme_bw(base_size = 14)
+```
+
+```{r observed_vs_breakaway, fig.width=5, fig.height=4}
+plot_obs_est_richness <- ggplot(richness_comp, aes(x = observed, y = breakaway, color = library_size)) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey60",
+              linewidth = 0.8) +
+  geom_point(alpha = 0.8, size = 2) +
+  scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
+  labs(x = "Observed richness (classical)", y = "Estimated richness (breakaway)") +
+  theme_bw(base_size = 14)
+plot_obs_est_richness
+```
+
+Breakaway estimates closely track observed richness. The frequency spectrum below
+explains why: unseen-species estimators such as breakaway extrapolate unobserved
+diversity from the ratio of rare taxa (singletons, doubletons, …). At genus level,
+read counts are aggregated across ASVs, so genera with very few reads are rare.
+
+```{r freq_spectrum_genus, fig.width=7, fig.height=4}
+# For each read-count class 0–10, count how many genera hit that count per sample
+freq_spectrum <- map_dfr(0:10, function(k) {
+  counts_per_sample <- colSums(otutab_genus == k)
+  tibble(
+    count     = k,
+    mean_taxa = mean(counts_per_sample),
+    sd_taxa   = sd(counts_per_sample)
+  )
+})
+
+x_labels <- c("0\n(absent)", "1\n(singleton)", "2\n(doubleton)", "3\n(tripleton)",
+               as.character(4:10))
+
+ggplot(freq_spectrum, aes(x = factor(count), y = mean_taxa)) +
+  geom_errorbar(aes(ymin = pmax(0, mean_taxa - sd_taxa),
+                    ymax = mean_taxa + sd_taxa),
+                width = 0.25, linewidth = 0.5, color = "grey40") +
+  geom_point(size = 3) +
+  scale_x_discrete(labels = 0:10) +
+  scale_y_continuous(
+    trans        = "log1p",
+    breaks       = c(0, 1, 2, 5, 10, 50, 100, 200),
+    minor_breaks = NULL
+  ) +
+  labs(x = "Read count per sample",
+       y = "Mean number of genera per sample") +
+  theme_bw(base_size = 13) +
+  theme(plot.caption = element_text(hjust = 0, size = 10))
+```
+
+Legend: Dots = mean across 592 samples; bars = \u00b11 SD.
+
+~211 genera are absent in the average sample (count = 0, top-left point). No sample
+contains any singleton genus (count = 1, pinned at zero): ASV-level rareness
+disappears when reads are aggregated to genus. The f~2~–f~10~ band contains only
+~0.6–0.9 genera on average per sample — an extremely sparse frequency tail.
+Without singleton signal, estimators that rely on f~1~/f~2~ (Chao1, breakaway)
+have no basis to project unseen genera, which is why breakaway estimates
+closely track observed richness throughout this analysis.
+
+## DivNet diversity measures
+
+Find base taxon (with minimum number of non-zero counts)
+
+```{r}
+nonzero_elem <- apply(otutab_genus, 1, function(x) sum(x == 0))
+base_taxon <- which.min(nonzero_elem)
+nonzero_elem[base_taxon]
+```
+
+```{r}
+if (!file.exists(path_target("divnet_genus.rds"))) {
+  divnet_start <- proc.time()
+  divnet_genus <- phylo_genus %>%
+    DivNet::divnet(ncores = 1, 
+                   base = names(base_taxon),
+                   tuning = "fast")
+  divnet_runtime <- proc.time() - divnet_start
+  message("divnet runtime: ", round(divnet_runtime["elapsed"], 1), " seconds")
+  
+  saveRDS(divnet_genus, file = path_target("divnet_genus.rds"))
+  saveRDS(divnet_runtime, file = path_target("divnet_genus_runtime.rds"))
+} else {
+  divnet_genus <- readRDS(path_target("divnet_genus.rds"))
+  divnet_runtime <- readRDS(path_target("divnet_genus_runtime.rds"))
+}
+
+print("Runtime:")
+divnet_runtime
+```
+
+```{r}
+# Use the no-formula genus-level model for per-sample estimates (used in strip charts)
+alpha_diversity_div <- 
+  data.frame(SampleID = names(divnet_genus$shannon),
+             shannon = unlist(lapply(divnet_genus$shannon, function(x) x$estimate)),
+             simpson = unlist(lapply(divnet_genus$simpson, function(x) x$estimate)))
+
+alpha_diversity_div <- alpha_diversity_div %>%
+  mutate(inv_simpson = 1 / simpson,
+         gini = 1 - simpson)
+```
+
+```{r}
+alpha_diversity <- inner_join(alpha_diversity_rich, 
+                              alpha_diversity_div, 
+                              by = "SampleID")
+```
+
+
+```{r}
+head(alpha_diversity)
+```
+
+
+## Permutation tests
+
+Results are cached separately per variable (one RDS file each). Delete a variable's
+file and rerun this chunk to recompute only that variable. Each test uses $10^6$
+permutations. Results are reused by the plotting functions below and summarised in
+the comparison table.
+
+```{r perm_tests, warning=FALSE}
+cores <- 10
+
+future::plan(
+  future::multisession,
+  workers = cores
+)
+
+progressr::handlers("txtprogressbar")
+options(progressr.enable = TRUE)
+
+# Helper: build metadata_alpha for a given variable
+prep_meta <- function(col, extra_filter = NULL) {
+  d <- sampdata[, c("SampleID", col)]
+  colnames(d) <- c("SampleID", "feature")
+  rownames(d) <- NULL
+  if (col == "Sex") {
+    d$feature <- fct_recode(as.factor(d$feature), female = "f", male = "m")
+  } else if (col == "C-section") {
+    d$feature <- fct_recode(as.factor(d$feature), no = "0", yes = "1")
+  } else {
+    d$feature <- as.factor(d$feature)
+  }
+  d <- d %>% tidyr::drop_na(feature)
+  if (!is.null(extra_filter)) d <- d %>% filter(feature != extra_filter)
+  d$feature <- droplevels(d$feature)
+  inner_join(d, alpha_diversity, by = "SampleID")
+}
+
+vars_def <- list(
+  Country        = list(col = "Country",         filter = NULL),
+  Sex            = list(col = "Sex",              filter = NULL),
+  Cesarean       = list(col = "C-section",         filter = NULL),
+  Breastfeeding  = list(col = "BF duration",  filter = NULL),
+  Exclusive_BF   = list(col = "EBF duration", filter = "1"),
+  Prenatal_smoke = list(col = "Smoking",        filter = NULL),
+  Siblings       = list(col = "Siblings",    filter = NULL)
+)
+
+measures_def <- c("richness", "shannon", "gini")
+
+perm_results <- list()
+
+progressr::with_progress({
+  for (vname in names(vars_def)) {
+    rds_path <- path_target(paste0("perm_results_", vname, ".rds"))
+    
+    if (!file.exists(rds_path)) {
+      message("Running permutation tests for: ", vname)
+      meta    <- prep_meta(vars_def[[vname]]$col, vars_def[[vname]]$filter)
+      nfeat_v <- nlevels(meta$feature)
+      var_res <- list()
+      set.seed(123456)
+      for (m in measures_def) {
+        key <- paste0(vname, "_", m)
+        x   <- meta[[m]]
+        g   <- meta$feature
+        res <- perm_kruskal(x, g, n_perm = 1e6)
+        res$p_pairwise <- NULL
+        if (nfeat_v > 2 && res$p_perm <= 0.05) {
+          res$p_pairwise <- perm_pairwise(x, g, n_perm = 1e6)  # returns list(p_matrix, p_matrix_approx)
+        }
+        var_res[[key]] <- res
+      }
+      saveRDS(var_res, rds_path)
+    } else {
+      var_res <- readRDS(rds_path)
+    }
+    
+    perm_results <- c(perm_results, var_res)
+  }
+})
+```
+
+### Comparison of asymptotic vs. permutation p-values
+
+```{r perm_table}
+var_labels <- c(
+  Country        = "Country",
+  Sex            = "Sex",
+  Cesarean       = "C-section",
+  Breastfeeding  = "Breastfeeding duration",
+  Exclusive_BF   = "Exclusive breastfeeding",
+  Prenatal_smoke = "Prenatal smoking",
+  Siblings       = "Number of siblings"
+)
+measure_labels <- c(
+  richness_genus = "Richness (breakaway)",
+  shannon        = "Shannon (DivNet)",
+  gini           = "Gini-Simpson (DivNet)"
+)
+
+fmt_p <- function(p) formatC(p, format = "e", digits = 2)
+
+perm_table <- purrr::imap_dfr(perm_results, function(res, key) {
+  measure_part <- stringr::str_extract(key, "richness_genus|shannon|gini")
+  var_part     <- sub(paste0("_", measure_part, "$"), "", key)
+  tibble::tibble(
+    Variable  = var_labels[var_part],
+    Measure   = measure_labels[measure_part],
+    H         = round(res$H, 2),
+    p_asymp   = fmt_p(res$p_asymp),
+    p_perm    = fmt_p(res$p_perm),
+    p_approx  = fmt_p(res$p_approx)
+  )
+})
+
+knitr::kable(perm_table,
+             col.names = c("Variable", "Measure", "H statistic",
+                           "p (KW asymptotic)", "p (permutation)", "p (GPD-refined)"),
+             align = "llrrrr")
+```
+
+```{r perm_table_latex}
+library(kableExtra)
+
+sig_stars <- function(p) {
+  p <- as.numeric(p)
+  dplyr::case_when(
+    p < 0.001 ~ "***",
+    p < 0.01  ~ "**",
+    p < 0.05  ~ "*",
+    p < 0.1   ~ ".",
+    TRUE      ~ ""
+  )
+}
+
+measures_order <- c("Richness (breakaway)", "Shannon (DivNet)", "Gini-Simpson (DivNet)")
+block_labels   <- c("Richness (breakaway)", "Shannon (DivNet)", "Gini-Simpson (DivNet)")
+
+add_stars <- function(p_char) {
+  stars <- sig_stars(p_char)
+  ifelse(stars != "", paste0(p_char, "$^{", stars, "}$"), p_char)
+}
+
+var_order     <- c("Country", "Sex", "C-section", "Breastfeeding duration",
+                   "Exclusive breastfeeding", "Prenatal smoking", "Number of siblings")
+measure_order <- c("Richness (breakaway)", "Shannon (DivNet)", "Gini-Simpson (DivNet)")
+measure_short <- c("Richness (breakaway)"  = "Richness",
+                   "Shannon (DivNet)"      = "Shannon",
+                   "Gini-Simpson (DivNet)" = "Gini-Simpson")
+
+perm_table_tex <- perm_table %>%
+  mutate(
+    Variable = factor(Variable, levels = var_order),
+    Measure  = factor(Measure,  levels = measure_order)
+  ) %>%
+  arrange(Variable, Measure) %>%
+  mutate(
+    Measure  = dplyr::recode(as.character(Measure), !!!measure_short),
+    p_asymp  = add_stars(p_asymp),
+    p_perm   = add_stars(p_perm),
+    p_approx = add_stars(p_approx)
+  ) %>%
+  select(Measure, H, p_asymp, p_perm, p_approx)
+
+# One block per variable (7 × 3 rows)
+group_starts <- seq(1, by = 3, length.out = length(var_order))
+group_ends   <- group_starts + 2L
+
+tex_table <- kbl(
+    perm_table_tex,
+    format    = "latex",
+    booktabs  = TRUE,
+    escape    = FALSE,
+    col.names = c("Measure", "$H$", "$p$ (asymptotic)",
+                  "$p$ (permutation)", "$p$ (GPD-refined)"),
+    align     = "lrrrr",
+    caption   = paste(
+      "Kruskal--Wallis test results for alpha diversity across cohort variables.",
+      "$H$ is the Kruskal--Wallis test statistic.",
+      "Richness was estimated using \\texttt{breakaway};",
+      "Shannon and Gini-Simpson were estimated using \\texttt{DivNet}.",
+      "$p$ (asymptotic): chi-squared approximation;",
+      "$p$ (permutation): empirical permutation $p$-values ($10^6$ permutations);",
+      "$p$ (GPD-refined): empirical $p$-values, refined with \\texttt{permApprox}."
+    ),
+    label     = "tab:7app:perm_results"
+  )
+
+for (i in seq_along(var_order)) {
+  tex_table <- tex_table %>%
+    pack_rows(var_order[i], group_starts[i], group_ends[i], bold = TRUE)
+}
+
+tex_table <- tex_table %>%
+  column_spec(1, latex_column_spec = "l@{\\hspace{1.5em}}") %>%
+  kable_styling(latex_options = c("hold_position")) %>%
+  footnote(
+    general        = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
+    general_title  = "",
+    escape         = FALSE,
+    threeparttable = TRUE
+  )
+
+save_kable(tex_table, file = path_target("perm_table.tex"))
+```
+
+## Plots 
+
+```{r}
+set.seed(123456)
+```
+
+
+### Study center
+
+```{r}
+feature_name <- "Country"
+feat_key     <- "Country"
+```
+
+
+
+```{r}
+metadata <- sampdata[, c("SampleID", "Country")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>%
+  mutate(feature = factor(feature)) %>%
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+```{r Country_richness_2m, fig.width=5, fig.height=5}
+# Richness
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.5, dotsize = 1.2, 
+              ylim = c(0, 90), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
+```
+
+
+
+```{r Country_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+```
+
+
+
+```{r Country_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
+```
+
+
+
+```{r Country_2m, fig.width=14, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+
+### Sex
+
+```{r}
+feature_name <- "Sex"
+feat_key     <- "Sex"
+```
+
+
+
+```{r}
+metadata <- sampdata[, c("SampleID", "Sex")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  mutate(feature = as.factor(feature)) %>%
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+```{r sex_richness_2m, fig.width=5, fig.height=5}
+# Richness
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
+```
+
+
+```{r sex_shannon_2m, fig.width=5, fig.height=5}
+# Shannon 
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+```
+
+
+
+```{r sex_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
+```
+
+
+
+```{r sex_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+### C-section
+
+```{r}
+feature_name <- "C-section"
+feat_key     <- "Cesarean"
+```
+
+
+
+```{r}
+metadata <- sampdata[, c("SampleID", "C-section")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  mutate(feature = as.factor(feature)) %>%
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+```{r cesarean_richness_2m, fig.width=5, fig.height=5}
+# Richness
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
+```
+
+
+
+```{r cesarean_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+```
+
+
+
+```{r cesarean_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
+```
+
+
+
+```{r cesarean_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg, ncol = 3, nrow = 1)
+```
+
+
+### Breast feeding
+
+```{r}
+feature_name <- "BF duration"
+feat_key     <- "Breastfeeding"
+```
+
+
+
+```{r}
+metadata <- sampdata[, c("SampleID", "BF duration")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+
+```{r breastfeed_richness_2m, fig.width=5, fig.height=5}
+# Richness
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = c("0", "1", "\u2265 2"))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
+```
+
+
+
+```{r breastfeed_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = c("0", "1", "\u2265 2"))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+```
+
+
+
+```{r breastfeed_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = c("0", "1", "\u2265 2"))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
+```
+
+
+```{r breastfeed_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+### Exclusive breast feeding duration
+
+```{r}
+feature_name <- "EBF duration"
+feat_key     <- "Exclusive_BF"
+```
+
+
+
+```{r}
+metadata <- sampdata[, c("SampleID", "EBF duration")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  drop_na(feature) %>%
+  filter(feature != "1")
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+
+```{r breast_excl_richness_2m, fig.width=5, fig.height=5}
+# Richness
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.3, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(droplevels(metadata_alpha)$feature),
+              labels = c("0", "\u2265 2"))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
+```
+
+
+
+```{r breast_excl_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(droplevels(metadata_alpha)$feature),
+             labels = c("0", "\u2265 2"))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+```
+
+
+
+```{r breast_excl_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(droplevels(metadata_alpha)$feature),
+          labels = c("0", "\u2265 2"))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
+```
+
+
+
+```{r breast_excl_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+### Smoke during pregnancy
+
+```{r}
+feature_name <- "Smoking"
+feat_key     <- "Smoking"
+```
+
+
+
+```{r}
+metadata <- sampdata[, c("SampleID", "Smoking")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+```{r pregsmoke_richness_2m, fig.width=5, fig.height=5}
+# Richness
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = levels(metadata$feature))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
+```
+
+
+
+```{r pregsmoke_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = levels(metadata$feature))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+```
+
+
+
+```{r pregsmoke_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = levels(metadata$feature))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
+```
+
+
+
+```{r pregsmoke_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+### Number of siblings
+
+```{r}
+feature_name <- "Siblings"
+feat_key     <- "Siblings"
+```
+
+
+
+```{r}
+metadata <- sampdata[, c("SampleID", "Siblings")]
+
+colnames(metadata) <- c("SampleID", "feature")
+rownames(metadata) <- NULL
+
+metadata <- metadata %>% 
+  drop_na(feature)
+
+metadata_alpha <- inner_join(metadata, alpha_diversity,
+                             by = "SampleID")
+
+nfeat <- nlevels(metadata_alpha$feature)
+table(metadata$feature)
+```
+
+```{r sibsnumb_richness_2m, fig.width=5, fig.height=5}
+# Richness
+pr <- plot_richness(metadata_alpha, feature_name, binwidth = 0.4, dotsize = 1.2, 
+              ylim = c(0, 80), space_line = 6, space_lab = 3,
+              xlab = feature_name, 
+              breaks = levels(metadata$feature),
+              labels = c("0", "1", "&gt;1"))
+              #ptest = perm_results[[paste0(feat_key, "_richness")]])
+```
+
+
+
+```{r sibsnumb_shannon_2m, fig.width=5, fig.height=5}
+# Shannon
+ps <- plot_shannon(metadata_alpha, feature_name, binwidth = 0.04, dotsize = 1, 
+             ylim = c(0, 4), space_line = 0.3, space_lab = 0.15,
+             xlab = feature_name, 
+             breaks = levels(metadata$feature),
+             labels = c("0", "1", "&gt;1"))
+             #ptest = perm_results[[paste0(feat_key, "_shannon")]]) 
+```
+
+
+
+```{r sibsnumb_simpson_2m, fig.width=5, fig.height=5}
+# Gini-Simpson index
+pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1, 
+          ylim = c(0, 1.3), space_line = 0.09, space_lab = 0.04,
+          xlab = feature_name, 
+          breaks = levels(metadata$feature),
+          labels = c("0", "1", "&gt;1"))
+          #ptest = perm_results[[paste0(feat_key, "_gini")]])
+```
+
+
+
+```{r sibsnumb_2m, fig.width=12, fig.height=5}
+ggarrange(pr, ps, pg,
+          ncol = 3, nrow = 1)
+```
+
+
+## Model-based analysis
+
+The permutation tests above treat each sample's diversity estimate as an exact
+observation. A model-based alternative, introduced by Willis & Martin (2020), uses
+`breakaway::betta()` — a mixed-effects regression model that explicitly accounts
+for the per-sample estimation variance ($\delta_i^2$) from breakaway/DivNet while
+simultaneously estimating residual biological heterogeneity ($\sigma^2$). We
+present two versions:
+
+1. **Intercept-only**: estimates the grand mean of each diversity metric with
+   proper variance weighting, using the full sample set. This is the baseline
+   approach from Willis & Martin (2020) and can serve as a foundation for
+   permutation tests that respect estimation uncertainty.
+2. **With covariates**: adds cohort-level predictors to jointly estimate
+   associations with diversity, restricted to samples with complete covariate data.
+
+---
+
+### Intercept-only model
+
+The intercept-only `betta` model fits
+
+$$Y_i = \mu + \varepsilon_i + \delta_i,$$
+
+where $Y_i$ is the diversity estimate for sample $i$, $\mu$ is the global mean,
+$\varepsilon_i \sim \mathcal{N}(0,\,\sigma^2)$ captures residual biological
+variation (estimated from the data), and $\delta_i$ is the estimation error with
+known variance supplied by breakaway/DivNet.
+
+The estimated $\sigma^2$ (labelled `global` in the betta output) captures
+between-sample variation after accounting for estimation noise. A large $\sigma^2$
+relative to the typical $\delta_i^2$ means biological heterogeneity dominates —
+which is a prerequisite for permutation tests to have power beyond a naïve
+Kruskal–Wallis test on raw estimates. The BLUP-like fitted values from this model
+could replace raw estimates in permutation tests, downweighting samples with high
+estimation uncertainty and providing a fairer test statistic when $\delta_i^2$
+varies substantially across samples.
+
+#### Richness
+
+```{r betta_int_richness}
+# Cache full-sample breakaway runs (estimate + SE needed for betta)
+if (!file.exists(path_target("breakaway_rich_full.rds"))) {
+  rich_full <- lapply(frequencytablelist, breakaway::breakaway)
+  saveRDS(rich_full, file = path_target("breakaway_rich_full.rds"))
+} else {
+  rich_full <- readRDS(path_target("breakaway_rich_full.rds"))
+}
+
+rich_est_int <- sapply(rich_full, function(x) x$estimate)
+rich_ses_int <- pmax(sapply(rich_full, function(x) x$error), 0.5)
+
+X_int_rich <- matrix(1, nrow = length(rich_est_int), ncol = 1,
+                     dimnames = list(NULL, "(Intercept)"))
+
+betta_rich_int <- breakaway::betta(rich_est_int, rich_ses_int, X_int_rich,
+                                   p.digits = 30)
+betta_rich_int$table
+```
+
+```{r}
+# Predicted values: intercept-only model predicts the grand mean for every sample
+rich_predicted_int <- as.numeric(X_int_rich %*% betta_rich_int$table[, 1])
+
+richness_plot_data_int <- data.frame(
+  SampleID           = names(rich_est_int),
+  richness_predicted = rich_predicted_int
+) %>%
+  left_join(select(richness_comp, SampleID, library_size), by = "SampleID")
+```
+
+```{r observed_vs_predicted_richness_int_libsize, fig.width=7, fig.height=4}
+plot_obs_est_richness_int <-
+  ggplot(richness_plot_data_int %>% inner_join(obs_rich, by = "SampleID"),
+         aes(x = observed, y = richness_predicted, color = library_size)) +
+  geom_point(alpha = 0.8, size = 2) +
+  scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
+  labs(x = "Observed richness (classical)",
+       y = "Predicted richness (intercept-only)") +
+  theme_bw(base_size = 14)
+plot_obs_est_richness_int
+```
+
+Since the intercept-only model has no covariates, all samples receive the same
+predicted value (the grand mean), so the points form a horizontal band. The
+vertical spread reflects true biological variation plus estimation noise that
+the model cannot explain without predictors.
+
+#### Shannon
+
+```{r betta_int_shannon}
+betta_est_int_s <- divnet_genus$shannon %>% summary() %>% dplyr::pull(estimate)
+betta_ses_int_s <- sqrt(divnet_genus$`shannon-variance`)
+
+X_int_s <- matrix(1, nrow = length(betta_est_int_s), ncol = 1,
+                  dimnames = list(NULL, "(Intercept)"))
+
+betta_shannon_int <- breakaway::betta(betta_est_int_s, betta_ses_int_s, X_int_s,
+                                      p.digits = 30)
+betta_shannon_int$table
+```
+
+#### Gini-Simpson
+
+```{r betta_int_gini}
+gini_est_int <- 1 - (divnet_genus$simpson %>% summary() %>% dplyr::pull(estimate))
+gini_ses_int <- sqrt(divnet_genus$`simpson-variance`)
+
+X_int_g <- matrix(1, nrow = length(gini_est_int), ncol = 1,
+                  dimnames = list(NULL, "(Intercept)"))
+
+betta_gini_int <- breakaway::betta(gini_est_int, gini_ses_int, X_int_g,
+                                   p.digits = 30)
+betta_gini_int$table
+```
+
+
+---
+
+### With covariates
+
+```{r}
+# Drop samples with NAs in any formula covariate
+# Also exclude samples with 1-month exclusive breastfeeding (sparse category)
+cov_vars <- c("Country", "Sex", "C-section", "BF duration",
+              "EBF duration", "Smoking", "Siblings")
+sdata <- sampdata
+complete_samples <- rownames(sdata)[complete.cases(sdata[, cov_vars])]
+complete_samples <- complete_samples[sdata[complete_samples, "EBF duration"] != "1"]
+phylo_genus_cov <- prune_samples(complete_samples, phylo_genus)
+```
+
+The strip charts above show unadjusted, per-sample DivNet estimates. Here we use
+the covariate model (`divnet_genus_cov`, family level) together with
+`breakaway::betta` to jointly estimate associations between all covariates and
+Shannon diversity, properly accounting for the uncertainty in the DivNet estimates.
+Note that this model uses only the `r nsamples(phylo_genus_cov)` samples with
+complete covariate data.
+
+```{r}
+if (!file.exists(path_target("divnet_genus_cov.rds"))) {
+  set.seed(123456)
+  divnet_start <- proc.time()
+  divnet_genus_cov <- phylo_genus_cov %>%
+    DivNet::divnet(formula = ~ Country + Sex + C_section + BF_duration + 
+                     EBF_duration + Smoking + Siblings,
+                   ncores = 1, 
+                   tuning = "fast")
+  
+  divnet_runtime <- proc.time() - divnet_start
+  
+  saveRDS(divnet_genus_cov, file = path_target("divnet_genus_cov.rds"))
+  saveRDS(divnet_runtime, file = path_target("divnet_genus_cov_runtime.rds"))
+} else {
+  divnet_genus_cov <- readRDS(path_target("divnet_genus_cov.rds"))
+  divnet_runtime <- readRDS(path_target("divnet_genus_cov_runtime.rds"))
+}
+
+print("Runtime:")
+divnet_runtime
+```
+
+**Computed measures:**
+
+```{r}
+names(divnet_genus_cov)
+```
+
+#### Richness
+
+```{r}
+# Rerun breakaway only on the model samples (n = 486) to obtain aligned SEs.
+# One sample has a near-zero SE (~5e-95); this is floored at 0.5
+# (conservative relative to the estimate scale of ~6–54) to avoid
+# a singular covariance matrix in betta().
+model_samples  <- rownames(divnet_genus_cov$X)
+flist_cov      <- frequencytablelist[model_samples]
+rich_cov       <- lapply(flist_cov, breakaway::breakaway)
+rich_estimates <- sapply(rich_cov, function(x) x$estimate)
+rich_ses       <- pmax(sapply(rich_cov, function(x) x$error), 0.5)
+
+betta_rich <- breakaway::betta(rich_estimates, rich_ses, divnet_genus_cov$X,
+                                  p.digits = 30)
+betta_rich$table
+```
+
+Extract predicted richness values (conditional on covariates):
+
+```{r}
+# Predicted values from the model
+rich_predicted <- divnet_genus_cov$X %*% betta_rich$table[, 1]
+
+richness_with_model <- data.frame(
+  SampleID = model_samples,
+  richness_observed = rich_estimates,
+  richness_predicted = as.numeric(rich_predicted),
+  richness_se = rich_ses
+)
+
+head(richness_with_model)
+
+sdata <- filter(sdata, SampleID %in% richness_with_model$SampleID)
+
+richness_plot_data <- richness_with_model %>%
+  left_join(select(sdata, SampleID, `BF duration`), by = "SampleID") %>%
+  left_join(select(richness_comp, SampleID, library_size), by = "SampleID")
+```
+
+
+```{r observed_vs_predicted_richness_libsize, fig.width=7, fig.height=4}
+plot_obs_est_richness_cov <- 
+  ggplot(richness_plot_data %>% inner_join(obs_rich, by = "SampleID"), 
+         aes(x = observed, y = richness_predicted,
+             color = library_size)) +
+  geom_point(alpha = 0.8, size = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey60",
+              linewidth = 0.6) +
+  #coord_cartesian(xlim = c(0, 55), ylim = c(15, 45)) +
+  scale_color_viridis_c(name = "Library size", labels = scales::label_comma()) +
+  labs(x = "Observed richness (classical)",
+       y = "Predicted richness (model-based)") +
+  theme_bw(base_size = 14)
+plot_obs_est_richness_cov
+```
+
+```{r observed_vs_predicted_richness_libsize_combined, fig.width=8, fig.height=4}
+(plot_obs_est_richness | plot_obs_est_richness_cov) +
+  plot_layout(guides = 'collect')
+```
+
+
+Observed vs. predicted richness (with covariates):
+
+```{r observed_vs_predicted_richness, fig.width=7, fig.height=4}
+ggplot(richness_plot_data, aes(x = richness_observed, y = richness_predicted, 
+                                color = `BF duration`)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey60", 
+              linewidth = 0.6) +
+  scale_color_manual(name = "BF duration", 
+                     values = cols[1:length(unique(richness_plot_data$`BF duration`))]) +
+  labs(x = "Observed richness (breakaway)", 
+       y = "Predicted richness (model-based)") +
+  theme_classic(base_size = 14)
+```
+
+#### Shannon
+
+```{r}
+betta_estimates <- divnet_genus_cov$shannon %>% summary() %>% dplyr::pull(estimate)
+betta_ses       <- sqrt(divnet_genus_cov$`shannon-variance`)
+
+betta_shannon <- breakaway::betta(betta_estimates, betta_ses, divnet_genus_cov$X,
+                                  p.digits = 30)
+betta_shannon$table
+```
+
+Global test of whether any covariate is associated with Shannon diversity:
+
+```{r}
+betta_shannon$global
+```
+
+`betta_shannon$global` is a likelihood ratio test of the null hypothesis that all covariates
+jointly have no association with Shannon diversity (i.e., all βs except the intercept equal
+zero). The two returned values are the chi-squared test statistic and its p-value,
+respectively. A significant result indicates that the model as a whole fits better than an
+intercept-only model, meaning at least one covariate is meaningfully associated with Shannon
+diversity. It does not identify which covariates are responsible — that is addressed by the
+individual p-values in `betta_shannon$table` above.
+
+#### Gini-Simpson
+
+```{r}
+gini_estimates <- 1 - (divnet_genus_cov$simpson %>% summary() %>% dplyr::pull(estimate))
+gini_ses       <- sqrt(divnet_genus_cov$`simpson-variance`)
+
+betta_gini <- breakaway::betta(gini_estimates, gini_ses, divnet_genus_cov$X,
+                                  p.digits = 30)
+betta_gini$table
+```
+
+
+
+#### Combined coefficient plot
+
+```{r betta_forest_combined, fig.width=10, fig.height=5}
+term_labels <- c(
+  "CountryGermany"      = "Country: Germany",
+  "CountrySwitzerland"  = "Country: Switzerland",
+  "Sexm"                = "Sex: male",
+  "C_section"           = "C-section",
+  "BF_duration1"        = "BF duration: 1 month",
+  "BF_duration>=2"      = "BF duration: \u22652 months",
+  "EBF_duration1"       = "EBF duration: 1 month",
+  "EBF_duration>=2"     = "EBF duration: \u22652 months",
+  "Smoking"             = "Smoking",
+  "Siblings1"           = "Siblings: 1",
+  "Siblings>1"          = "Siblings: >1"
+)
+
+tidy_betta <- function(betta_res, measure_label) {
+  as.data.frame(betta_res$table) %>%
+    tibble::rownames_to_column("term") %>%
+    filter(term != "(Intercept)") %>%
+    mutate(
+      lower   = Estimates - 1.96 * `Standard Errors`,
+      upper   = Estimates + 1.96 * `Standard Errors`,
+      sig     = `p-values` < 0.05,
+      measure = measure_label,
+      term    = dplyr::recode(term, !!!term_labels)
+    )
+}
+
+bind_rows(
+  tidy_betta(betta_shannon, "Shannon (DivNet)"),
+  tidy_betta(betta_gini,   "Gini-Simpson (DivNet)"),
+  tidy_betta(betta_rich,   "Richness (breakaway)")
+) %>%
+  mutate(
+    measure = factor(measure, levels = c("Richness (breakaway)",
+                                         "Shannon (DivNet)",
+                                         "Gini-Simpson (DivNet)")),
+    term = factor(term, levels = rev(unique(term)))
+  ) %>%
+  ggplot(aes(x = Estimates, y = term, color = sig)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey60") +
+  geom_errorbarh(aes(xmin = lower, xmax = upper), height = 0.3) +
+  geom_point(size = 2.5) +
+  scale_color_manual(values = c("FALSE" = "grey55", "TRUE" = "#1B7837"),
+                     labels = c("FALSE" = "no", "TRUE"  = "yes")) +
+  facet_wrap(~measure, scales = "free_x", nrow = 1) +
+  labs(x = "Coefficient estimate (95% CI)", y = NULL, color = "p < 0.05") +
+  theme_bw(base_size = 14) +
+  theme(strip.text = element_text(face = "bold"),
+        legend.position = "bottom")
+```
+
+##### Investigating the C-section effect: confounding by breastfeeding duration
+
+The positive association of caesarean delivery with Shannon diversity is counterintuitive
+biologically. A likely explanation is confounding by breastfeeding: C-section delivery is
+associated with shorter breastfeeding duration, and shorter breastfeeding is associated with
+higher Shannon diversity (the dominant effect in the model). The following two plots
+investigate this.
+
+```{r cesarean_breastfeed_confounding, fig.width=9, fig.height=4}
+plot_dat <- alpha_diversity_div %>%
+  left_join(
+    sdata %>%
+      select(SampleID, `C-section`, `BF duration`),
+    by = "SampleID"
+  ) %>%
+  filter(!is.na(`C-section`), !is.na(`BF duration`)) %>%
+  mutate(
+    `C-section` = factor(`C-section`, levels = c("Yes", "No"), labels = c("C-section", "Vaginal")),
+    `BF duration` = factor(`BF duration`,
+                             levels = c("0", "1", ">=2"),
+                             labels = c("< 1 month", "1 month", "≥ 2 months"))
+  )
+
+# Panel 1: breastfeeding duration distribution by delivery mode
+p1 <- plot_dat %>%
+  count(`C-section`, `BF duration`) %>%
+  group_by(`C-section`) %>%
+  mutate(pct = n / sum(n)) %>%
+  ggplot(aes(x = `C-section`, y = pct, fill = `BF duration`)) +
+  geom_col() +
+  scale_fill_manual(values = cols[1:3]) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Delivery mode", y = "Proportion", fill = "Breastfeeding\nduration") +
+  theme_bw()
+
+# Panel 2: Shannon diversity by delivery mode, stratified by breastfeeding duration
+p2 <- ggplot(plot_dat, aes(x = `C-section`, y = shannon)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.3, size = 0.8) +
+  facet_wrap(~`BF duration`) +
+  labs(x = "Delivery mode", y = "Shannon index (DivNet)") +
+  theme_bw()
+
+cowplot::plot_grid(p1, p2, rel_widths = c(1, 1.8))
+```
+
+The left panel shows that C-section infants are less likely to be breastfed for ≥ 2 months
+compared to vaginally born infants. Since prolonged breastfeeding is the strongest single
+predictor of *lower* Shannon diversity in this cohort, C-section infants appear more diverse
+in the unadjusted comparison. The right panel confirms this: within each breastfeeding
+duration stratum, the delivery mode difference is substantially attenuated or absent.
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list_files_target}
+projthis::proj_dir_info(path_target())
+```

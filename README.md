@@ -16,13 +16,13 @@ The workflow is organized using the [projthis](https://github.com/ijlyttle/projt
 │   ├── 00_build_dataset          → Load raw PASTURE data, filter samples/variables,
 │   │                               and export clean phyloseq objects
 │   │
-│   ├── 00_phyloseq_objects       → Inspect and document phyloseq objects
-│   │
 │   ├── 01_overview               → Descriptive overview of the study cohort and
 │   │                               microbiome composition
 │   │
-│   ├── 02_alpha_diversity        → Alpha diversity analysis (richness, Shannon,
-│   │                               Gini-Simpson) across clinical/environmental features
+│   ├── 02_filtering              → Taxonomic aggregation and prevalence filtering
+│   │
+│   ├── 03_alpha_diversity        → Alpha diversity analysis (richness, Shannon,
+│   │                               Gini-Simpson) across sample variables
 │   │
 │   ├── data/                     → Inputs and outputs of the Rmd files (managed by projthis)
 │   │   ├── PASTURE_data/         → Raw input data (not published)

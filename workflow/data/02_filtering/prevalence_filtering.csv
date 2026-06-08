@@ -1,0 +1,6 @@
+prevalence_threshold,prevalence_threshold_label,n_genera,zero_entries
+0,No prevalence filtering,235,89.7
+0.01,$\geq 1\%$ of samples,117,79.6
+0.05,$\geq 5\%$ of samples,58,61.3
+0.1,$\geq 10\%$ of samples,41,48.4
+0.2,$\geq 20\%$ of samples,31,36.4
