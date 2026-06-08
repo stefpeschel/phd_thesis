@@ -1,6 +1,6 @@
 Build reduced data set
 ================
-Compiled at 2026-04-29 13:08:33 UTC
+Compiled at 2026-06-08 11:52:57 UTC
 
 In this script, we load the original PASTURE data (not published) and
 build the reduced data set, which is the basis for all analyses
@@ -53,13 +53,16 @@ counts.
     ## sample_data() Sample Data:       [ 592 samples by 9 sample variables ]
     ## tax_table()   Taxonomy Table:    [ 235 taxa by 7 taxonomic ranks ]
 
+## Sample metadata with display labels
+
 ## Files written
 
 These files have been written to the target directory,
 `data/00_build_dataset`:
 
-    ## # A tibble: 2 × 4
+    ## # A tibble: 3 × 4
     ##   path                    type         size modification_time  
     ##   <fs::path>              <fct> <fs::bytes> <dttm>             
-    ## 1 bact_phylo_2m_asv.rds   file       212.9K 2026-04-29 13:08:36
-    ## 2 bact_phylo_2m_genus.rds file        67.5K 2026-04-29 13:08:36
+    ## 1 bact_phylo_2m_asv.rds   file       212.8K 2026-06-08 11:52:59
+    ## 2 bact_phylo_2m_genus.rds file        67.5K 2026-06-08 11:52:59
+    ## 3 sampdata.rds            file         5.2K 2026-06-08 11:52:59

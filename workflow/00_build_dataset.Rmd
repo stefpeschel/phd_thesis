@@ -72,26 +72,30 @@ keep_countries <- c("Germany", "Switzerland", "Austria")
 keep_vars      <- c("SampleID", "idx", "Country", "Sex", "cesarean",
                     "breast_dur_cat1", "breast_excl_cat1", "pregsmoke",
                     "sibs_numb_cat")
+rename_vars    <- c("SampleID", "idx", "Country", "Sex", "C_section",
+                    "BF_duration", "EBF_duration", "Smoking", "Siblings")
 
 # Filter samples (rows) by country and variables (columns)
 phylo_genus <- prune_samples(
   sample_data(phylo_genus)$Country %in% keep_countries,
   phylo_genus
 )
-sample_data(phylo_genus) <- sample_data(phylo_genus) |>
-  as("data.frame") |>
-  select(all_of(keep_vars))
+sample_data(phylo_genus) <- sample_data(phylo_genus) %>%
+  as("data.frame") %>%
+  select(all_of(keep_vars)) %>%
+  setNames(rename_vars)
 
 phylo_asv <- prune_samples(
   sample_data(phylo_asv)$Country %in% keep_countries,
   phylo_asv
 )
-sample_data(phylo_asv) <- sample_data(phylo_asv) |>
-  as("data.frame") |>
-  select(all_of(keep_vars))
+sample_data(phylo_asv) <- sample_data(phylo_asv) %>%
+  as("data.frame") %>%
+  select(all_of(keep_vars)) %>%
+  setNames(rename_vars)
 
 # Extract sampdata if needed downstream
-sampdata <- sample_data(phylo_genus) |> as("data.frame")
+sampdata <- sample_data(phylo_genus) %>% as("data.frame")
 ```
 
 ### ASV level
@@ -137,6 +141,24 @@ phylo_genus
 # Save data
 saveRDS(phylo_asv, path_target("bact_phylo_2m_asv.rds"))
 saveRDS(phylo_genus, path_target("bact_phylo_2m_genus.rds"))
+```
+
+## Sample metadata with display labels
+
+```{r}
+# sampdata with display-friendly names (hyphen in C-section, underscores elsewhere)
+sampdata_labels <- sampdata %>%
+  rename(`C-section` = C_section,
+         `BF duration` = BF_duration,
+         `EBF duration` = EBF_duration) %>%
+  mutate(
+    Country     = factor(Country, levels = keep_countries),
+    Sex         = factor(Sex, levels = c("f", "m"), labels = c("Female", "Male")),
+    `C-section` = factor(`C-section`, levels = c(0, 1), labels = c("No", "Yes")),
+    Smoking     = factor(Smoking, levels = c(0, 1), labels = c("No", "Yes"))
+  )
+
+saveRDS(sampdata_labels, path_target("sampdata.rds"))
 ```
 
 ## Files written
