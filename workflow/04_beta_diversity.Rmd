@@ -68,23 +68,27 @@ path_source <- projthis::proj_path_source(params$name)
 ## Set global parameters
 
 ```{r, echo = TRUE}
-min_taxon_prevalence <- 0.10
 zero_replacement_fraction <- 0.65
 n_perm <- 999
 permutation_seed <- 42
 alpha_perm_approx <- 0.05
 
-var_order_beta <- c("Country", "Sex", "Delivery mode", "BF duration",
-                    "Exclusive BF", "Prenatal smoking", "No. of siblings")
+var_order_beta <- c("Country", "Sex", "C-section", "BF duration",
+                    "EBF duration", "Smoking", "Siblings")
 ```
 
+## Colors
+
+```{r}
+cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00", 
+         "#CC79A7", "#F0E442", "#0072B2", "gray")
+```
 
 ## Load data
 
 ```{r load_data}
-phylo_genus <- readRDS(path_source("00_build_dataset", "bact_phylo_2m_genus.rds"))
-sampdata <- sample_data(phylo_genus) %>% as("data.frame")
-otutab <- as(otu_table(phylo_genus), "matrix")
+phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev10.rds"))
+sampdata <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
 ```
 
 ### Phyloseq object on genus level
@@ -193,7 +197,7 @@ compute_pcoa <- function(dist_obj, n_axes = 5) {
   )
 }
 
-plot_pcoa <- function(pcoa_res, metadata, color_var = NULL, title = NULL) {
+plot_pcoa <- function(pcoa_res, metadata, color_var = NULL, title = NULL, palette = NULL) {
   plot_df <- pcoa_res$coords %>%
     left_join(metadata, by = "SampleID")
   
@@ -209,22 +213,7 @@ plot_pcoa <- function(pcoa_res, metadata, color_var = NULL, title = NULL) {
     ")"
   )
   
-  p <- ggplot(plot_df, aes(x = PCo1, y = PCo2)) +
-    geom_point(alpha = 0.8, size = 2) +
-    labs(
-      x = x_lab,
-      y = y_lab,
-      color = NULL,
-      title = title
-    ) +
-    theme_bw() +
-    theme(
-      axis.text  = element_text(size = 12),
-      axis.title = element_text(size = 14),
-      plot.title = element_text(face = "bold"),
-      panel.grid = element_blank()
-    )
-  
+
   if (!is.null(color_var) && color_var %in% names(plot_df)) {
     p <- ggplot(plot_df, aes(x = PCo1, y = PCo2, color = .data[[color_var]])) +
       geom_point(alpha = 0.8, size = 2) +
@@ -233,13 +222,30 @@ plot_pcoa <- function(pcoa_res, metadata, color_var = NULL, title = NULL) {
         y = y_lab,
         color = color_var,
         title = title
-      ) +
-      theme_bw() +
+      )
+    
+    if (!is.null(palette)) {
+      p <- p + scale_color_manual(values = palette)
+    }
+  } else {
+    p <- ggplot(plot_df, aes(x = PCo1, y = PCo2)) +
+      geom_point(alpha = 0.8, size = 2) +
+      labs(
+        x = x_lab,
+        y = y_lab,
+        color = NULL,
+        title = title
+      )
+  }
+  
+  p <- p + 
+    theme_bw() +
       theme(
+        axis.text  = element_text(size = 14),
+        axis.title = element_text(size = 14),
         plot.title = element_text(face = "bold"),
         panel.grid = element_blank()
       )
-  }
   
   p
 }
@@ -267,11 +273,11 @@ plot_distance_heatmap <- function(dist_obj, metadata, ann_vars = NULL, title = N
   var_base_colors <- c(
     "Country"          = "#2166AC",  # blue
     "Sex"              = "#CB181D",  # red
-    "Delivery mode"    = "#238B45",  # green
+    "C-section"        = "#238B45",  # green
     "BF duration"      = "#D94801",  # orange
-    "Exclusive BF"     = "#6A51A3",  # purple
-    "Prenatal smoking" = "gold",  # teal
-    "No. of siblings"  = "#8C510A"   # brown
+    "EBF duration"     = "#6A51A3",  # purple
+    "Smoking"          = "gold",  # teal
+    "Siblings"  = "#8C510A"   # brown
   )
   
   # Build top annotation
@@ -330,39 +336,11 @@ counts_raw <- counts_raw[sampdata$SampleID, , drop = FALSE]
 
 stopifnot(identical(rownames(counts_raw), sampdata$SampleID))
 
-counts_raw_unfiltered <- counts_raw
-
-taxa_prevalence <- colMeans(counts_raw_unfiltered > 0)
-taxa_keep <- taxa_prevalence >= min_taxon_prevalence
-
-if (!any(taxa_keep)) {
-  stop("No taxa remain after prevalence filtering.")
-}
-
-taxa_filter_summary <- tibble(
-  min_taxon_prevalence = min_taxon_prevalence,
-  n_samples = nrow(counts_raw_unfiltered),
-  n_taxa_before_filter = ncol(counts_raw_unfiltered),
-  n_taxa_after_filter = sum(taxa_keep),
-  n_taxa_removed = sum(!taxa_keep)
-)
-
-taxa_prevalence_summary <- tibble(
-  taxon = names(taxa_prevalence),
-  prevalence = unname(taxa_prevalence),
-  n_samples_present = as.integer(colSums(counts_raw_unfiltered > 0)),
-  keep = unname(taxa_keep)
-)
-
-counts_raw <- counts_raw_unfiltered[, taxa_keep, drop = FALSE]
 counts_rel <- counts_to_rel_abund(counts_raw)
 
 data_summary <- tibble(
   n_samples = nrow(counts_raw),
-  n_taxa_before_filter = ncol(counts_raw_unfiltered),
-  n_taxa_after_filter = ncol(counts_raw),
-  n_taxa_removed = ncol(counts_raw_unfiltered) - ncol(counts_raw),
-  min_taxon_prevalence = min_taxon_prevalence,
+  n_taxa = ncol(counts_raw),
   min_library_size = min(rowSums(counts_raw)),
   median_library_size = median(rowSums(counts_raw)),
   max_library_size = max(rowSums(counts_raw)),
@@ -417,11 +395,8 @@ dist_clr_object[1:10]
 ```{r}
 beta_objects <- list(
   metadata = sampdata,
-  counts_raw_unfiltered = counts_raw_unfiltered,
   counts_raw = counts_raw,
   counts_rel = counts_rel,
-  taxa_filter_summary = taxa_filter_summary,
-  taxa_prevalence_summary = taxa_prevalence_summary,
   clr = clr_object,
   counts_clr = counts_clr,
   dist_bray = dist_bray,
@@ -433,8 +408,6 @@ beta_objects <- list(
 saveRDS(beta_objects, path_target("beta_diversity_objects.rds"))
 
 write_csv(data_summary, path_target("beta_data_summary.csv"))
-write_csv(taxa_filter_summary, path_target("beta_taxa_filter_summary.csv"))
-write_csv(taxa_prevalence_summary, path_target("beta_taxa_prevalence_summary.csv"))
 write_csv(clr_summary, path_target("beta_clr_summary.csv"))
 ```
 
@@ -468,7 +441,7 @@ p_bray <- plot_pcoa(
 p_clr <- plot_pcoa(
   pcoa_res = pcoa_clr_object,
   metadata = sampdata,
-  title = "Euclidean distance after multRepl + CLR"
+  title = "Aitchison distance"
 )
 
 p_bray + p_clr
@@ -492,27 +465,27 @@ var_map <- list(
   ),
   Sex = list(
     label  = "Sex",
-    levels = c(f = "Female", m = "Male")
+    levels = NULL  # already Female/Male
   ),
-  cesarean = list(
-    label  = "Delivery mode",
-    levels = c(`0` = "Vaginal", `1` = "Cesarean")
+  `C-section` = list(
+    label  = "C-section",
+    levels = c(No = "Vaginal", Yes = "Cesarean")
   ),
-  breast_dur_cat1 = list(
+  `BF duration` = list(
     label  = "BF duration",
     levels = c(`0` = "0 months", `1` = "1 month", `>=2` = "\u22652 months")
   ),
-  breast_excl_cat1 = list(
-    label  = "Exclusive BF",
+  `EBF duration` = list(
+    label  = "EBF duration",
     levels = c(`0` = "0 months", `1` = "1 month", `>=2` = "\u22652 months")
   ),
-  pregsmoke = list(
-    label  = "Prenatal smoking",
-    levels = c(`0` = "No", `1` = "Yes")
+  Smoking = list(
+    label  = "Smoking",
+    levels = NULL  # already No/Yes
   ),
-  sibs_numb_cat = list(
-    label  = "No. of siblings",
-    levels = c(`0` = "0", `1` = "1", `>1` = ">1")
+  Siblings = list(
+    label  = "Siblings",
+    levels = NULL  # already 0/1/>1
   )
 )
 
@@ -550,14 +523,16 @@ if (length(variables_to_plot) > 0) {
       pcoa_res = pcoa_bray,
       metadata = sampdata_plot,
       color_var = var,
-      title = paste0("Bray-Curtis dissimilarity: ", var)
+      title = paste0("Bray-Curtis dissimilarity: ", var),
+      palette = cols
     )
     
     p_clr_var <- plot_pcoa(
       pcoa_res = pcoa_clr_object,
       metadata = sampdata_plot,
       color_var = var,
-      title = paste0("Euclidean distance after multRepl + CLR: ", var)
+      title = paste0("Aitchison distance: ", var),
+      palette = cols
     )
     
     print((p_bray_var | p_clr_var) +
