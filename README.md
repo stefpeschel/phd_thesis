@@ -73,6 +73,10 @@ All data required to reproduce the reported results are available in this reposi
 
 Depending on the analysis, regenerating simulated data and rerunning downstream scripts may require substantial computation time. Exact numerical values may differ slightly across systems because of floating-point arithmetic, package versions, or parallel execution.
 
+## License
+
+Code in this repository is released under the MIT License. Figures, rendered reports, generated outputs, and thesis-related text are provided to document and reproduce the analyses. Reuse of these materials should cite the corresponding thesis and repository.
+
 ## Working Conventions
 
 - Chapter folders are the primary organizational unit.
