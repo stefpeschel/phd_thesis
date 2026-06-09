@@ -5,4 +5,5 @@
 .Rhistory
 .Rprofile
 .positai
-workflow/data/PASTURE_data
+ch07_application/data/PASTURE_data
+**/01_data_gen/

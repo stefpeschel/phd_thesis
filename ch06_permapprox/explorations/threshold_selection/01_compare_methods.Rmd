@@ -1,0 +1,2319 @@
+---
+title: "compare_methods"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output:
+  github_document: default
+  html_document:
+    toc: true
+    toc_float: true
+always_allow_html: true
+params:
+  name: "01_compare_methods" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "4892c382-867a-4ad7-8c98-22c28d1dae81")
+```
+
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 10, 
+  fig.height = 6, 
+  dpi = 200,
+  fig.path = paste0('figures/', params, "/thresh_"),
+  message = FALSE, 
+  warning = FALSE,
+  echo = FALSE)
+```
+
+```{r packages}
+library(permApprox)
+library(conflicted)
+library(tidyverse)
+library(changepoint)
+library(evmix)
+library(here)
+library(glue)
+library(patchwork)
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::lag)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+#projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+# Overview
+
+This script explores and compares several threshold selection methods for generalized Pareto distribution (GPD) tail modeling in the context of permutation-based inference. The main goal is to understand how different threshold rules behave, both on a concrete permutation example and under simulated bulk-tail mixture models where the true threshold is known.
+
+The analysis proceeds in three stages. First, the script defines the candidate threshold grid and computes method-specific diagnostics based on goodness-of-fit testing and stability criteria. Second, the methods are illustrated on a two-sample permutation $t$-test example, where no true threshold is available but the empirical behavior of the diagnostics can be inspected visually. Third, the script turns to simulated settings generated from known mixture distributions, allowing the selected thresholds to be compared against the true threshold. This includes both single illustrative draws and a larger simulation study with repeated samples.
+
+## Threshold methods
+
+This section defines the set of threshold selection methods considered throughout the script, together with display labels and a consistent color palette for the figures. The methods include existing approaches as well as new proposed methods.
+
+```{r threshold-methods, echo=TRUE}
+threshold_methods <- c(
+  "ftr",
+  "fwd_stop",
+  "rob_ftr",
+  "gof_cp",
+  "rpc",
+  "shape_var"
+)
+
+method_labels <- c(
+  ftr = "FTR",
+  fwd_stop = "FwdStop",
+  rob_ftr = "robFTR",
+  gof_cp = "GoF-CP",
+  rpc = "RPC",
+  shape_var = "Shape-Var"
+)
+
+okabe_ito <- c(
+  ftr = "#56B4E9",
+  fwd_stop = "#009E73",
+  rob_ftr = "#0072B2",
+  gof_cp = "#CC79A7",
+  rpc = "#E69F00",
+  shape_var = "#D55E00"
+)
+```
+
+## Parameter settings
+
+The following global parameters are used throughout the analysis. They specify the significance level for the goodness-of-fit assessment, the window width used in the shape-variation diagnostic, the GPD fitting method, the selected goodness-of-fit test, and a global random seed for reproducibility. These settings are held fixed unless explicitly varied later in the script.
+
+```{r par-settings, echo=TRUE}
+gof_alpha <- 0.05
+shape_var_window <- 7L
+fit_method <- "lme"
+gof_test <- "ad"
+seed_global <- 123456
+set.seed(seed_global) # Set seed here already to produce the same plots when knitting
+```
+
+## Data-generating functions
+
+To study threshold selection under controlled conditions, the script generates samples from several bulk--tail mixture distributions. In each setting, observations below the threshold arise from a bulk distribution, whereas exceedances follow a GPD tail. By varying the bulk family and the relationship between bulk and tail at the threshold, the simulations cover both smooth transitions and mismatch scenarios with upward or downward jumps in tail behavior. Since the true threshold is known in these settings, they provide a useful basis for evaluating threshold estimators.
+
+```{r dgp-functions, echo=TRUE}
+simulate_perm_stats <- function(
+    n,
+    scenario,
+    bulk = NULL,
+    xi = NULL, # GPD shape
+    sigma = NA_real_, # GPD scale
+    epsilon = NULL, # for the transition interval
+    wshape = NULL,
+    wscale = NULL,
+    nmean = NULL,
+    nsd = NULL,
+    gshape = NULL,
+    gscale = NULL,
+    lnmean = NULL,
+    lnsd = NULL
+) {
+  if (scenario == "smooth_weibull_gpd") {
+    u <- qweibull(bulk, shape = wshape, scale = wscale)
+    
+    if (is.na(sigma)) {
+      sigma <- (1 - pweibull(u, shape = wshape, scale = wscale)) /
+      dweibull(u, shape = wshape, scale = wscale)
+    }
+    
+    x <- evmix::rweibullgpd(
+      n = n,
+      wshape = wshape,
+      wscale = wscale,
+      u = u,
+      sigmau = sigma,
+      xi = xi
+    )
+
+    return(list(
+      x = x,
+      true_u = u,
+      scenario = scenario,
+      pars = list(
+        bulk = bulk,
+        wshape = wshape,
+        wscale = wscale,
+        xi = xi,
+        sigma = sigma
+      )
+    ))
+  }
+
+  if (scenario == "transition_weibull_gpd") {
+    u <- qweibull(bulk, shape = wshape, scale = wscale)
+    
+    if (is.na(sigma)) {
+      sigma <- (1 - pweibull(u, shape = wshape, scale = wscale)) /
+      dweibull(u, shape = wshape, scale = wscale)
+    }
+
+    x <- evmix::ritmweibullgpd(
+      n = n,
+      wshape = wshape,
+      wscale = wscale,
+      u = u,
+      epsilon = epsilon,
+      sigmau = sigma,
+      xi = xi
+    )
+
+    return(list(
+      x = x,
+      true_u = u,
+      scenario = scenario,
+      pars = list(
+        bulk = bulk,
+        wshape = wshape,
+        wscale = wscale,
+        xi = xi,
+        epsilon = epsilon,
+        sigma = sigma
+      )
+    ))
+  }
+  
+  if (scenario == "normal_gpd") {
+    u <- qnorm(bulk, mean = nmean, sd = nsd)
+    
+    if (is.na(sigma)) {
+      sigma <- (1 - pnorm(u, mean = nmean, sd = nsd)) /
+        dnorm(u, mean = nmean, sd = nsd)
+    }
+    
+    x <- evmix::rnormgpd(
+      n = n,
+      nmean = nmean,
+      nsd = nsd,
+      u = u,
+      sigmau = sigma,
+      xi = xi
+    )
+
+    return(list(
+      x = x,
+      true_u = u,
+      scenario = scenario,
+      pars = list(
+        bulk = bulk,
+        nmean = nmean,
+        nsd = nsd,
+        xi = xi,
+        sigma = sigma
+      )
+    ))
+  }
+  
+  if (scenario == "gamma_gpd") {
+    u <- qgamma(bulk, shape = gshape, scale = gscale)
+    
+    if (is.na(sigma)) {
+      sigma <- (1 - pgamma(u, shape = gshape, scale = gscale)) /
+        dgamma(u, shape = gshape, scale = gscale)
+    }
+    
+    x <- evmix::rgammagpd(
+      n = n,
+      gshape = gshape,
+      gscale = gscale,
+      u = u,
+      sigmau = sigma,
+      xi = xi
+    )
+    
+    return(list(
+      x = x,
+      true_u = u,
+      scenario = scenario,
+      pars = list(
+        bulk = bulk,
+        gshape = gshape,
+        gscale = gscale,
+        xi = xi,
+        sigma = sigma
+      )
+    ))
+  }
+  
+  if (scenario == "lognormal_gpd") {
+    u <- qlognormgpd(bulk, lnmean = lnmean, lnsd = lnsd)
+    
+    if (is.na(sigma)) {
+      sigma <- (1 - plognormgpd(u, lnmean = lnmean, lnsd = lnsd)) /
+        dlognormgpd(u, lnmean = lnmean, lnsd = lnsd)
+    }
+    
+    x <- evmix::rlognormgpd(
+      n = n,
+      lnmean = lnmean,
+      lnsd = lnsd,
+      u = u,
+      sigmau = sigma,
+      xi = xi
+    )
+    
+    return(list(
+      x = x,
+      true_u = u,
+      scenario = scenario,
+      pars = list(
+        bulk = bulk,
+        lnmean = lnmean,
+        lnsd = lnsd,
+        xi = xi,
+        sigma = sigma
+      )
+    ))
+  }
+  stop("Unknown scenario.")
+}
+```
+
+## Candidate thresholds and diagnostics
+
+Threshold selection is performed over a grid of candidate values derived from the observed sample. The grid is restricted by upper and lower exceedance constraints to exclude thresholds that are clearly too low or too high for reliable tail fitting. For each candidate threshold, a GPD is fitted to the exceedances and a collection of diagnostics is computed, including parameter estimates, goodness-of-fit $p$-values, and method-specific summary quantities.
+
+Based on these diagnostics, each threshold selection rule returns one selected threshold, if available. This modular structure makes it possible to compare the methods on a common set of candidate thresholds and fitted models, rather than conflating methodological differences with differences in the underlying grid.
+
+```{r diagnostics-functions, echo=TRUE}
+build_threshold_grid <- function(perm_stats, obs_stat = Inf, exceed0, exceed_min, thresh_step = 1) {
+  n_perm <- length(perm_stats)
+  t_sort <- sort(perm_stats, decreasing = FALSE)
+  thresh_init <- c(0, t_sort[t_sort > 0])
+
+  exceed0 <- if (is.finite(exceed0) && exceed0 <= 1) {
+    max(1L, floor(n_perm * exceed0))
+  } else {
+    as.integer(exceed0)
+  }
+
+  exceed_min <- if (is.finite(exceed_min) && exceed_min < 1) {
+    max(1L, floor(n_perm * exceed_min))
+  } else {
+    as.integer(exceed_min)
+  }
+
+  thresh_exceed0 <- sort(thresh_init, decreasing = TRUE)[exceed0 + 1]
+  thresh_ex_min <- sort(thresh_init, decreasing = TRUE)[exceed_min + 1]
+  thresh_incl_obs <- max(thresh_init[thresh_init < obs_stat])
+
+  thresh_low <- min(thresh_exceed0, thresh_incl_obs)
+  thresh_upp <- min(thresh_ex_min, thresh_incl_obs)
+
+  thresh_poss <- thresh_init[thresh_init >= thresh_low & thresh_init <= thresh_upp]
+  thresh_poss <- thresh_poss[c(TRUE, rep(FALSE, thresh_step - 1))]
+  unique(thresh_poss)
+}
+
+compute_threshold_diagnostics <- function(
+    perm_stats,
+    obs_stat = Inf,
+    exceed0 = 250,
+    exceed_min = 50,
+    thresh_step = 10,
+    gof_alpha = 0.05,
+    gof_test = "ad",
+    fit_method = "lme",
+    tol = 1e-7,
+    shape_var_window = 7L,
+    seed = NULL
+) {
+  if (!is.null(seed)) set.seed(seed)
+
+  thresh_poss <- build_threshold_grid(
+    perm_stats = perm_stats,
+    obs_stat = obs_stat,
+    exceed0 = exceed0,
+    exceed_min = exceed_min,
+    thresh_step = thresh_step
+  )
+
+  t_sort <- sort(perm_stats, decreasing = FALSE)
+
+  diag_df <- purrr::map_dfr(seq_along(thresh_poss), function(i) {
+    thresh <- thresh_poss[i]
+    fit <- permApprox::fit_gpd(
+      data = t_sort,
+      thresh = thresh,
+      fit_method = fit_method,
+      tol = tol,
+      constraint = "unconstrained",
+      gof_test = gof_test
+    )
+
+    tibble(
+      idx = i,
+      thresh = thresh,
+      n_exceed = sum(t_sort > thresh),
+      shape = fit$shape,
+      scale = fit$scale,
+      gof_p_value = fit$p_value
+    )
+  })
+
+  acc <- which(diag_df$gof_p_value > gof_alpha)
+  rej <- which(diag_df$gof_p_value <= gof_alpha)
+  
+  # Initialize index vector
+  idx_methods <- numeric(length(threshold_methods))
+  names(idx_methods) <- threshold_methods
+
+  # FTR
+  idx_ftr <- if (length(acc) == 0) NA_integer_ else acc[1]
+  idx_methods["ftr"] <- idx_ftr
+
+  # robFTR: x consecutive acceptances
+  min_acc <- 5
+  idx_rob_ftr <- NA_integer_
+  if (nrow(diag_df) >= 3) {
+    for (i in 1:(nrow(diag_df) - (min_acc - 1))) {
+      if (all(diag_df$gof_p_value[i:(i + (min_acc - 1))] > gof_alpha)) {
+        idx_rob_ftr <- i
+        break
+      }
+    }
+  }
+  idx_methods["rob_ftr"] <- idx_rob_ftr
+
+  # ForwardStop
+  y <- -log(1 - diag_df$gof_p_value)
+  ybar <- purrr::map_dbl(seq_along(y), ~ mean(y[1:.x]))
+  idx_fwd_stop <- if (all(ybar <= gof_alpha)) {
+    length(ybar)
+  } else if (all(ybar > gof_alpha)) {
+    1L
+  } else {
+    which(ybar > gof_alpha)[1]
+  }
+  idx_methods["fwd_stop"] <- idx_fwd_stop
+
+  # GoF change point
+  gof_p_tmp <- c(runif(100, min = 0, max = 0.01), diag_df$gof_p_value)
+  cp <- changepoint::cpt.meanvar(gof_p_tmp)
+  idx_sel <- cp@cpts[1] - 100
+  idx_gof_cp <- if (length(acc[acc >= idx_sel]) == 0) NA_integer_ else acc[acc >= idx_sel][1]
+  idx_methods["gof_cp"] <- idx_gof_cp
+  
+  # Shape stability: rolling variance over all candidate thresholds,
+  # final selection only among GoF-accepted thresholds
+  w <- as.integer(shape_var_window)
+  if (w < 2L) stop("shape_var_window must be at least 2.")
+  half <- floor((w - 1L) / 2L)
+
+  shape_roll_var <- rep(NA_real_, nrow(diag_df))
+
+  for (i in seq_len(nrow(diag_df))) {
+    lo <- max(1L, i - half)
+    hi <- min(nrow(diag_df), i + half)
+    sh <- diag_df$shape[lo:hi]
+    shape_roll_var[i] <- if (sum(!is.na(sh)) >= 2) stats::var(sh, na.rm = TRUE) else NA_real_
+  }
+
+  cand_shape <- which(diag_df$gof_p_value > gof_alpha & !is.na(shape_roll_var))
+
+  idx_shape_var <- NA_integer_
+  if (length(cand_shape) == 1) {
+    idx_shape_var <- cand_shape[1]
+  } else if (length(cand_shape) > 1) {
+    best <- cand_shape[shape_roll_var[cand_shape] ==
+                         min(shape_roll_var[cand_shape], na.rm = TRUE)]
+    idx_shape_var <- best[which.max(diag_df$thresh[best])]
+  }
+  idx_methods["shape_var"] <- idx_shape_var
+  
+  # RPC
+  prop_reject <- purrr::map_dbl(seq_len(nrow(diag_df)), function(i) {
+    mean(diag_df$gof_p_value[i:nrow(diag_df)] <= gof_alpha)
+  })
+  prop_reject2 <- prop_reject
+  prop_reject2[rej] <- 1
+  idx_rpc <- which(prop_reject2 <= gof_alpha)[1]
+  if (is.na(idx_rpc)) idx_rpc <- which.min(prop_reject2)
+  idx_methods["rpc"] <- idx_rpc
+  
+  # Combine results
+  method_tbl <- tibble(
+    method = threshold_methods,
+    idx = idx_methods[threshold_methods]
+  ) %>%
+    mutate(
+      thresh = ifelse(is.na(idx), NA_real_, diag_df$thresh[idx]),
+      n_exceed = ifelse(is.na(idx), NA_integer_, diag_df$n_exceed[idx])
+    )
+
+  cp_thresh <- if (!is.na(idx_sel) && idx_sel >= 1 && idx_sel <= nrow(diag_df)) {
+    diag_df$thresh[idx_sel]
+  } else {
+    NA_real_
+  }
+
+  diag_df <- diag_df %>%
+    mutate(
+      ybar_forwardstop = ybar,
+      prop_reject = prop_reject,
+      shape_roll_var = shape_roll_var
+    )
+
+  cp_df <- tibble(
+    idx_aug = seq_along(gof_p_tmp),
+    gof_p_value_aug = gof_p_tmp,
+    idx_original = seq_along(gof_p_tmp) - 100L,
+    is_artificial = seq_along(gof_p_tmp) <= 100L,
+    thresh = NA_real_
+  )
+
+  idx_valid <- cp_df$idx_original >= 1 & cp_df$idx_original <= nrow(diag_df)
+  cp_df$thresh[idx_valid] <- diag_df$thresh[cp_df$idx_original[idx_valid]]
+
+  list(
+    diagnostics = diag_df,
+    selected = method_tbl,
+    cp_diagnostics = cp_df,
+    cp_idx = idx_sel,
+    cp_thresh = cp_thresh
+  )
+}
+```
+
+## Plot functions
+
+### AD p-value plot
+
+```{r}
+# AD p-value plot for one method
+
+plot_ad_pvalues <- function(
+  res,
+  method,
+  true_u = NA_real_,
+  gof_alpha = 0.05,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  col_pos = 2
+) {
+
+  stopifnot(method %in% names(method_labels))
+
+  diag_df <- res$diagnostics
+
+  sel <- res$selected %>%
+    dplyr::filter(method == !!method)
+
+  sel_thresh <- if (nrow(sel) == 1) sel$thresh else NA_real_
+
+  p <- ggplot(diag_df, aes(thresh, gof_p_value)) +
+    geom_point(color = "grey30", alpha = 0.65, size = 1.6) +
+    geom_hline(yintercept = gof_alpha, linetype = 2, linewidth = 0.6) +
+    labs(
+      x = "Candidate threshold",
+      y = "AD p-value",
+      title = NULL
+    ) +
+    theme_minimal(base_size = 12)
+
+  if (!is.na(sel_thresh)) {
+    p <- p +
+      geom_vline(
+        xintercept = sel_thresh,
+        color = unname(okabe_ito[method]),
+        linewidth = 1
+      )
+  }
+
+  if (!is.na(true_u)) {
+    p <- p +
+      geom_vline(
+        xintercept = true_u,
+        linetype = 3,
+        color = "black",
+        linewidth = 1
+      )
+  }
+  
+  p <- p +
+    theme(
+      axis.text.x  = element_text(size = 14),
+      axis.text.y  = element_text(size = 14),
+      axis.title   = element_text(size = 15),
+      plot.title   = element_text(size = 15),
+      strip.text   = element_text(size = 15),
+      legend.title = element_text(size = 16),
+      legend.text  = element_text(size = 16)
+    )
+  
+  p
+}
+```
+
+### Diagnostic plot
+
+Several plotting functions are defined to visualize the threshold diagnostics in a consistent way. 
+
+```{r}
+plot_method_diagnostic <- function(
+  res,
+  method,
+  gof_alpha = 0.05,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  col_pos = 2
+) {
+  
+  stopifnot(method %in% names(method_labels))
+  
+  diag_df <- res$diagnostics
+  
+  # Add info if AD test is accepted
+  diag_df <- diag_df %>%
+    mutate(gof_accept = as.character(gof_p_value > gof_alpha))
+  
+  sel <- res$selected %>%
+    dplyr::filter(method == !!method)
+  
+  sel_thresh <- if (nrow(sel) == 1) sel$thresh else NA_real_
+
+  # No extra diagnostic needed
+  if (method %in% c("ftr", "rob_ftr")) {
+    return(NULL)
+  }
+
+  if (method == "fwd_stop") {
+
+    p <- ggplot(diag_df, aes(thresh, ybar_forwardstop)) +
+      geom_line(color = okabe_ito[method], linewidth = 0.8) +
+      geom_point(color = okabe_ito[method], size = 1.2) +
+      geom_hline(yintercept = gof_alpha, linetype = 2, linewidth = 0.6) +
+      labs(
+        x = "Candidate threshold",
+        y = "ForwardStop statistic"
+        #title = "ForwardStop diagnostic"
+      ) +
+      theme_minimal()
+
+    if (!is.na(sel_thresh))
+      p <- p + geom_vline(xintercept = sel_thresh, color = okabe_ito[method],
+                          linewidth = 1)
+
+  }
+
+  if (method == "rpc") {
+
+    p <- ggplot(diag_df, aes(thresh, prop_reject))
+    
+    if (!is.na(sel_thresh)) {
+      p <- p + geom_vline(
+        xintercept = sel_thresh,
+        color = okabe_ito[method],
+        linewidth = 1
+      )
+    }
+    
+    p <- p + geom_point(
+      aes(color = gof_accept),
+      shape = 16,
+      size = 1.7,
+      alpha = 0.9,
+      na.rm = TRUE
+    ) +
+      scale_color_manual(
+        values = c(
+          `TRUE` = unname(okabe_ito[method]),
+          `FALSE` = "grey70"
+        ),
+        labels = c(
+          `TRUE` = "GoF accepted",
+          `FALSE` = "GoF rejected"
+        ),
+        name = NULL
+      ) +
+      geom_hline(yintercept = gof_alpha, linetype = 2, linewidth = 0.6) +
+      labs(
+        x = "Candidate threshold",
+        y = "Prop. of rejected GoF tests",
+        #title = "RPC diagnostic"
+      ) +
+      theme_minimal()
+  }
+  
+  if (method == "shape_var") {
+    p <- ggplot(diag_df, aes(x = thresh, y = shape_roll_var)) #+
+      #geom_line(color = "grey60", linewidth = 0.7, na.rm = TRUE)
+    
+    if (!is.na(sel_thresh)) {
+      p <- p + geom_vline(
+        xintercept = sel_thresh,
+        color = okabe_ito[method],
+        linewidth = 1
+      )
+    }
+    
+    p <- p + geom_point(
+      aes(color = gof_accept),
+      shape = 16,
+      size = 1.7,
+      alpha = 0.9,
+      na.rm = TRUE
+    ) +
+      scale_color_manual(
+        values = c(
+          `TRUE` = unname(okabe_ito[method]),
+          `FALSE` = "grey70"
+        ),
+        labels = c(
+          `TRUE` = "GoF accepted",
+          `FALSE` = "GoF rejected"
+        ),
+        name = NULL
+      ) +
+      scale_y_log10() +
+      labs(
+        x = "Candidate threshold",
+        y = "Rolling shape variance"
+        #title = "Shape stability diagnostic"
+      ) +
+      theme_minimal()
+  }
+  
+  if (method == "gof_cp") {
+    cp_df <- res$cp_diagnostics
+    
+    p <- ggplot(cp_df, aes(idx_aug, gof_p_value_aug)) +
+            geom_point(
+        aes(color = is_artificial),
+        size = 1.4,
+        alpha = 0.9,
+        na.rm = TRUE
+      ) +
+      geom_hline(yintercept = gof_alpha, linetype = 2, linewidth = 0.6) +
+      scale_color_manual(
+        values = c(`TRUE` = unname(okabe_ito[method]), `FALSE` = "grey30"),
+        labels = c(`TRUE` = "Artificial p-value", `FALSE` = "True AD p-value"),
+        name = NULL
+      ) +
+      labs(
+        x = "Augmented index",
+        y = "AD p-value"
+        #title = "GoF changepoint diagnostic"
+      ) +
+      theme_minimal()
+
+    if (!is.null(res$cp_idx))
+      p <- p + geom_vline(xintercept = res$cp_idx + 100, 
+                          linetype = 3, linewidth = 1)
+    
+    if (!is.na(sel_thresh)) {
+      thresh_idx <- which(cp_df$thresh == sel_thresh)
+      p <- p + geom_vline(
+        xintercept = thresh_idx,
+        color = okabe_ito[method],
+        linewidth = 1
+      )
+    }
+    
+  }
+  
+  p <- p +
+    theme(
+      axis.text.x  = element_text(size = 14),
+      axis.text.y  = element_text(size = 14),
+      axis.title   = element_text(size = 15),
+      plot.title   = element_text(size = 15),
+      strip.text   = element_text(size = 15),
+      legend.title = element_text(size = 16),
+      legend.text  = element_text(size = 16),
+      legend.position = "bottom"
+    ) +
+    guides(
+      color = guide_legend(override.aes = list(size = 2.5)),
+      shape = guide_legend(override.aes = list(size = 2.5)),
+      fill = guide_legend(override.aes = list(size = 2.5))
+    )
+  
+  return(p)
+}
+```
+
+### Combined plot AD p-values and diagnostic for a single method
+
+```{r}
+plot_method_summary <- function(
+  res,
+  method,
+  true_u = NA_real_,
+  gof_alpha = 0.05,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  col_pos = 2
+) {
+
+  p_main <- plot_ad_pvalues(
+    res,
+    method,
+    true_u,
+    gof_alpha,
+    method_labels,
+    okabe_ito,
+    col_pos = col_pos
+  )
+
+  p_diag <- plot_method_diagnostic(
+    res,
+    method,
+    gof_alpha,
+    method_labels,
+    okabe_ito,
+    col_pos = col_pos
+  )
+
+  if (is.null(p_diag)) {
+    return(p_main)
+  }
+
+  p_main / p_diag +
+    patchwork::plot_layout(heights = c(1.2, 1))
+}
+```
+
+### AD p-value plot with all methods
+
+```{r}
+plot_ad_pvalues_all_methods <- function(
+    res,
+    true_u = NA_real_,
+    gof_alpha = 0.05,
+    method_labels = method_labels,
+    okabe_ito = okabe_ito,
+    triangle_dist = 0.05,
+    triangle_size = 5,
+    size_axis_text = 13,
+    size_axis_title = 14,
+    size_plot_title = 16,
+    size_strip_text = 16,
+    size_legend_title = 16,
+    size_legend_text = 16
+) {
+  diag_df <- res$diagnostics
+  
+  sel_df <- res$selected %>%
+    dplyr::filter(!is.na(thresh)) %>%
+    dplyr::mutate(
+      method = factor(method, levels = threshold_methods),
+      method_label = factor(
+        unname(method_labels[as.character(method)]),
+        levels = unname(method_labels[threshold_methods])
+      ),
+      color = unname(okabe_ito[as.character(method)])
+    ) %>%
+    dplyr::arrange(method)
+  
+  y_max <- max(diag_df$gof_p_value, na.rm = TRUE)
+  
+  # give each method its own y-position above the panel
+  tri_levels <- seq((1 - nrow(sel_df) * triangle_dist + triangle_dist), 
+                    1, by = triangle_dist)
+  
+  tri_df <- sel_df %>%
+    dplyr::mutate(y = tri_levels)
+
+  p <- ggplot(diag_df, aes(x = thresh, y = gof_p_value)) +
+    geom_point(color = "grey50", alpha = 0.65, size = 1.6) +
+    geom_hline(yintercept = gof_alpha, linetype = 2, linewidth = 0.6) +
+    labs(
+      x = "Candidate threshold",
+      y = "AD p-value",
+      title = NULL
+    ) +
+    theme_minimal(base_size = 12) +
+    # coord_cartesian(
+    #   ylim = c(min(diag_df$gof_p_value, na.rm = TRUE), y_max + 0.12),
+    #   clip = "off"
+    # ) +
+    theme(
+      axis.text    = element_text(size = size_axis_text),
+      axis.title   = element_text(size = size_axis_title),
+      plot.title   = element_text(size = size_plot_title),
+      strip.text   = element_text(size = size_strip_text),
+      legend.title = element_text(size = size_legend_title, face = "bold"),
+      legend.text  = element_text(size = size_legend_text),
+      plot.margin  = margin(10, 20, 10, 10),
+      legend.position = "bottom"
+    )
+  
+  # True threshold: solid black line
+  if (!is.na(true_u)) {
+    p <- p +
+      geom_vline(
+        xintercept = true_u,
+        color = "black",
+        linewidth = 0.9
+      )
+  }
+
+  # Estimated thresholds: dotted grey guide lines + colored filled triangles
+  if (nrow(sel_df) > 0) {
+    fill_vals <- stats::setNames(sel_df$color, sel_df$method_label)
+
+    p <- p +
+      geom_vline(
+        data = sel_df,
+        aes(xintercept = thresh),
+        color = "grey30",
+        linetype = 2,
+        linewidth = 0.7,
+        inherit.aes = FALSE,
+        show.legend = FALSE
+      ) +
+      geom_point(
+        data = tri_df,
+        aes(x = thresh, y = y, fill = method_label),
+        shape = 25,   # filled downward triangle
+        size = triangle_size,
+        stroke = 0.3,
+        color = "black",
+        inherit.aes = FALSE,
+        show.legend = TRUE
+      ) +
+      scale_fill_manual(
+        values = fill_vals,
+        name = "Method:",
+        guide = guide_legend(
+          nrow = 1,                # force one row
+          byrow = TRUE,
+          override.aes = list(
+            shape = 25,
+            size = triangle_size,
+            color = "black",
+            stroke = 0.3
+          )
+        )
+      )
+  }
+
+  p
+}
+```
+
+### Histrogram 
+
+```{r}
+plot_sample_histogram <- function(
+    sim_obj,
+    bins = 50,
+    x_max = NULL,
+    title = NULL
+) {
+  x <- sim_obj$x
+  scenario <- sim_obj$scenario
+  true_u <- sim_obj$true_u
+  pars <- sim_obj$pars
+
+  if (is.null(x_max)) {
+    x_max <- stats::quantile(x, 0.995, na.rm = TRUE)
+  }
+
+  x_grid <- seq(min(x, na.rm = TRUE), x_max, length.out = 1000)
+
+  dens_df <- dplyr::case_when(
+    scenario == "smooth_weibull_gpd" ~ TRUE,
+    scenario == "transition_weibull_gpd" ~ FALSE,
+    .default = FALSE
+  )
+
+  if (scenario == "smooth_weibull_gpd") {
+    dens <- evmix::dweibullgpd(
+      x_grid,
+      wshape = pars$wshape,
+      wscale = pars$wscale,
+      u = true_u,
+      sigmau = pars$sigma,
+      xi = pars$xi
+    )
+  } else if (scenario == "transition_weibull_gpd") {
+    dens <- evmix::ditmweibullgpd(
+      x_grid,
+      wshape = pars$wshape,
+      wscale = pars$wscale,
+      u = true_u,
+      epsilon = pars$epsilon,
+      sigmau = pars$sigma,
+      xi = pars$xi
+    )
+  } else if (scenario == "normal_gpd") {
+    dens <- evmix::dnormgpd(
+      x_grid,
+      nmean = pars$nmean,
+      nsd = pars$nsd,
+      u = true_u,
+      sigmau = pars$sigma,
+      xi = pars$xi
+    )
+  } else if (scenario == "gamma_gpd") {
+    dens <- evmix::dgammagpd(
+      x_grid,
+      gshape = pars$gshape,
+      gscale = pars$gscale,
+      u = true_u,
+      sigmau = pars$sigma,
+      xi = pars$xi
+    )
+  } else if (scenario == "lognormal_gpd") {
+    dens <- evmix::dlognormgpd(
+      x_grid,
+      lnmean = pars$lnmean,
+      lnsd = pars$lnsd,
+      u = true_u,
+      sigmau = pars$sigma,
+      xi = pars$xi
+    )
+  } else {
+    stop("Unknown scenario.")
+  }
+  
+  dens_df <- tibble(
+    x = x_grid,
+    density = dens
+  )
+  
+  # title_txt <- dplyr::case_when(
+  #   scenario == "smooth_weibull_gpd" ~ "Smooth Weibull-GPD mixture",
+  #   scenario == "transition_weibull_gpd" ~ 
+  #     "Weibull-GPD mixture with transition interval",
+  #   scenario == "normal_gpd" ~ "Normal-GPD mixture",
+  #   scenario == "gamma_gpd" ~ "Gamma-GPD mixture",
+  #   scenario == "lognormal_gpd" ~ "Log-normal-GPD mixture",
+  #   .default = scenario,
+  # )
+  
+  ggplot(tibble(x = x), aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+                   bins = bins,
+                   fill = "grey85",
+                   color = "grey30",
+                   linewidth = 0.3) +
+    geom_line(data = dens_df, aes(x = x, y = density),
+              color = "black",
+              linetype = 1,
+              linewidth = 1) +
+    geom_vline(xintercept = true_u,
+               color = "black",
+               linewidth = 0.8) +
+    labs(
+      #title = title_txt,
+      x = "Simulated test statistic",
+      y = "Density"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      axis.text.x  = element_text(size = 13),
+      axis.text.y  = element_text(size = 13),
+      axis.title   = element_text(size = 13),
+      plot.title   = element_text(size = 16),
+      strip.text   = element_text(size = 16),
+      legend.title = element_text(size = 16),
+      legend.text  = element_text(size = 16),
+    )
+}
+```
+
+## Two-sample t-test
+
+Before turning to fully controlled simulations, the methods are first illustrated on a simple two-sample permutation $t$-test example. This setting mimics the intended use case more directly: the permutation statistics are finite in number, no true threshold is known, and threshold choice must be guided purely by diagnostics. The example is therefore useful for understanding how the methods behave in practice, even though it does not permit a formal accuracy assessment.
+
+```{r, echo=TRUE}
+get_perm_t_example <- function(
+    n = 500,
+    mu1 = 1,
+    mu2 = 0,
+    sd = 1,
+    B = 1000,
+    seed = NULL
+) {
+  if (!is.null(seed)) set.seed(seed)
+
+  x1 <- rnorm(n, mean = mu1, sd = sd)
+  x2 <- rnorm(n, mean = mu2, sd = sd)
+
+  # Observed t-statistic (manual)
+  t_obs <- (mean(x1) - mean(x2)) /
+    sqrt((var(x1) + var(x2)) / n)
+  
+  # Permutation setup
+  x_comb <- c(x1, x2)
+  n_comb <- length(x_comb)
+  
+  # Generate permutation indices
+  perm_idx_mat <- matrix(nrow = 0, ncol = n)
+  while (nrow(perm_idx_mat) < B) {
+    new_rows <- replicate(B, sample(n_comb, n), simplify = "matrix")
+    perm_idx_mat <- unique(rbind(perm_idx_mat, t(new_rows)))
+  }
+  perm_idx_mat <- perm_idx_mat[1:B, , drop = FALSE]
+  
+  # Permutation t-statistics (manual)
+  t_perm <- apply(perm_idx_mat, 1, function(idx) {
+    x1_perm <- x_comb[idx]
+    x2_perm <- x_comb[-idx]
+    (mean(x1_perm) - mean(x2_perm)) /
+      sqrt((var(x1_perm) + var(x2_perm)) / n)
+  })
+
+  list(
+    x1 = x1,
+    x2 = x2,
+    t_obs = t_obs,
+    t_perm = t_perm
+  )
+}
+```
+
+```{r, eval=FALSE}
+perm_ex <- get_perm_t_example(
+  n = 250,
+  mu1 = 1,
+  mu2 = 0,
+  sd = 1,
+  B = 1000,
+  seed = 12345
+)
+
+res_perm <- compute_threshold_diagnostics(
+  perm_stats = abs(perm_ex$t_perm),
+  obs_stat = abs(perm_ex$t_obs),
+  exceed0 = 1000,
+  exceed_min = 10,
+  thresh_step = 1,
+  gof_alpha = gof_alpha,
+  gof_test = gof_test,
+  fit_method = fit_method,
+  shape_var_window = shape_var_window,
+  seed = 123456
+)
+saveRDS(perm_ex, path_target("ttest_perm_ex.rds"))
+saveRDS(res_perm, path_target("ttest_res_perm.rds"))
+```
+
+```{r}
+perm_ex <- readRDS(path_target("ttest_perm_ex.rds"))
+res_perm <- readRDS(path_target("ttest_res_perm.rds"))
+```
+
+### Histogram
+
+The histogram of the permuted absolute $t$-statistics gives a first impression of the empirical null distribution.
+
+```{r ttest_hist, fig.width=10, fig.height=5, dpi=200}
+p_hist <- ggplot(tibble(t_perm = abs(perm_ex$t_perm)), aes(x = abs(t_perm))) +
+  geom_histogram(bins = 50, fill = "grey85", color = "grey10", linewidth = 0.3) +
+  #geom_vline(xintercept = abs(perm_ex$t_obs), color = "black", linewidth = 0.9) +
+  labs(
+    title = NULL,
+    x = "Permuted t-statistic",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x  = element_text(size = 14),
+    axis.text.y  = element_text(size = 14),
+    axis.title   = element_text(size = 15),
+    plot.title   = element_text(size = 15)
+  ) +
+  coord_cartesian(xlim = c(0, 3.1))
+p_hist
+```
+
+### AD p-values all methods
+
+This plot overlays the thresholds selected by all methods on the same Anderson--Darling goodness-of-fit profile. It provides a compact overview of where the methods place the tail threshold relative to the apparent region of acceptable GPD fit.
+
+```{r ttest_ADp_all, fig.width=10, fig.height=5, dpi=200}
+plot_ad_pvalues_all_methods(
+  res = res_perm,
+  true_u = NA_real_,   # no true threshold here
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  triangle_dist = 0.05,
+  size_axis_title = 16
+) +
+  coord_cartesian(xlim = c(0, 3.1), ylim = c(0,1))
+```
+
+### FTR
+
+The first-threshold rule selects the smallest candidate threshold whose goodness-of-fit test is accepted. As the most liberal rule considered here, it tends to enter the acceptance region as early as possible and serves as a useful baseline for comparison.
+
+```{r ttest_ftr_ADp, fig.width=10, fig.height=3, dpi=200}
+plot_ad_pvalues(res_perm, "ftr", true_u = NA_real_,
+                    method_labels = method_labels,
+                    okabe_ito = okabe_ito, col_pos = 1) +
+  coord_cartesian(xlim = c(0, 3.1))
+```
+
+### Robust FTR
+
+The robust first-threshold rule modifies the simple first-acceptance idea by requiring several consecutive accepted thresholds. This makes the method less sensitive to isolated large $p$-values and typically shifts the selected threshold upward.
+
+```{r ttest_rob_ftr_ADp, fig.width=10, fig.height=3, dpi=200}
+plot_ad_pvalues(res_perm, "rob_ftr", true_u = NA_real_,
+                    method_labels = method_labels,
+                    okabe_ito = okabe_ito) +
+  coord_cartesian(xlim = c(0, 3.1))
+```
+
+### ForwardStop
+
+ForwardStop aggregates the sequence of goodness-of-fit $p$-values into a running summary statistic motivated by sequential multiple testing. Rather than reacting to a single accepted threshold, it aims to identify a stable entry point into a region of acceptable fit.
+
+```{r ttest_fwd_stop_ADp, fig.width=10, fig.height=3, dpi=200}
+p_pvals <- plot_ad_pvalues(res_perm, "fwd_stop", true_u = NA_real_,
+                    method_labels = method_labels, okabe_ito = okabe_ito) +
+  coord_cartesian(xlim = c(0, 3.1)) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank()
+  )
+
+p_pvals
+```
+
+```{r ttest_fwd_stop_diag, fig.width=10, fig.height=3, dpi=200}
+p_diag <- plot_method_diagnostic(res_perm, "fwd_stop",
+                    method_labels = method_labels, okabe_ito = okabe_ito) +
+  coord_cartesian(xlim = c(0, 3.1))
+
+p_diag
+```
+
+```{r ttest_fwd_stop_ADp_diag, fig.width=10, fig.height=5.5, dpi=200}
+p_pvals / plot_spacer() / p_diag +
+  patchwork::plot_layout(heights = c(1, 0.1, 1))
+```
+
+### Combined plot (hist + FTR + FwdStop)
+
+This combined figure juxtaposes the empirical distribution of the permutation statistics with the threshold choices of FTR and ForwardStop. It illustrates how two conceptually different rules may respond to the same diagnostic pattern.
+
+```{r ttest_ftr_fwd_stop_ADp_diag, fig.width=10, fig.height=8, dpi=200}
+p_hist2 <- p_hist +
+  geom_vline(xintercept = res_perm$diagnostics$thresh[989],
+             color = "grey30",
+             linetype = 3,
+             linewidth = 1) + 
+  ggtitle("(a)")
+
+line_df <- tibble::tibble(
+  method = c("ForwardStop", "FTR"),
+  thresh = c(
+    res_perm$selected$thresh[res_perm$selected$method == "fwd_stop"],
+    res_perm$selected$thresh[res_perm$selected$method == "ftr"]
+  )
+)
+
+p_pvals <- plot_ad_pvalues(
+  res_perm,
+  method = "fwd_stop",
+  true_u = NA_real_,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito
+) +
+  geom_vline(
+    data = line_df,
+    aes(xintercept = thresh, color = method),
+    linewidth = 1
+  ) +
+  scale_color_manual(
+    values = c(
+      "ForwardStop" = unname(okabe_ito["fwd_stop"]),
+      "FTR" = unname(okabe_ito["ftr"])
+    ),
+    name = "Method:"
+  ) + 
+  theme(legend.position = "bottom") +
+  coord_cartesian(xlim = c(0, 3.2)) +
+  ggtitle("(b)")
+
+p_diag <- plot_method_diagnostic(
+  res_perm,
+  method = "fwd_stop",
+  method_labels = method_labels,
+  okabe_ito = okabe_ito
+) +
+  coord_cartesian(xlim = c(0, 3.2)) +
+  ggtitle("(c)")
+
+p_hist2 / p_pvals / p_diag +
+  patchwork::plot_layout(heights = c(1, 1.2, 1)) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+
+### GoF-changepoint
+
+The changepoint-based approach searches for a structural shift in the sequence of goodness-of-fit $p$-values after augmenting the series with artificial small values. The aim is to detect the transition from clear model misspecification to a region where GPD fitting becomes plausible.
+
+```{r ttest_gof_cp_diag, fig.width=10, fig.height=3.5, dpi=200}
+plot_method_diagnostic(res_perm, "gof_cp", 
+                       method_labels = method_labels, okabe_ito = okabe_ito)
+```
+
+
+### Rejection proportion control
+
+The rejection proportion control rule summarizes how often goodness-of-fit tests are rejected among larger candidate thresholds. This yields a more global criterion that favors thresholds beyond which model fit appears acceptably stable in aggregate.
+
+```{r ttest_rpc_ADp, fig.width=10, fig.height=3, dpi=200}
+p_pvals <- plot_ad_pvalues(res_perm, "rpc", true_u = NA_real_,
+                    method_labels = method_labels, okabe_ito = okabe_ito) +
+  coord_cartesian(xlim = c(0, 3.1)) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank()
+  )
+p_pvals
+```
+
+```{r ttest_rpc_diag, fig.width=10, fig.height=3, dpi=200}
+p_diag <- plot_method_diagnostic(res_perm, "rpc",
+                    method_labels = method_labels, okabe_ito = okabe_ito) +
+  coord_cartesian(xlim = c(0, 3.1))
+
+p_diag
+```
+
+```{r ttest_rpc_ADp_diag, fig.width=10, fig.height=5.5, dpi=200}
+p_pvals / plot_spacer() / p_diag +
+  patchwork::plot_layout(heights = c(1, 0.1, 1))
+```
+
+### Shape variation
+
+The shape-variation rule is based on the heuristic that, above a suitable threshold, the estimated GPD shape parameter should stabilize. The diagnostic therefore evaluates the local variability of the shape estimate across neighboring thresholds and selects a threshold with small variation among those that also pass the goodness-of-fit filter.
+
+```{r ttest_shape_var_ADp, fig.width=10, fig.height=3, dpi=200}
+p_pvals <- plot_ad_pvalues(res_perm, "shape_var", true_u = NA_real_,
+                    method_labels = method_labels, okabe_ito = okabe_ito) +
+  coord_cartesian(xlim = c(0, 3.1)) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank()
+  )
+
+p_pvals
+```
+
+```{r ttest_shape_var_diag, fig.width=10, fig.height=3, dpi=200}
+p_diag <- plot_method_diagnostic(res_perm, "shape_var",
+                    method_labels = method_labels, okabe_ito = okabe_ito) +
+  coord_cartesian(xlim = c(0, 3.1))
+
+p_diag
+```
+
+```{r ttest_shape_var_ADp_diag, fig.width=10, fig.height=5.7, dpi=200}
+p_pvals / plot_spacer() / p_diag +
+  patchwork::plot_layout(heights = c(1, 0.1, 1.1))
+```
+
+## Exploratory simulation study
+
+The next part of the script considers single simulated samples from several bulk--tail mixture models. These examples are intended for visual exploration rather than formal performance evaluation. Because the true threshold is known, they make it possible to assess qualitatively whether the selected thresholds align with the actual onset of the GPD tail and how the methods react to smooth transitions or bulk--tail mismatches.
+
+### Weibull-GPD with smooth transition
+
+This setting represents the most favorable case for threshold selection: the Weibull bulk connects smoothly to the GPD tail at the true threshold. In principle, one would expect threshold methods to perform relatively well here, although finite-sample variability and the discreteness of the candidate grid may still lead to noticeable deviations.
+
+```{r, eval=FALSE}
+set.seed(seed_global)
+
+sim_ex <- simulate_perm_stats(
+  n = 1000,
+  scenario = "smooth_weibull_gpd",
+  bulk = 0.8,
+  wshape = 1.2,
+  wscale = 1,
+  xi = -0.2,
+  sigma = NA_real_
+)
+
+res_ex <- compute_threshold_diagnostics(
+  perm_stats = sim_ex$x,
+  exceed0 = 1000,
+  exceed_min = 10,
+  thresh_step = 1,
+  gof_alpha = gof_alpha,
+  shape_var_window = shape_var_window,
+  seed = 1
+)
+
+saveRDS(sim_ex, path_target("weibull_gpd_smooth_sim_ex.rds"))
+saveRDS(res_ex, path_target("weibull_gpd_smooth_res_ex.rds"))
+```
+
+```{r}
+sim_ex <- readRDS(path_target("weibull_gpd_smooth_sim_ex.rds"))
+res_ex <- readRDS(path_target("weibull_gpd_smooth_res_ex.rds"))
+```
+
+
+```{r sim_single_weib_gpd_smooth_hist_ADp_all, fig.width=10, fig.height=5, dpi=200}
+p_hist_weib_smooth <- plot_sample_histogram(sim_ex, bins = 60) +
+  coord_cartesian(xlim = c(0, 3.8)) +
+  ggtitle("Smooth Weibull-GPD")
+
+p_adp_weib_smooth <- plot_ad_pvalues_all_methods(
+  res = res_ex,
+  true_u = sim_ex$true_u,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  triangle_dist = 0.1
+) +
+  coord_cartesian(xlim = c(0, 3.8), ylim = c(0,1))
+
+p_weib_smooth <- p_hist_weib_smooth / p_adp_weib_smooth
+p_weib_smooth
+```
+
+Since in this smooth setting, none of the methods is able to detect the true threshold, we consider mixtures with a jump at the threshold in the following.
+
+### Weibull-GPD with upward jump
+
+```{r, eval=FALSE}
+set.seed(seed_global)
+
+sim_ex <- simulate_perm_stats(
+  n = 1000,
+  scenario = "smooth_weibull_gpd",
+  bulk = 0.8,
+  wshape = 1.2,
+  wscale = 3,
+  xi = -0.2,
+  sigma = 1
+)
+
+res_ex <- compute_threshold_diagnostics(
+  perm_stats = sim_ex$x,
+  exceed0 = 1000,
+  exceed_min = 10,
+  thresh_step = 1,
+  gof_alpha = gof_alpha,
+  shape_var_window = shape_var_window,
+  seed = 1
+)
+
+saveRDS(sim_ex, path_target("weibull_gpd_up_jump_sim_ex.rds"))
+saveRDS(res_ex, path_target("weibull_gpd_up_jump_res_ex.rds"))
+```
+
+```{r}
+sim_ex <- readRDS(path_target("weibull_gpd_up_jump_sim_ex.rds"))
+res_ex <- readRDS(path_target("weibull_gpd_up_jump_res_ex.rds"))
+```
+
+```{r sim_single_weib_gpd_up_jump_hist_ADp_all, fig.width=10, fig.height=5.5, dpi=200}
+p_hist <- plot_sample_histogram(sim_ex, bins = 60) +
+  coord_cartesian(xlim = c(0, 7.8)) + 
+  ggtitle(expression("Weibull-GPD (" * k[0] == 1000 * ")"))
+
+p_adp <- plot_ad_pvalues_all_methods(
+  res = res_ex,
+  true_u = sim_ex$true_u,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  triangle_dist = 0.1
+) +
+  coord_cartesian(xlim = c(0, 7.8), ylim = c(0,1))
+
+p_hist / p_adp
+```
+
+### Weibull-GPD with downward jump
+
+```{r, fig.width=10, fig.height=3, dpi=200, eval=FALSE}
+set.seed(seed_global)
+
+sim_ex <- simulate_perm_stats(
+  n = 1000,
+  scenario = "smooth_weibull_gpd",
+  bulk = 0.8,
+  wshape = 1.2,
+  wscale = 1,
+  xi = -0.2,
+  sigma = 1.8
+)
+
+res_ex <- compute_threshold_diagnostics(
+  perm_stats = sim_ex$x,
+  exceed0 = 1000,
+  exceed_min = 10,
+  thresh_step = 1,
+  gof_alpha = gof_alpha,
+  shape_var_window = shape_var_window,
+  seed = 1
+)
+
+saveRDS(sim_ex, path_target("weibull_gpd_down_jump_sim_ex.rds"))
+saveRDS(res_ex, path_target("weibull_gpd_down_jump_res_ex.rds"))
+```
+
+```{r}
+sim_ex <- readRDS(path_target("weibull_gpd_down_jump_sim_ex.rds"))
+res_ex <- readRDS(path_target("weibull_gpd_down_jump_res_ex.rds"))
+```
+
+```{r sim_single_weib_gpd_down_jump_hist_ADp_all, fig.width=10, fig.height=5.5, dpi=200}
+p_hist_weib <- plot_sample_histogram(sim_ex, bins = 60) +
+  coord_cartesian(xlim = c(0, 7.2)) +
+  ggtitle(expression("(a) Weibull-GPD (" * k[0] == 1000 * ")"))
+
+p_adp_weib <- plot_ad_pvalues_all_methods(
+  res = res_ex,
+  true_u = sim_ex$true_u,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  triangle_dist = 0.1
+) +
+  coord_cartesian(xlim = c(0, 7.2), ylim = c(0,1))
+
+p_weib <- p_hist_weib / p_adp_weib
+p_weib
+```
+
+```{r, fig.width=10, fig.height=3, dpi=200, eval=FALSE}
+set.seed(12345)
+
+sim_ex <- simulate_perm_stats(
+  n = 1000,
+  scenario = "smooth_weibull_gpd",
+  bulk = 0.8,
+  wshape = 1.2,
+  wscale = 1,
+  xi = -0.2,
+  sigma = 1.8
+)
+
+res_ex <- compute_threshold_diagnostics(
+  perm_stats = sim_ex$x,
+  exceed0 = 1000,
+  exceed_min = 10,
+  thresh_step = 1,
+  gof_alpha = gof_alpha,
+  shape_var_window = shape_var_window,
+  seed = 1
+)
+
+saveRDS(sim_ex, path_target("weibull_gpd_down_jump_sim_ex_seed2.rds"))
+saveRDS(res_ex, path_target("weibull_gpd_down_jump_res_ex_seed2.rds"))
+```
+
+```{r}
+sim_ex <- readRDS(path_target("weibull_gpd_down_jump_sim_ex_seed2.rds"))
+res_ex <- readRDS(path_target("weibull_gpd_down_jump_res_ex_seed2.rds"))
+```
+
+```{r sim_single_weib_gpd_down_jump_hist_ADp_all_seed2, fig.width=10, fig.height=5.5, dpi=200}
+p_hist_weib2 <- plot_sample_histogram(sim_ex, bins = 60) +
+  coord_cartesian(xlim = c(0, 6.5)) +
+  ggtitle(expression("(b) Weibull-GPD (" * k[0] == 1000 * ")"))
+
+p_adp_weib2 <- plot_ad_pvalues_all_methods(
+  res = res_ex,
+  true_u = sim_ex$true_u,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  triangle_dist = 0.1
+) +
+  coord_cartesian(xlim = c(0, 6.5), ylim = c(0,1))
+
+p_weib2 <- p_hist_weib2 / p_adp_weib2
+p_weib2
+```
+
+### Log-Normal-GPD
+
+As alternative to the Weibull distribution, we consider also a log-normal distribution for the bulk, which might also be a good representation of permutation distributions. 
+
+```{r, eval=FALSE}
+set.seed(seed_global)
+
+sim_ex <- simulate_perm_stats(
+  n = 1000,
+  scenario = "lognormal_gpd",
+  bulk = 0.8,
+  lnmean = 0,
+  lnsd = 0.8,
+  xi = -0.2,
+  sigma = 2.5
+)
+
+res_ex <- compute_threshold_diagnostics(
+  perm_stats = sim_ex$x,
+  exceed0 = 1000,
+  exceed_min = 10,
+  thresh_step = 1,
+  gof_alpha = gof_alpha,
+  shape_var_window = shape_var_window,
+  seed = 1
+)
+
+saveRDS(sim_ex, path_target("log_normal_gpd_down_jump_sim_ex.rds"))
+saveRDS(res_ex, path_target("log_normal_gpd_down_jump_res_ex.rds"))
+```
+
+```{r}
+sim_ex <- readRDS(path_target("log_normal_gpd_down_jump_sim_ex.rds"))
+res_ex <- readRDS(path_target("log_normal_gpd_down_jump_res_ex.rds"))
+```
+
+```{r sim_single_log_normal_gpd_hist_ADp_all, fig.width=10, fig.height=5.5, dpi=200}
+p_hist_lnorm <- plot_sample_histogram(sim_ex, bins = 60) +
+  coord_cartesian(xlim = c(0, 10)) +
+  ggtitle(expression("(b) Log-Normal-GPD (" * k[0] == 1000 * ")"))
+
+p_adp_lnorm <- plot_ad_pvalues_all_methods(
+  res = res_ex,
+  true_u = sim_ex$true_u,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  triangle_dist = 0.1
+) +
+  coord_cartesian(xlim = c(0, 10), ylim = c(0,1))
+
+p_lnorm <- p_hist_lnorm / p_adp_lnorm
+p_lnorm
+```
+
+### Gamma-GPD
+
+As third model, we consider the Gamma distribution for the bulk, which might also be a good representation of permutation distributions. 
+
+```{r, eval=FALSE}
+set.seed(seed_global)
+
+sim_ex <- simulate_perm_stats(
+  n = 1000,
+  scenario = "gamma_gpd",
+  bulk = 0.8,
+  gshape = 1.2,
+  gscale = 0.6,
+  xi = -0.2,
+  sigma = 1.3
+)
+
+res_ex <- compute_threshold_diagnostics(
+  perm_stats = sim_ex$x,
+  exceed0 = 1000,
+  exceed_min = 10,
+  thresh_step = 1,
+  gof_alpha = gof_alpha,
+  shape_var_window = shape_var_window,
+  seed = 1
+)
+
+saveRDS(sim_ex, path_target("gamma_gpd_down_jump_sim_ex.rds"))
+saveRDS(res_ex, path_target("gamma_gpd_down_jump_res_ex.rds"))
+```
+
+```{r}
+sim_ex <- readRDS(path_target("gamma_gpd_down_jump_sim_ex.rds"))
+res_ex <- readRDS(path_target("gamma_gpd_down_jump_res_ex.rds"))
+```
+
+```{r sim_single_gamma_gpd_hist_ADp_all, fig.width=10, fig.height=5.5, dpi=200}
+p_hist_gamma <- plot_sample_histogram(sim_ex, bins = 60) +
+  coord_cartesian(xlim = c(0, 5.2)) +
+  ggtitle(expression("(c) Gamma-GPD (" * k[0] == 1000 * ")"))
+
+p_adp_gamma <- plot_ad_pvalues_all_methods(
+  res = res_ex,
+  true_u = sim_ex$true_u,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  triangle_dist = 0.1
+) +
+  coord_cartesian(xlim = c(0, 5.2), ylim = c(0,1))
+
+p_gamma <- p_hist_gamma / p_adp_gamma
+p_gamma
+```
+
+### Gamma-GPD - 250 exceedances
+
+In reality, one would not fit the GPD to the whole distribution, but only to the tail, which is represented here.
+
+```{r, eval=FALSE}
+set.seed(seed_global)
+
+sim_ex <- simulate_perm_stats(
+  n = 1000,
+  scenario = "gamma_gpd",
+  bulk = 0.8,
+  gshape = 1.2,
+  gscale = 0.6,
+  xi = -0.2,
+  sigma = 1.3
+)
+
+res_ex <- compute_threshold_diagnostics(
+  perm_stats = sim_ex$x,
+  exceed0 = 250,
+  exceed_min = 10,
+  thresh_step = 1,
+  gof_alpha = gof_alpha,
+  shape_var_window = shape_var_window,
+  seed = 1
+)
+
+saveRDS(sim_ex, path_target("gamma_gpd_down_jump_sim_ex_250.rds"))
+saveRDS(res_ex, path_target("gamma_gpd_down_jump_res_ex_250.rds"))
+```
+
+```{r}
+sim_ex <- readRDS(path_target("gamma_gpd_down_jump_sim_ex_250.rds"))
+res_ex <- readRDS(path_target("gamma_gpd_down_jump_res_ex_250.rds"))
+```
+
+```{r sim_single_gamma_gpd_250_hist_ADp_all, fig.width=10, fig.height=5.5, dpi=200}
+p_hist_gamma250 <- plot_sample_histogram(sim_ex, bins = 60) +
+  coord_cartesian(xlim = c(0, 5.2)) +
+  ggtitle(expression("(d) Gamma-GPD (" * k[0] == 250 * ")"))
+
+p_adp_gamma250 <- plot_ad_pvalues_all_methods(
+  res = res_ex,
+  true_u = sim_ex$true_u,
+  method_labels = method_labels,
+  okabe_ito = okabe_ito,
+  triangle_dist = 0.1
+) +
+  coord_cartesian(xlim = c(0, 5.2), ylim = c(0,1))
+
+p_gamma250 <- p_hist_gamma250 / p_adp_gamma250
+p_gamma250
+```
+
+### Combined plot (four panels)
+
+```{r sim_single_combined_four_panels, fig.width=10, fig.height=8, dpi=200}
+((p_weib | p_lnorm) /
+  (p_gamma | p_gamma250)) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+## Simulation study
+
+While the previous section focused on single illustrative samples, the following simulation study provides a more systematic assessment. For each scenario and each choice of starting exceedances, 100 independent data sets are generated. The threshold methods are then applied repeatedly, and the selected thresholds are compared with the known true threshold. This repeated-sampling perspective allows systematic bias and variability to be distinguished from one-off behavior in individual examples.
+
+```{r sim-study-packages}
+library(future)
+library(furrr)
+library(progressr)
+library(fs)
+```
+
+### Simulation settings
+
+The simulation design crosses five distributional settings with two choices of the starting number of exceedances, resulting in ten scenario configurations. The selected settings were chosen to represent both favorable and challenging threshold problems while keeping the simulation study manageable.
+
+```{r sim-study-settings}
+n_sim_reps <- 1000
+cores <- 9
+
+sim_settings <- tribble(
+  ~setting_id,      ~scenario,            ~bulk, ~xi,   ~sigma, ~wshape, ~wscale, ~gshape, ~gscale, ~lnmean, ~lnsd,
+  "weibull_down",   "smooth_weibull_gpd", 0.8,  -0.2,  1.8,    1.2,     1.0,     NA,      NA,      NA,      NA,
+  "lognormal_down", "lognormal_gpd",      0.8,  -0.2,  2.5,    NA,      NA,      NA,      NA,      0,       0.8,
+  "gamma_down",     "gamma_gpd",          0.8,  -0.2,  1.3,    NA,      NA,      1.2,     0.6,     NA,      NA
+)
+
+sim_grid <- tidyr::crossing(
+  sim_settings,
+  exceed0 = c(1000L, 250L),
+  stepsize = c(1, 10),
+) %>%
+  mutate(
+    exceed0_label = factor(
+      paste0("exceed0 = ", exceed0),
+      levels = c("exceed0 = 1000", "exceed0 = 250")
+    ),
+    stepsize_label = factor(
+      paste0("stepsize = ", stepsize),
+      levels = c("stepsize = 1", "stepsize = 10")
+    )
+  )
+
+sim_grid
+```
+
+### Helper functions
+
+The helper functions in this section execute a single simulation replicate and aggregate multiple replicates for a fixed setting. For each repetition, the script stores the selected threshold, the corresponding number of exceedances, the true threshold, and summary measures of estimation error. These quantities form the basis of the later numerical and graphical comparisons.
+
+```{r sim-study-helper-functions, echo=TRUE}
+run_one_threshold_rep <- function(
+    rep_id,
+    setting_row,
+    n = 1000L,
+    exceed_min = 10L,
+    gof_alpha = 0.05,
+    gof_test = "ad",
+    fit_method = "lme",
+    shape_var_window = 7L,
+    seed_global = 123456
+) {
+  seed_rep <- seed_global + 
+    10000L * match(setting_row$setting_id, unique(sim_grid$setting_id)) +
+    1000L * as.integer(setting_row$exceed0) + rep_id
+  set.seed(seed_rep)
+  
+  sim_obj <- simulate_perm_stats(
+    n = n,
+    scenario = setting_row$scenario,
+    bulk = setting_row$bulk,
+    xi = setting_row$xi,
+    sigma = setting_row$sigma,
+    epsilon = NA,
+    wshape = setting_row$wshape,
+    wscale = setting_row$wscale,
+    nmean = NA,
+    nsd = NA,
+    gshape = setting_row$gshape,
+    gscale = setting_row$gscale,
+    lnmean = setting_row$lnmean,
+    lnsd = setting_row$lnsd
+  )
+
+  res <- compute_threshold_diagnostics(
+    perm_stats = sim_obj$x,
+    exceed0 = setting_row$exceed0,
+    exceed_min = exceed_min,
+    thresh_step = setting_row$stepsize,
+    gof_alpha = gof_alpha,
+    gof_test = gof_test,
+    fit_method = fit_method,
+    shape_var_window = shape_var_window,
+    seed = seed_rep
+  )
+  
+  res$selected %>%
+    transmute(
+      rep = rep_id,
+      method,
+      est_thresh = thresh,
+      est_n_exceed = n_exceed,
+      true_u = sim_obj$true_u,
+      diff_est_minus_true = est_thresh - true_u,
+      abs_diff = abs(diff_est_minus_true)
+    )
+}
+
+run_one_setting <- function(
+    setting_row,
+    n_reps = 100L,
+    n = 1000L,
+    exceed_min = 10L,
+    gof_alpha = 0.05,
+    gof_test = "ad",
+    fit_method = "lme",
+    shape_var_window = 7L,
+    seed_global = 123456
+) {
+  purrr::map_dfr(
+    seq_len(n_reps),
+    run_one_threshold_rep,
+    setting_row = setting_row,
+    n = n,
+    exceed_min = exceed_min,
+    gof_alpha = gof_alpha,
+    gof_test = gof_test,
+    fit_method = fit_method,
+    shape_var_window = shape_var_window,
+    seed_global = seed_global
+  )
+}
+```
+
+```{r sim-study-directories}
+path_sim <- path_target("simulation_thresholds")
+dir_create(path_sim)
+```
+
+### Run simulation study
+
+```{r sim-study-run, eval=FALSE, echo=TRUE}
+handlers("txtprogressbar")
+plan(multisession, workers = cores)
+
+with_progress({
+  p <- progressor(steps = nrow(sim_grid))
+
+  furrr::future_walk(
+    split(sim_grid, seq_len(nrow(sim_grid))),
+    function(row) {
+      
+      row <- as_tibble(row)
+
+      f_out <- path(
+        path_sim,
+        paste0(row$setting_id, "_exceed0_", row$exceed0, "_step", row$stepsize, ".rds")
+      )
+
+      if (!file_exists(f_out)) {
+        res_setting <- run_one_setting(
+          setting_row = row,
+          n_reps = n_sim_reps,
+          n = 1000L,
+          exceed_min = 10L,
+          gof_alpha = gof_alpha,
+          gof_test = gof_test,
+          fit_method = fit_method,
+          shape_var_window = shape_var_window,
+          seed_global = seed_global
+        )
+        saveRDS(res_setting, f_out)
+      }
+
+      p()
+    },
+    .options = furrr::furrr_options(seed = TRUE)
+  )
+})
+
+plan(sequential)
+```
+
+
+```{r sim-study-read}
+# Read simulation results
+
+sim_res <- sim_grid %>%
+  #filter(exceed0 == 250) %>%
+  mutate(
+    file = path(path_sim, paste0(setting_id, "_exceed0_", exceed0, "_step", stepsize, ".rds"))
+  ) %>%
+  mutate(data = purrr::map(file, readRDS)) %>%
+  dplyr::select(-file) %>%
+  tidyr::unnest(data) %>%
+  mutate(
+    method = factor(method, levels = threshold_methods),
+    method_label = factor(
+      unname(method_labels[as.character(method)]),
+      levels = unname(method_labels[threshold_methods])
+    ),
+    exceed0_label = factor(
+      paste0("exceed0 = ", exceed0),
+      levels = c("exceed0 = 1000", "exceed0 = 250")
+    ),
+    stepsize_label = factor(
+      paste0("stepsize = ", stepsize),
+      levels = c("stepsize = 1", "stepsize = 10")
+    ),
+    setting_label = factor(
+      setting_id,
+      levels = sim_settings$setting_id,
+      labels = c(
+        "Weibull-GPD",
+        "Log-normal-GPD",
+        "Gamma-GPD"
+      )
+    )
+  )
+
+head(sim_res)
+```
+
+### Quick numerical summary
+
+As a first overview, the simulation results are summarized numerically by setting, starting exceedance level, and method. The reported quantities include the number of successful threshold selections, the median and mean signed threshold error, and the median absolute error.
+
+```{r sim-study-summary}
+sim_summary <- sim_res %>%
+  group_by(setting_label, exceed0_label, stepsize_label, method_label) %>%
+  summarise(
+    n_ok = sum(!is.na(est_thresh)),
+    median_diff = median(diff_est_minus_true, na.rm = TRUE),
+    mean_diff = mean(diff_est_minus_true, na.rm = TRUE),
+    median_abs_diff = median(abs_diff, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+sim_summary
+```
+
+### Boxplots of estimated minus true threshold
+
+The main graphical summary of the simulation study is based on the signed error $\hat{u} - u_{\mathrm{true}}$. Positive values indicate that the selected threshold is too high, whereas negative values correspond to underestimation. The boxplots and jittered points therefore show both systematic bias and the variability of each method across repetitions.
+
+```{r}
+plot_thresh_diff_jitter_box <- function(
+    sim_res,
+    setting_id,
+    method_labels = method_labels,
+    okabe_ito = okabe_ito
+) {
+  stopifnot(setting_id %in% unique(sim_res$setting_id))
+  
+  dodge_width <- 0.75
+  jitter_width <- 0.12
+  
+  df_plot <- sim_res %>%
+    dplyr::filter(setting_id == !!setting_id)
+  
+  setting_title <- unique(df_plot$setting_label)
+  
+  ggplot(mapping = aes(x = stepsize_label)) +
+    geom_hline(
+      yintercept = 0,
+      linetype = 2,
+      linewidth = 0.6,
+      color = "grey40"
+    ) +
+    geom_point(
+      data = df_plot,
+      aes(
+        y = diff_est_minus_true,
+        color = method_label,
+        group = interaction(method_label, stepsize_label)
+      ),
+      size = 1.5,
+      alpha = 0.85,
+      position = position_jitterdodge(
+        jitter.width = jitter_width,
+        jitter.height = 0,
+        dodge.width = dodge_width
+      )
+    ) +
+    geom_boxplot(
+      data = df_plot,
+      aes(
+        y = diff_est_minus_true,
+        group = interaction(method_label, stepsize_label)
+      ),
+      fill = NA,
+      color = "black",
+      width = 0.65,
+      outlier.shape = NA,
+      linewidth = 0.7,
+      position = position_dodge(width = dodge_width),
+      show.legend = FALSE
+    ) +
+    facet_wrap(~ exceed0_label) +
+    scale_color_manual(
+      values = unname(okabe_ito[threshold_methods]),
+      breaks = unname(method_labels[threshold_methods]),
+      name = "Method",
+      guide = guide_legend(
+        nrow = 1,
+        byrow = TRUE,
+        override.aes = list(size = 3)
+      )
+    ) +
+    labs(
+      title = setting_title,
+      x = NULL,
+      y = expression(hat(u) - u[true])
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(size = 15),
+      axis.text.y = element_text(size = 15),
+      axis.title = element_text(size = 16),
+      plot.title = element_text(size = 14, face = "bold"),
+      strip.text = element_text(size = 14, face = "bold"),
+      legend.title = element_text(size = 16, face = "bold"),
+      legend.text = element_text(size = 16),
+      legend.position = "bottom"
+    )
+}
+```
+
+```{r sim_rep_jitter_box_gen_plots}
+plot_list_settings <- purrr::map(
+  sim_settings$setting_id,
+  ~ plot_thresh_diff_jitter_box(sim_res, .x,
+                              okabe_ito = okabe_ito, 
+                              method_labels = method_labels)
+)
+
+names(plot_list_settings) <- sim_settings$setting_id
+```
+
+```{r sim_rep_jitter_box_weib_down, fig.width=10, fig.height=5, dpi=200}
+plot_list_settings$weibull_down
+```
+
+```{r sim_rep_jitter_box_lnorm_down, fig.width=10, fig.height=5, dpi=200}
+plot_list_settings$lognormal_down
+```
+
+```{r sim_rep_jitter_box_gamma_down, fig.width=10, fig.height=5, dpi=200}
+plot_list_settings$gamma_down
+```
+
+### Boxplots for selected settings
+
+Since the smooth Weibull-GPD and upward-jump Weibull-GPD settings show uniformly weak performance for `exceed0 = 1000`, the final comparison focuses on the remaining three settings, where the methods exhibit better performance in estimating the true threshold.
+
+```{r}
+# Filter settings
+sim_res_filt <- sim_res %>%
+  dplyr::filter(setting_id %in% c("weibull_down", 
+                                  "lognormal_down",
+                                  "gamma_down")) %>%
+  mutate(setting_label = case_when(
+    setting_label == "Weibull-GPD downward jump" ~ "Weibull-GPD",
+    TRUE ~ setting_label
+  ))
+
+sim_settings_filt <- sim_settings %>%
+  filter(setting_id %in% c("weibull_down", 
+                                  "lognormal_down",
+                                  "gamma_down"))
+```
+
+
+```{r}
+plot_thresh_diff_jitter_box <- function(
+    sim_res,
+    setting_id,
+    exceed0,
+    stepsize,
+    method_labels = method_labels,
+    okabe_ito = okabe_ito,
+    ylim = NULL
+) {
+  stopifnot(setting_id %in% unique(sim_res$setting_id))
+  stopifnot(exceed0 %in% unique(sim_res$exceed0))
+  stopifnot(stepsize %in% unique(sim_res$stepsize))
+  
+  jitter_width <- 0.12
+  
+  df_plot <- sim_res %>%
+    dplyr::filter(
+      setting_id == !!setting_id,
+      exceed0 == !!exceed0,
+      stepsize == !!stepsize,
+    ) %>%
+    dplyr::mutate(
+      method = factor(method, levels = threshold_methods),
+      method_label = factor(
+        method_label,
+        levels = unname(method_labels[threshold_methods])
+      )
+    )
+  
+  setting_title <- unique(df_plot$setting_label)
+  
+  p <- ggplot(df_plot, aes(x = method_label, y = diff_est_minus_true)) +
+    geom_hline(
+      yintercept = 0,
+      linetype = 2,
+      linewidth = 0.6,
+      color = "grey40"
+    ) +
+    geom_point(
+      aes(color = method_label),
+      size = 1,
+      alpha = 0.85,
+      position = position_jitter(width = jitter_width, height = 0)
+    ) +
+    geom_boxplot(
+      aes(group = method_label),
+      fill = NA,
+      color = "black",
+      width = 0.65,
+      outlier.shape = NA,
+      linewidth = 0.7,
+      show.legend = FALSE
+    ) +
+    scale_color_manual(
+      values = unname(okabe_ito[threshold_methods]),
+      breaks = unname(method_labels[threshold_methods]),
+      name = "Method:",
+      guide = guide_legend(
+        nrow = 1,
+        byrow = TRUE,
+        override.aes = list(size = 3.5)
+      )
+    ) +
+    labs(
+      title = paste0(setting_title),
+      x = NULL,
+      y = expression(hat(u) - u[true])
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(size = 15, angle = 45, hjust = 1),
+      axis.text.y = element_text(size = 16),
+      axis.title = element_text(size = 16),
+      plot.title = element_text(size = 16, face = "bold"),
+      legend.title = element_text(size = 16, face = "bold"),
+      legend.text = element_text(size = 16),
+      legend.position = "bottom"
+    )
+  
+  if (!is.null(ylim)) {
+    p <- p + coord_cartesian(ylim = ylim)
+  }
+  
+  p
+}
+```
+
+#### exceed0 = 1000, step size = 1
+
+The following figure compares the three retained settings when the candidate threshold grid starts at 1000 exceedances. This corresponds to the broadest threshold search range considered in the simulation study.
+
+The step size is 1 here, which means that in the candidate range all thresholds are considered.
+
+```{r}
+y_limits <- sim_res_filt %>%
+  dplyr::filter(exceed0 == 1000) %>%
+  pull(diff_est_minus_true) %>%
+  range(na.rm = TRUE)
+
+plot_list_1000 <- purrr::map(
+  sim_settings_filt$setting_id,
+  ~ plot_thresh_diff_jitter_box(sim_res_filt, 
+                                setting_id = .x, 
+                                exceed0 = 1000,
+                                stepsize = 1,
+                                okabe_ito = okabe_ito, 
+                                method_labels = method_labels,
+                                ylim = y_limits)
+)
+names(plot_list_1000) <- sim_settings_filt$setting_id
+```
+
+```{r sim_rep_jitter_box_all_exc1000_step1, fig.width=10, fig.height=4, dpi=200}
+(plot_list_1000$weibull_down | 
+  plot_list_1000$lognormal_down | 
+  plot_list_1000$gamma_down) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+#### exceed0 = 1000, step size = 10
+
+The following figure compares the three retained settings when the candidate threshold grid starts at 1000 exceedances. This corresponds to the broadest threshold search range considered in the simulation study.
+
+The step size is 10 here, which means that in the candidate range only every 10th threshold is considered.
+
+```{r}
+y_limits <- sim_res_filt %>%
+  dplyr::filter(exceed0 == 1000) %>%
+  pull(diff_est_minus_true) %>%
+  range(na.rm = TRUE)
+
+plot_list_1000 <- purrr::map(
+  sim_settings_filt$setting_id,
+  ~ plot_thresh_diff_jitter_box(sim_res_filt, 
+                                setting_id = .x, 
+                                exceed0 = 1000,
+                                stepsize = 10,
+                                okabe_ito = okabe_ito, 
+                                method_labels = method_labels,
+                                ylim = y_limits)
+)
+names(plot_list_1000) <- sim_settings_filt$setting_id
+```
+
+```{r sim_rep_jitter_box_all_exc1000_step10, fig.width=10, fig.height=4, dpi=200}
+(plot_list_1000$weibull_down | 
+  plot_list_1000$lognormal_down | 
+  plot_list_1000$gamma_down) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+#### exceed0 = 250, step size = 1
+
+The next figure shows the same comparison when the candidate threshold grid starts at 250 exceedances, which is more realistic.
+
+The step size is 1 here, which means that in the candidate range all thresholds are considered.
+
+```{r}
+y_limits <- sim_res_filt %>%
+  dplyr::filter(exceed0 == 250) %>%
+  pull(diff_est_minus_true) %>%
+  range(na.rm = TRUE)
+
+plot_list_250 <- purrr::map(
+  sim_settings_filt$setting_id,
+  ~ plot_thresh_diff_jitter_box(sim_res_filt, 
+                                setting_id = .x, 
+                                exceed0 = 250,
+                                stepsize = 1,
+                                okabe_ito = okabe_ito, 
+                                method_labels = method_labels,
+                                ylim = y_limits)
+)
+names(plot_list_250) <- sim_settings_filt$setting_id
+```
+
+```{r sim_rep_jitter_box_all_exc250_step1, fig.width=10, fig.height=4, dpi=200}
+(plot_list_250$weibull_down | 
+  plot_list_250$lognormal_down | 
+  plot_list_250$gamma_down) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+#### exceed0 = 250, step size = 10
+
+The next figure shows the same comparison when the candidate threshold grid starts at 250 exceedances, which is more realistic.
+
+The step size is 10 here, which means that in the candidate range only every 10th threshold is considered.
+
+```{r}
+y_limits <- sim_res_filt %>%
+  dplyr::filter(exceed0 == 250) %>%
+  pull(diff_est_minus_true) %>%
+  range(na.rm = TRUE)
+
+plot_list_250 <- purrr::map(
+  sim_settings_filt$setting_id,
+  ~ plot_thresh_diff_jitter_box(sim_res_filt, 
+                                setting_id = .x, 
+                                exceed0 = 250,
+                                stepsize = 10,
+                                okabe_ito = okabe_ito, 
+                                method_labels = method_labels,
+                                ylim = y_limits)
+)
+names(plot_list_250) <- sim_settings_filt$setting_id
+```
+
+```{r sim_rep_jitter_box_all_exc250_step10, fig.width=10, fig.height=4, dpi=200}
+(plot_list_250$weibull_down | 
+  plot_list_250$lognormal_down | 
+  plot_list_250$gamma_down) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
