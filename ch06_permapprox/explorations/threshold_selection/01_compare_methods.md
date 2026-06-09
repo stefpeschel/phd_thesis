@@ -1,6 +1,10 @@
 compare_methods
 ================
-Compiled at 2026-03-22 16:06:23 UTC
+Compiled at 2026-06-10 10:34:05 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "4892c382-867a-4ad7-8c98-22c28d1dae81")
+```
 
 # Overview
 
@@ -726,20 +730,20 @@ favorable and challenging threshold problems while keeping the
 simulation study manageable.
 
     ## # A tibble: 12 × 15
-    ##    setting_id     scenario            bulk    xi sigma wshape wscale gshape gscale lnmean  lnsd exceed0 stepsize exceed0_label  stepsize_label
-    ##    <chr>          <chr>              <dbl> <dbl> <dbl>  <dbl>  <dbl>  <dbl>  <dbl>  <dbl> <dbl>   <int>    <dbl> <fct>          <fct>         
-    ##  1 gamma_down     gamma_gpd            0.8  -0.2   1.3   NA       NA    1.2    0.6     NA  NA       250        1 exceed0 = 250  stepsize = 1  
-    ##  2 gamma_down     gamma_gpd            0.8  -0.2   1.3   NA       NA    1.2    0.6     NA  NA       250       10 exceed0 = 250  stepsize = 10 
-    ##  3 gamma_down     gamma_gpd            0.8  -0.2   1.3   NA       NA    1.2    0.6     NA  NA      1000        1 exceed0 = 1000 stepsize = 1  
-    ##  4 gamma_down     gamma_gpd            0.8  -0.2   1.3   NA       NA    1.2    0.6     NA  NA      1000       10 exceed0 = 1000 stepsize = 10 
-    ##  5 lognormal_down lognormal_gpd        0.8  -0.2   2.5   NA       NA   NA     NA        0   0.8     250        1 exceed0 = 250  stepsize = 1  
-    ##  6 lognormal_down lognormal_gpd        0.8  -0.2   2.5   NA       NA   NA     NA        0   0.8     250       10 exceed0 = 250  stepsize = 10 
-    ##  7 lognormal_down lognormal_gpd        0.8  -0.2   2.5   NA       NA   NA     NA        0   0.8    1000        1 exceed0 = 1000 stepsize = 1  
-    ##  8 lognormal_down lognormal_gpd        0.8  -0.2   2.5   NA       NA   NA     NA        0   0.8    1000       10 exceed0 = 1000 stepsize = 10 
-    ##  9 weibull_down   smooth_weibull_gpd   0.8  -0.2   1.8    1.2      1   NA     NA       NA  NA       250        1 exceed0 = 250  stepsize = 1  
-    ## 10 weibull_down   smooth_weibull_gpd   0.8  -0.2   1.8    1.2      1   NA     NA       NA  NA       250       10 exceed0 = 250  stepsize = 10 
-    ## 11 weibull_down   smooth_weibull_gpd   0.8  -0.2   1.8    1.2      1   NA     NA       NA  NA      1000        1 exceed0 = 1000 stepsize = 1  
-    ## 12 weibull_down   smooth_weibull_gpd   0.8  -0.2   1.8    1.2      1   NA     NA       NA  NA      1000       10 exceed0 = 1000 stepsize = 10
+    ##    setting_id   scenario  bulk    xi sigma wshape wscale gshape gscale lnmean  lnsd exceed0 stepsize exceed0_label stepsize_label
+    ##    <chr>        <chr>    <dbl> <dbl> <dbl>  <dbl>  <dbl>  <dbl>  <dbl>  <dbl> <dbl>   <int>    <dbl> <fct>         <fct>         
+    ##  1 gamma_down   gamma_g…   0.8  -0.2   1.3   NA       NA    1.2    0.6     NA  NA       250        1 exceed0 = 250 stepsize = 1  
+    ##  2 gamma_down   gamma_g…   0.8  -0.2   1.3   NA       NA    1.2    0.6     NA  NA       250       10 exceed0 = 250 stepsize = 10 
+    ##  3 gamma_down   gamma_g…   0.8  -0.2   1.3   NA       NA    1.2    0.6     NA  NA      1000        1 exceed0 = 10… stepsize = 1  
+    ##  4 gamma_down   gamma_g…   0.8  -0.2   1.3   NA       NA    1.2    0.6     NA  NA      1000       10 exceed0 = 10… stepsize = 10 
+    ##  5 lognormal_d… lognorm…   0.8  -0.2   2.5   NA       NA   NA     NA        0   0.8     250        1 exceed0 = 250 stepsize = 1  
+    ##  6 lognormal_d… lognorm…   0.8  -0.2   2.5   NA       NA   NA     NA        0   0.8     250       10 exceed0 = 250 stepsize = 10 
+    ##  7 lognormal_d… lognorm…   0.8  -0.2   2.5   NA       NA   NA     NA        0   0.8    1000        1 exceed0 = 10… stepsize = 1  
+    ##  8 lognormal_d… lognorm…   0.8  -0.2   2.5   NA       NA   NA     NA        0   0.8    1000       10 exceed0 = 10… stepsize = 10 
+    ##  9 weibull_down smooth_…   0.8  -0.2   1.8    1.2      1   NA     NA       NA  NA       250        1 exceed0 = 250 stepsize = 1  
+    ## 10 weibull_down smooth_…   0.8  -0.2   1.8    1.2      1   NA     NA       NA  NA       250       10 exceed0 = 250 stepsize = 10 
+    ## 11 weibull_down smooth_…   0.8  -0.2   1.8    1.2      1   NA     NA       NA  NA      1000        1 exceed0 = 10… stepsize = 1  
+    ## 12 weibull_down smooth_…   0.8  -0.2   1.8    1.2      1   NA     NA       NA  NA      1000       10 exceed0 = 10… stepsize = 10
 
 ### Helper functions
 
@@ -879,16 +883,16 @@ plan(sequential)
 ```
 
     ## # A tibble: 6 × 24
-    ##   setting_id scenario   bulk    xi sigma wshape wscale gshape gscale lnmean  lnsd exceed0 stepsize exceed0_label stepsize_label   rep method   
-    ##   <chr>      <chr>     <dbl> <dbl> <dbl>  <dbl>  <dbl>  <dbl>  <dbl>  <dbl> <dbl>   <int>    <dbl> <fct>         <fct>          <int> <fct>    
-    ## 1 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1       1 ftr      
-    ## 2 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1       1 fwd_stop 
-    ## 3 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1       1 rob_ftr  
-    ## 4 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1       1 gof_cp   
-    ## 5 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1       1 rpc      
-    ## 6 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1       1 shape_var
-    ## # ℹ 7 more variables: est_thresh <dbl>, est_n_exceed <int>, true_u <dbl>, diff_est_minus_true <dbl>, abs_diff <dbl>, method_label <fct>,
-    ## #   setting_label <fct>
+    ##   setting_id scenario   bulk    xi sigma wshape wscale gshape gscale lnmean  lnsd exceed0 stepsize exceed0_label stepsize_label
+    ##   <chr>      <chr>     <dbl> <dbl> <dbl>  <dbl>  <dbl>  <dbl>  <dbl>  <dbl> <dbl>   <int>    <dbl> <fct>         <fct>         
+    ## 1 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1  
+    ## 2 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1  
+    ## 3 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1  
+    ## 4 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1  
+    ## 5 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1  
+    ## 6 gamma_down gamma_gpd   0.8  -0.2   1.3     NA     NA    1.2    0.6     NA    NA     250        1 exceed0 = 250 stepsize = 1  
+    ## # ℹ 9 more variables: rep <int>, method <fct>, est_thresh <dbl>, est_n_exceed <int>, true_u <dbl>, diff_est_minus_true <dbl>,
+    ## #   abs_diff <dbl>, method_label <fct>, setting_label <fct>
 
 ### Quick numerical summary
 

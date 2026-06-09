@@ -1,7 +1,7 @@
 Accuracy and error-rate study - Unconstrained vs. constrained (fact,
 SLLS)
 ================
-Compiled at 2026-02-02 19:25:32 UTC
+Compiled at 2026-06-10 10:54:22 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "7146734b-7152-4fe6-a555-ed990432b2bd")
@@ -2588,5 +2588,5 @@ These files have been written to the target directory,
     ## # A tibble: 2 × 4
     ##   path        type             size modification_time  
     ##   <fs::path>  <fct>     <fs::bytes> <dttm>             
-    ## 1 acc_results directory           0 2025-12-18 14:08:34
-    ## 2 err_results directory           0 2025-12-18 14:08:35
+    ## 1 acc_results directory           0 2026-03-17 13:46:30
+    ## 2 err_results directory           0 2026-03-17 13:46:30

@@ -1,6 +1,6 @@
 Generate Gaussian data for permutation-based p-value simulations
 ================
-Compiled at 2026-02-02 19:25:30 UTC
+Compiled at 2026-06-10 10:54:18 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "5bde0cc7-05ce-483d-944a-feac8192384e")
@@ -61,5 +61,5 @@ multiple n_perm & pi1.
     ## # A tibble: 2 × 4
     ##   path              type             size modification_time  
     ##   <fs::path>        <fct>     <fs::bytes> <dttm>             
-    ## 1 sim_accuracy_data directory           0 2025-12-18 14:01:59
-    ## 2 sim_error_data    directory           0 2025-12-18 14:08:21
+    ## 1 sim_accuracy_data directory           0 2026-03-17 13:39:57
+    ## 2 sim_error_data    directory           0 2026-03-17 13:46:17

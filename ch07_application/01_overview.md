@@ -1,6 +1,10 @@
 Data overview
 ================
-Compiled at 2026-06-08 14:25:54 UTC
+Compiled at 2026-06-10 12:15:31 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "939f7706-3574-435a-aaeb-5ae9ac700dc9")
+```
 
 ## Load data
 
@@ -417,4 +421,4 @@ These files have been written to the target directory,
     ## # A tibble: 1 × 4
     ##   path                           type         size modification_time  
     ##   <fs::path>                     <fct> <fs::bytes> <dttm>             
-    ## 1 tbl_sample_characteristics.tex file        1.26K 2026-06-08 14:25:56
+    ## 1 tbl_sample_characteristics.tex file        1.26K 2026-06-10 12:15:34

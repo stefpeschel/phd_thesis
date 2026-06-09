@@ -1,6 +1,10 @@
 Two-sample t-test - Find a proper epsilon rule
 ================
-Compiled at 2026-03-08 13:21:12 UTC
+Compiled at 2026-06-10 10:13:46 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "33fc44d3-dfcd-4437-8007-bd720e59a7e7")
+```
 
 In **permApprox**, permutation $p$-values are obtained by fitting a GPD
 to the tail of permutation test statistics. When the fitted shape is
@@ -8,9 +12,7 @@ negative ($\hat\xi<0$), the GPD has a finite upper support. To **avoid
 zero or overly small $p$-values**, we impose the constraint that the
 **evaluation point** lies inside the support by requiring
 
-$$
-t_{\text{obs}}+\varepsilon \;<\; s_{\text{GPD}},
-$$
+$$t_{\text{obs}}+\varepsilon \;<\; s_{\text{GPD}},$$
 
 where $\varepsilon>0$ is a small, data-dependent buffer.
 
@@ -37,10 +39,8 @@ The parameters are set as follows:
 
 The observed $t$-statistic is calculated as
 
-$$
-t_{\text{obs}} = \frac{\bar{x}_1 - \bar{x}_2}
-{\sqrt{\frac{s_1^2 + s_2^2}{n}}}
-$$
+$$t_{\text{obs}} = \frac{\bar{x}_1 - \bar{x}_2}
+{\sqrt{\frac{s_1^2 + s_2^2}{n}}}$$
 
 where  
 - $\bar{x}_1$ and $\bar{x}_2$ are the sample means,  
@@ -72,13 +72,13 @@ For comparison, we again start with the unconstrained fit.
 
     ## Rows: 6,000
     ## Columns: 7
-    ## $ idx         <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, …
-    ## $ n_per_group <dbl> 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,…
-    ## $ effect_size <fct> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,…
-    ## $ obs_stats   <dbl> 0.129255525, 1.418815748, 2.541184859, 0.469398919, 1.329776159, 0.286718830, 0.389742604, 0.401101697, 0.728142692, 0.592186661, 1…
-    ## $ p_ttest     <dbl> 0.89742037, 0.15912533, 0.01261645, 0.63982721, 0.18667889, 0.77493292, 0.69757261, 0.68921847, 0.46826251, 0.55508943, 0.26047741,…
-    ## $ gpd_fit     <lgl> FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRU…
-    ## $ p_unconstr  <dbl> 0.894105894, 0.147344092, 0.009766589, 0.636363636, 0.180129932, 0.773226773, 0.697302697, 0.680319680, 0.433566434, 0.533466533, 0…
+    ## $ idx         <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, …
+    ## $ n_per_group <dbl> 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,…
+    ## $ effect_size <fct> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,…
+    ## $ obs_stats   <dbl> 0.129255525, 1.418815748, 2.541184859, 0.469398919, 1.329776159, 0.286718830, 0.389742604, 0.401101697, 0.7…
+    ## $ p_ttest     <dbl> 0.89742037, 0.15912533, 0.01261645, 0.63982721, 0.18667889, 0.77493292, 0.69757261, 0.68921847, 0.46826251,…
+    ## $ gpd_fit     <lgl> FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE,…
+    ## $ p_unconstr  <dbl> 0.894105894, 0.147344092, 0.009766589, 0.636363636, 0.180129932, 0.773226773, 0.697302697, 0.680319680, 0.4…
 
     ## Number of zeros for n = 50: 488
 
@@ -112,9 +112,7 @@ expected as the t-test p-values decrease with increasing sample size.
 This is the simplest **linear-in-$t$** rule. We set epsilon to a fixed
 fraction of the absolute observed statistic:
 
-$$
-\varepsilon = \varepsilon_{fact} * |t_{obs}| \;, \qquad \varepsilon_{fact}=0.1 \, .
-$$
+$$\varepsilon = \varepsilon_{fact} * |t_{obs}| \;, \qquad \varepsilon_{fact}=0.1 \, .$$
 
 Larger $|t_{obs}|$ get a proportionally larger safety margin, while
 small effects remain lightly adjusted. This rule ignores $n$ and the
@@ -182,9 +180,7 @@ conservative for larger sample sizes.
 As the optimal epsilon factor seems to be dependent on the the sample
 size, we define the following epsilon rule:
 
-$$
-\varepsilon = |t_{obs}| \times \frac{C}{n^p}
-$$
+$$\varepsilon = |t_{obs}| \times \frac{C}{n^p}$$
 
 where $C$ is a scaling constant and $p$ controls the rate of decay.
 
@@ -508,9 +504,7 @@ log_sat
 
 This rule makes use of a **scaled logarithmic growth**:
 
-$$
-\varepsilon = \frac{A}{n^2} \cdot \log\!\big( 1 + B \cdot t_{obs} \big)
-$$
+$$\varepsilon = \frac{A}{n^2} \cdot \log\!\big( 1 + B \cdot t_{obs} \big)$$
 
 where $B$ influences the bend position and $A$ the plateau height.
 
@@ -550,9 +544,7 @@ multiple-testing scenarios.
 
 Let $n$ denote the **per-group** sample size in a two-sample test and
 
-$$
-T_{\max} = \max_j \left| T_{\text{obs}}^{(j)} \right|
-$$
+$$T_{\max} = \max_j \left| T_{\text{obs}}^{(j)} \right|$$
 
 be the largest observed test statistic across all tests.
 
@@ -561,11 +553,9 @@ be the largest observed test statistic across all tests.
 We first define the curvature parameter $k$ and the target plateau
 height $E_{\text{target}}$ as
 
-$$
-k = k_{\text{factor}} \cdot \frac{500}{n},  
+$$k = k_{\text{factor}} \cdot \frac{500}{n},  
 \qquad
-E_{\text{target}} = \text{target}_{\text{factor}} \cdot \frac{500}{n}.
-$$
+E_{\text{target}} = \text{target}_{\text{factor}} \cdot \frac{500}{n}.$$
 
 Here:
 
@@ -580,11 +570,9 @@ Here:
 To ensure the curve saturates exactly at $E_{\text{target}}$ when
 $t_{\text{obs}} = T_{\max}$, we define
 
-$$
-B = \frac{k}{T_{\max}},  
+$$B = \frac{k}{T_{\max}},  
 \qquad
-A = \frac{E_{\text{target}}}{\log\!\left(1 + B \, T_{\max}\right)}.
-$$
+A = \frac{E_{\text{target}}}{\log\!\left(1 + B \, T_{\max}\right)}.$$
 
 - $B$ controls **how quickly** the curve bends toward saturation.
 - $A$ rescales the curve so that the maximum value matches
@@ -594,9 +582,7 @@ $$
 
 For any test statistic $t_{\text{obs}}$,
 
-$$
-\varepsilon = \max\!\left[ A \cdot \log\!\big(1 + B \, |t_{\text{obs}}|\big),\ \varepsilon_{\min} \right],
-$$
+$$\varepsilon = \max\!\left[ A \cdot \log\!\big(1 + B \, |t_{\text{obs}}|\big),\ \varepsilon_{\min} \right],$$
 
 where $\varepsilon_{\min}$ is a small constant (e.g., $10^{-6}$)
 preventing extremely small constraint values.
@@ -964,9 +950,7 @@ approximations in this range.
 To address this, we introduce a **lift kernel** $\psi(s)$ applied to
 small statistics, where
 
-$$
-s = \frac{|t_{\text{obs}}|}{T_{\max}} \in [0,1].
-$$
+$$s = \frac{|t_{\text{obs}}|}{T_{\max}} \in [0,1].$$
 
 Here, $s$ is a scale-free index that describes the relative position of
 a test statistic within the reference range up to $T_{max}$, and it
@@ -975,9 +959,7 @@ contribute to $\varepsilon$.
 
 Due to its smootheness, we use the **Wendland $C^2$** kernel:
 
-$$
-\psi_{C^2}(s) = (1 - s)^4 \, (1 + 4s),
-$$
+$$\psi_{C^2}(s) = (1 - s)^4 \, (1 + 4s),$$
 
 which satisfies:
 
@@ -988,11 +970,9 @@ which satisfies:
 
 We then add the lift term to the base rule:
 
-$$
-\varepsilon \;=\; \max\!\left[
+$$\varepsilon \;=\; \max\!\left[
 A \cdot \log\!\big(1 + B \, |t_{\text{obs}}|\big) + \rho_{\text{lift}} \cdot \psi(s),\ \varepsilon_{\min}
-\right],
-$$
+\right],$$
 
 where $\rho_{\text{lift}}$ controls the magnitude of the lift at
 $s = 0$.
@@ -1344,9 +1324,7 @@ slope jumps at the point where it vanishes ($s = 1$).
 
 - **$C^0$** Wendland:
 
-  $$
-  h(s) = (1-s)^2_+
-  $$
+  $$h(s) = (1-s)^2_+$$
 
   Continuous, but the slope has a jump at $s = 1$ (first derivative
   discontinuous). This means the bump will end abruptly in slope when
@@ -1355,9 +1333,7 @@ slope jumps at the point where it vanishes ($s = 1$).
 
 - **$C^2$** Wendland:
 
-  $$
-  h(s) = (1-s)^4 (1 + 4s)
-  $$
+  $$h(s) = (1-s)^4 (1 + 4s)$$
 
   Continuous up to the second derivative — the slope *and* curvature
   vanish smoothly at $s = 1$. This means the bump “fades” into the
@@ -1404,26 +1380,21 @@ can considerably simplify the rule.
 
 Using
 
-$$
-B = \frac{k}{T_{\max}},  
+$$B = \frac{k}{T_{\max}},  
 \qquad
-A = \frac{E_{\text{target}}}{\log\!\left(1 + B \, T_{\max}\right)}.
-$$
+A = \frac{E_{\text{target}}}{\log\!\left(1 + B \, T_{\max}\right)}.$$
 
 the lifted rule
 
-$$
-\varepsilon
+$$\varepsilon
 = \max\!\left[
 A \log\!\big(1 + B\,|t_{\text{obs}}|\big) + \rho_{\text{lift}}\psi(s),\ \varepsilon_{\min}
-\right]
-$$
+\right]$$
 
 reduces algebraically to the **lifted log-saturation in scale-free
 form**
 
-$$
-\boxed{
+$$\boxed{
 \;\varepsilon(t_{\text{obs}})
 = \max\!\left[
 E_{\text{target}}\,
@@ -1432,8 +1403,7 @@ E_{\text{target}}\,
 \;,\ \varepsilon_{\min}
 \right],\quad
 s=\frac{|t_{\text{obs}}|}{T_{\max}}\in[0,1].
-}
-$$
+}$$
 
 Here $k=k_{\text{factor}}\cdot \tfrac{500}{n}$ controls the curvature
 and
@@ -1490,10 +1460,10 @@ anchor the rule at a **cap** ($T_{\text{cap}}$). We allow two choices:
   tuning constant (default ($\alpha=0.5$)). The floor at (1) prevents
   deflation for small ($n$).
 
-We then use the **scale-free index** $$
-s = \frac{|t_{\text{obs}}|}{T_{\text{cap}}}\in[0,1],
-$$ and apply the simplified LLS rule from above (with lift), i.e.,
-replace ($T_{\max}$) by ($T_{\text{cap}}$) wherever ($s$) appears.
+We then use the **scale-free index**
+$$s = \frac{|t_{\text{obs}}|}{T_{\text{cap}}}\in[0,1],$$
+and apply the simplified LLS rule from above (with lift), i.e., replace
+($T_{\max}$) by ($T_{\text{cap}}$) wherever ($s$) appears.
 
 **Practical guidance.** Use `cap_base = "perm"` for **single/few tests**
 or when you want robustness against extreme ($t_{\text{obs}}$). For
@@ -1899,9 +1869,7 @@ scale differences.
 
 We solve this by working on a **standardized $Z$-scale**:
 
-$$
-Z_{\text{obs}}^{(j)} = \frac{|T_{\text{obs}}^{(j)} - \mu_j|}{\sigma_j},
-$$
+$$Z_{\text{obs}}^{(j)} = \frac{|T_{\text{obs}}^{(j)} - \mu_j|}{\sigma_j},$$
 
 where $\mu_j$ and $\sigma_j$ are the mean and SD of the permutation
 distribution for test $j$.
@@ -1909,9 +1877,7 @@ distribution for test $j$.
 The *Lifted Log-Saturation Rule* is applied in $Z$-space, and the result
 is converted back to the original $T$-scale:
 
-$$
-\varepsilon^{(j)} = \sigma_j \cdot \varepsilon_{Z}^{(j)}.
-$$
+$$\varepsilon^{(j)} = \sigma_j \cdot \varepsilon_{Z}^{(j)}.$$
 
 **Why standardization matters**:
 

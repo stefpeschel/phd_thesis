@@ -1,6 +1,6 @@
 Evaluate GPD parameter estimation methods
 ================
-Compiled at 2026-02-02 19:15:02 UTC
+Compiled at 2026-06-10 10:39:23 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "52a6b799-d49a-4efe-9bb8-22bea6c7d463")

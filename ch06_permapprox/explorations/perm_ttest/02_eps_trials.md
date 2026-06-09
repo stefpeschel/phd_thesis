@@ -1,6 +1,10 @@
 Two-sample t-test - Try different epsilon factors
 ================
-Compiled at 2026-02-06 16:39:25 UTC
+Compiled at 2026-06-10 08:44:26 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "8e44924a-ef1f-49be-8525-758bc60311e2")
+```
 
 In **permApprox**, permutation $p$-values are obtained by fitting a GPD
 to the tail of permutation test statistics. When the fitted shape is
@@ -8,9 +12,7 @@ negative ($\hat\xi<0$), the GPD has a finite upper support. To **avoid
 zero or overly small $p$-values**, we impose the constraint that the
 **evaluation point** lies inside the support by requiring
 
-$$
-t_{\text{obs}}+\varepsilon \;<\; s_{\text{GPD}},
-$$
+$$t_{\text{obs}}+\varepsilon \;<\; s_{\text{GPD}},$$
 
 where $\varepsilon>0$ is a small, data-dependent buffer.
 
@@ -39,10 +41,8 @@ The parameters are set as follows:
 
 The observed $t$-statistic is calculated as
 
-$$
-t_{\text{obs}} = \frac{\bar{x}_1 - \bar{x}_2}
-{\sqrt{\frac{s_1^2 + s_2^2}{n}}}
-$$
+$$t_{\text{obs}} = \frac{\bar{x}_1 - \bar{x}_2}
+{\sqrt{\frac{s_1^2 + s_2^2}{n}}}$$
 
 where  
 - $\bar{x}_1$ and $\bar{x}_2$ are the sample means,  

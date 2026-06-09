@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>2-Wasserstein distance calculation</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">2-Wasserstein distance calculation</h1>
+
+
+
+<div id="background" class="section level2">
+<h2>Background</h2>
+<p>The 2-Wasserstein distance <span class="math inline">\(W\)</span> is
+a metric to describe the distance between two distributions,
+representing e.g. two different conditions <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>.</p>
+<p>For continuous distributions, it is given by</p>
+<p><span class="math display">\[W := W(F_A, F_B)
+= \bigg( \int_0^1 \big|F_A^{-1}(u)
+- F_B^{-1}(u) \big|^2 du \bigg)^\frac{1}{2},\]</span></p>
+<p>where <span class="math inline">\(F_A\)</span> and <span class="math inline">\(F_B\)</span> are the corresponding cumulative
+distribution functions (CDFs) and <span class="math inline">\(F_A^{-1}\)</span> and <span class="math inline">\(F_B^{-1}\)</span> the respective quantile
+functions.</p>
+<p>We specifically consider the squared 2-Wasserstein distance <span class="math inline">\(d := W^2\)</span> which offers the following
+decomposition into location, size, and shape terms: <span class="math display">\[d := d(F_A, F_B)
+= \int_0^1 \big|F^{-1}(u) - F^{-1}(u) \big|^2 du
+= \underbrace{\big(\mu_A - \mu_B\big)^2}_{\text{location}}
++ \underbrace{\big(\sigma_A - \sigma_B\big)^2}_{\text{size}}
++ \underbrace{2\sigma_A \sigma_B \big(1 -
+\rho^{A,B}\big)}_{\text{shape}},\]</span></p>
+<p>where <span class="math inline">\(\mu_A\)</span> and <span class="math inline">\(\mu_B\)</span> are the respective means, <span class="math inline">\(\sigma_A\)</span> and <span class="math inline">\(\sigma_B\)</span> are the respective standard
+deviations, and <span class="math inline">\(\rho^{A,B}\)</span> is the
+Pearson correlation of the points in the quantile-quantile plot of <span class="math inline">\(F_A\)</span> and <span class="math inline">\(F_B\)</span>.</p>
+</div>
+<div id="usage-in-two-sample-setting" class="section level2">
+<h2>Usage in two-sample setting</h2>
+<p>In case the distributions <span class="math inline">\(F_A\)</span>
+and <span class="math inline">\(F_B\)</span> are not explicitly given
+and information is only availbale in the form of samples from <span class="math inline">\(F_A\)</span> and <span class="math inline">\(F_B\)</span>, respectively, we use the
+corresponding empirical CDFs <span class="math inline">\(\hat{F}_A\)</span> and <span class="math inline">\(\hat{F}_B\)</span>. Then, the 2-Wasserstein
+distance is computed by</p>
+<p><span class="math display">\[d(\hat{F}_A, \hat{F}_B)
+\approx \frac{1}{K} \sum_{k=1}^K \big(Q_A^{\alpha_k} - Q_B^{\alpha_k}
+\big)
+\approx \big(\hat{\mu}_A - \hat{\mu}_B\big)^2
++  \big(\hat{\sigma}_A - \hat{\sigma}_B\big)^2
++ 2\hat{\sigma}_A \hat{\sigma}_B \big(1 -
+\hat{\rho}^{A,B}\big).\]</span></p>
+<p>Here, <span class="math inline">\(Q_A\)</span> and <span class="math inline">\(Q_B\)</span> denote equidistant quantiles of <span class="math inline">\(F_A\)</span> and <span class="math inline">\(F_B\)</span>, respectively, at the levels <span class="math inline">\(\alpha_k := \frac{k-0.5}{K}, k = 1, \dots ,
+K\)</span>, where we use <span class="math inline">\(K:=1000\)</span> in
+our implementation. Moreover, <span class="math inline">\(\hat{\mu}_A,
+\hat{\mu}_B, \hat{\sigma}_A, \hat{\sigma}_B\)</span> and <span class="math inline">\(\hat{\rho}_{A,B}\)</span> denote the empirical
+versions of the corresponding quantities.</p>
+</div>
+<div id="three-implementations" class="section level2">
+<h2>Three implementations</h2>
+<p>The <code>waddR</code> package offers three functions to compute the
+2-Wasserstein distance in two-sample settings.</p>
+<p>We will use samples from normal distributions to illustrate them.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(waddR)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">24</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">100</span>,<span class="at">mean=</span><span class="dv">0</span>,<span class="at">sd=</span><span class="dv">1</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">100</span>,<span class="at">mean=</span><span class="dv">2</span>,<span class="at">sd=</span><span class="dv">1</span>)</span></code></pre></div>
+<p>The first function, <code>wasserstein_metric</code>, offers a faster
+reimplementation in C++ of the <code>wasserstein1d</code> function from
+the R package <code>transport</code>, which is able to compute general
+<span class="math inline">\(p\)</span>-Wasserstein distances. For <span class="math inline">\(p=2\)</span>, we obtain the 2-Wasserstein distance
+<span class="math inline">\(W\)</span>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">wasserstein_metric</span>(x,y,<span class="at">p=</span><span class="dv">2</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; [1] 2.044457</span></span></code></pre></div>
+<p>The corresponding value of the squared 2-Wasserstein distance <span class="math inline">\(d\)</span> is then computed as:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">wasserstein_metric</span>(x,y,<span class="at">p=</span><span class="dv">2</span>)<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [1] 4.179803</span></span></code></pre></div>
+<p>The second function, <code>squared_wass_approx</code>, computes the
+squared 2-Wasserstein distance by calculating the mean squared
+difference of the equidistant quantiles (first approximation in the
+previous formula). This function is currently used to compute the
+2-Wasserstein distances in the testing procedures.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">squared_wass_approx</span>(x,y)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; [1] 4.179803</span></span></code></pre></div>
+<p>The third function, <code>squared_wass_decomp</code>, approximates
+the squared 2-Wasserstein distance using the location, size, and shape
+terms from the above decomposition (second apporximation in the previous
+formula). It also returns the respective decomposition values.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">squared_wass_decomp</span>(x,y)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; $distance</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; [1] 4.180458</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; $location</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; [1] 4.114983</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; $size</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; [1] 0.002307</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; $shape</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; [1] 0.06316766</span></span></code></pre></div>
+<p>In the considered example, the decomposition results suggest that the
+two distributions differ with respect to location (mean), but not in
+terms of size and shape, thus confirming the underlying normal
+model.</p>
+</div>
+<div id="see-also" class="section level2">
+<h2>See also</h2>
+<ul>
+<li><p>The <a href="waddR.html"><code>waddR</code> package</a></p></li>
+<li><p><a href="wasserstein_test.html">Two-sample tests</a> to check for
+differences between two distributions</p></li>
+<li><p>Detection of <a href="wasserstein_singlecell.html">differential
+gene expression distributions</a> in scRNAseq data</p></li>
+</ul>
+</div>
+<div id="session-info" class="section level2">
+<h2>Session Info</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; R version 4.5.2 (2025-10-31 ucrt)</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Platform: x86_64-w64-mingw32/x64</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; Running under: Windows 10 x64 (build 19045)</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;   LAPACK version 3.12.1</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; [1] LC_COLLATE=German_Germany.utf8  LC_CTYPE=German_Germany.utf8    LC_MONETARY=German_Germany.utf8</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt; [4] LC_NUMERIC=C                    LC_TIME=German_Germany.utf8    </span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; time zone: Europe/Berlin</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; [1] splines   stats     graphics  grDevices datasets  utils     methods   base     </span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt;  [1] waddR_1.24.0          knitr_1.51            rlang_1.2.0           eva_0.2.6             fs_2.1.0             </span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt;  [6] glue_1.8.1            here_1.0.2            evmix_2.12            SparseM_1.84-2        gsl_2.1-9            </span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt; [11] changepoint_2.3       zoo_1.8-15            lubridate_1.9.5       forcats_1.0.1         readr_2.2.0          </span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt; [16] tidyverse_2.0.0       permApprox_1.0.2.9000 scales_1.4.0          limma_3.66.0          goftest_1.2-3        </span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co">#&gt; [21] fitdistrplus_1.2-6    survival_3.8-3        MASS_7.3-65           fdrtool_1.2.18        digest_0.6.39        </span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co">#&gt; [26] progressr_0.19.0      furrr_0.4.0           kableExtra_1.4.0      future.apply_1.20.2   future_1.70.0        </span></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="co">#&gt; [31] stringr_1.6.0         purrr_1.2.2           tidyr_1.3.2           dplyr_1.2.1           tibble_3.3.1         </span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">#&gt; [36] pheatmap_1.0.13       patchwork_1.3.2       ggplot2_4.0.3         conflicted_1.2.0      rprojroot_2.1.1      </span></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="co">#&gt; [41] rmarkdown_2.31        projthis_0.0.0.9025  </span></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a><span class="co">#&gt;   [1] filelock_1.0.3              lifecycle_1.0.5             httr2_1.2.2                 Rdpack_2.6.6               </span></span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a><span class="co">#&gt;   [5] doParallel_1.0.17           globals_0.19.1              lattice_0.22-7              magrittr_2.0.5             </span></span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a><span class="co">#&gt;   [9] sass_0.4.10                 jquerylib_0.1.4             yaml_2.3.12                 otel_0.2.0                 </span></span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="co">#&gt;  [13] cowplot_1.2.0               DBI_1.3.0                   minqa_1.2.8                 RColorBrewer_1.1-3         </span></span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a><span class="co">#&gt;  [17] ade4_1.7-24                 abind_1.4-8                 GenomicRanges_1.62.1        BiocGenerics_0.56.0        </span></span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a><span class="co">#&gt;  [21] phyloseq_1.54.2             rappdirs_0.3.4              circlize_0.4.18             IRanges_2.44.0             </span></span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="co">#&gt;  [25] S4Vectors_0.48.1            listenv_0.10.1              breakaway_4.8.4             vegan_2.7-5                </span></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a><span class="co">#&gt;  [29] arm_1.15-3                  parallelly_1.47.0           svglite_2.2.2               permute_0.9-10             </span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a><span class="co">#&gt;  [33] DelayedArray_0.36.1         codetools_0.2-20            xml2_1.5.2                  tidyselect_1.2.1           </span></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a><span class="co">#&gt;  [37] shape_1.4.6.1               farver_2.1.2                lme4_2.0-1                  matrixStats_1.5.0          </span></span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a><span class="co">#&gt;  [41] stats4_4.5.2                BiocFileCache_3.0.0         Seqinfo_1.0.0               jsonlite_2.0.0             </span></span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a><span class="co">#&gt;  [45] GetoptLong_1.1.1            multtest_2.66.0             iterators_1.0.14            systemfonts_1.3.2          </span></span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a><span class="co">#&gt;  [49] foreach_1.5.2               tools_4.5.2                 Rcpp_1.1.1-1.1              SparseArray_1.10.10        </span></span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a><span class="co">#&gt;  [53] xfun_0.58                   mgcv_1.9-3                  MatrixGenerics_1.22.0       mvnfast_0.2.8              </span></span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a><span class="co">#&gt;  [57] withr_3.0.2                 BiocManager_1.30.27         fastmap_1.2.0               boot_1.3-32                </span></span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a><span class="co">#&gt;  [61] truncnorm_1.0-9             timechange_0.4.0            R6_2.6.1                    textshaping_1.0.5          </span></span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a><span class="co">#&gt;  [65] colorspace_2.1-2            DivNet_0.4.1                RSQLite_3.53.1              utf8_1.2.6                 </span></span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a><span class="co">#&gt;  [69] generics_0.1.4              renv_1.2.3                  data.table_1.18.4           S4Arrays_1.10.1            </span></span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a><span class="co">#&gt;  [73] pkgconfig_2.0.3             gtable_0.3.6                zCompositions_1.6.1         blob_1.3.0                 </span></span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a><span class="co">#&gt;  [77] ComplexHeatmap_2.26.1       S7_0.2.2                    SingleCellExperiment_1.32.0 XVector_0.50.0             </span></span>
+<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a><span class="co">#&gt;  [81] htmltools_0.5.9             biomformat_1.38.3           multcompView_0.1-11         clue_0.3-68                </span></span>
+<span id="cb6-52"><a href="#cb6-52" tabindex="-1"></a><span class="co">#&gt;  [85] Biobase_2.70.0              png_0.1-9                   reformulas_0.4.4            rstudioapi_0.18.0          </span></span>
+<span id="cb6-53"><a href="#cb6-53" tabindex="-1"></a><span class="co">#&gt;  [89] tzdb_0.5.0                  reshape2_1.4.5              rjson_0.2.23                coda_0.19-4.1              </span></span>
+<span id="cb6-54"><a href="#cb6-54" tabindex="-1"></a><span class="co">#&gt;  [93] nlme_3.1-168                curl_7.1.0                  nloptr_2.2.1                cachem_1.1.0               </span></span>
+<span id="cb6-55"><a href="#cb6-55" tabindex="-1"></a><span class="co">#&gt;  [97] GlobalOptions_0.1.4         parallel_4.5.2              pillar_1.11.1               grid_4.5.2                 </span></span>
+<span id="cb6-56"><a href="#cb6-56" tabindex="-1"></a><span class="co">#&gt; [101] vctrs_0.7.3                 dbplyr_2.5.2                cluster_2.1.8.1             evaluate_1.0.5             </span></span>
+<span id="cb6-57"><a href="#cb6-57" tabindex="-1"></a><span class="co">#&gt; [105] cli_3.6.6                   compiler_4.5.2              crayon_1.5.3                labeling_0.4.3             </span></span>
+<span id="cb6-58"><a href="#cb6-58" tabindex="-1"></a><span class="co">#&gt; [109] plyr_1.8.9                  stringi_1.8.7               viridisLite_0.4.3           BiocParallel_1.44.0        </span></span>
+<span id="cb6-59"><a href="#cb6-59" tabindex="-1"></a><span class="co">#&gt; [113] Biostrings_2.78.0           Matrix_1.7-4                hms_1.1.4                   bit64_4.8.2                </span></span>
+<span id="cb6-60"><a href="#cb6-60" tabindex="-1"></a><span class="co">#&gt; [117] statmod_1.5.2               SummarizedExperiment_1.40.0 rbibutils_2.4.1             igraph_2.3.2               </span></span>
+<span id="cb6-61"><a href="#cb6-61" tabindex="-1"></a><span class="co">#&gt; [121] memoise_2.0.1               bslib_0.11.0                bit_4.6.0                   ape_5.8-1</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

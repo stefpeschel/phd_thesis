@@ -1,7 +1,11 @@
 Student’s t-test on Gaussian data — Compare p-value approximation
 methods
 ================
-Compiled at 2026-02-05 10:38:20 UTC
+Compiled at 2026-06-10 10:27:22 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "600930db-b62c-4670-bb31-ade6ab85af4b")
+```
 
 ## Packages & paths
 

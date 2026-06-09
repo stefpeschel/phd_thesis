@@ -1478,16 +1478,19 @@ border-radius: 0px;
 
 
 <h1 class="title toc-ignore">Build reduced data set</h1>
-<h4 class="date">Compiled at 2026-06-08 11:53:00 UTC</h4>
+<h4 class="date">Compiled at 2026-06-10 12:10:18 UTC</h4>
 
 </div>
 
 
+<pre class="r"><code>here::i_am(paste0(params$name, &quot;.Rmd&quot;), uuid = &quot;8ad93c89-8d43-4945-9813-3d10fac8034c&quot;)</code></pre>
 <p>In this script, we load the original PASTURE data (not published) and
 build the reduced data set, which is the basis for all analyses
 conducted in this project.</p>
 <div id="load-data-set-parameters" class="section level2">
 <h2>Load data &amp; set parameters</h2>
+<pre><code>## Warning in path_source(&quot;PASTURE_data&quot;, paste0(&quot;bact_2m_genus.rds&quot;)): PASTURE_data is not previous to 00_build_dataset</code></pre>
+<pre><code>## Warning in path_source(&quot;PASTURE_data&quot;, paste0(&quot;bact_2m_asv.rds&quot;)): PASTURE_data is not previous to 00_build_dataset</code></pre>
 <pre><code>## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 367 taxa and 740 samples ]
 ## sample_data() Sample Data:       [ 740 samples by 517 sample variables ]
@@ -1543,9 +1546,9 @@ total counts.</p>
 <pre><code>## # A tibble: 3 × 4
 ##   path                    type         size modification_time  
 ##   &lt;fs::path&gt;              &lt;fct&gt; &lt;fs::bytes&gt; &lt;dttm&gt;             
-## 1 bact_phylo_2m_asv.rds   file       212.8K 2026-06-08 11:53:02
-## 2 bact_phylo_2m_genus.rds file        67.5K 2026-06-08 11:53:02
-## 3 sampdata.rds            file         5.2K 2026-06-08 11:53:02</code></pre>
+## 1 bact_phylo_2m_asv.rds   file       212.8K 2026-06-10 12:10:24
+## 2 bact_phylo_2m_genus.rds file        67.5K 2026-06-10 12:10:24
+## 3 sampdata.rds            file         5.2K 2026-06-10 12:10:24</code></pre>
 </div>
 
 

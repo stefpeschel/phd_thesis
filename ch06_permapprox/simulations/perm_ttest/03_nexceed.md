@@ -1,6 +1,6 @@
 Assess the optimal number of starting exceedances
 ================
-Compiled at 2026-03-22 15:37:17 UTC
+Compiled at 2026-06-10 10:59:00 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "907ec83f-a14f-4333-abdd-a7b00d861428")

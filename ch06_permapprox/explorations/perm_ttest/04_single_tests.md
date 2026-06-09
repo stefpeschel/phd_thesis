@@ -1,6 +1,10 @@
 Two-sample t-test - Test epsilon rule for single tests
 ================
-Compiled at 2026-02-06 16:46:39 UTC
+Compiled at 2026-06-10 10:24:57 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "5e646f9e-bea7-4678-8776-a33608cb3fad")
+```
 
 In this script we evaluate the performance of the **Standardized Lifted
 Log-Saturation (SLLS) rule** in the **single-test setting**. Here, each
@@ -28,10 +32,8 @@ The parameters are set as follows:
 
 The observed $t$-statistic is calculated as
 
-$$
-t_{\text{obs}} = \frac{\bar{x}_1 - \bar{x}_2}
-{\sqrt{\frac{s_1^2 + s_2^2}{n}}}
-$$
+$$t_{\text{obs}} = \frac{\bar{x}_1 - \bar{x}_2}
+{\sqrt{\frac{s_1^2 + s_2^2}{n}}}$$
 
 where  
 - $\bar{x}_1$ and $\bar{x}_2$ are the sample means,  

@@ -57,9 +57,10 @@ library(knitr)
 library(ggplot2)
 library(tidyverse)
 library(ggh4x)
+library(zCompositions)
 
 
-conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::select, dplyr::filter)
 ```
 
 # Helper functions
@@ -75,7 +76,7 @@ rel_norm <- function(x) {
 
 multiplicative_replacement <- function(x, delta = 1) {
   if (any(x == 0)) {
-    as.matrix(multRepl(x, label = 0, frac = 1, dl = rep(delta, length(x))))
+    as.matrix(zCompositions::multRepl(x, label = 0, frac = 1, dl = rep(delta, length(x))))
   } else {
     x
   }
@@ -162,6 +163,7 @@ kable(clr_add_table, digits = 3, caption = "CLR values after additive offset rep
 # Visualization of all transformed values
 
 ```{r original_transformed_values, fig.height=4.5, fig.width=8, dpi = 200}
+set.seed(42)
 # Compact plot: original counts and CLR-transformed values ----------------
 # Fixed horizontal positions for samples within each group
 pos_sample <- position_dodge(width = 0.35)

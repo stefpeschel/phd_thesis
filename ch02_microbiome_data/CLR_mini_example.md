@@ -1,6 +1,10 @@
 Mini example: zero replacement before CLR transformation
 ================
-Compiled at 2026-06-02 09:46:26 UTC
+Compiled at 2026-06-10 08:42:55 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "7aac30f8-96f0-4cb8-b30e-a3c181fc95c0")
+```
 
 # Aim
 
@@ -15,6 +19,11 @@ Aitchison distances, marginal transformed values, group contrasts, and
 pairwise log-ratios used in association or proportionality analyses.
 
 # Packages
+
+    ## [conflicted] Removing existing preference.
+    ## [conflicted] Will prefer dplyr::select over any other package.
+    ## [conflicted] Removing existing preference.
+    ## [conflicted] Will prefer dplyr::filter over any other package.
 
 # Helper functions
 
@@ -75,7 +84,9 @@ CLR values after additive offset replacement.
 
 # Visualization of all transformed values
 
-![](figures/CLR_mini_example/clr_exmpl_original_transformed_values-1.png)<!-- -->
+    ## Warning: `geom_hline()`: Ignoring `data` because `yintercept` was provided.
+
+![](figures/clr_mini_example/clr_exmpl_original_transformed_values-1.png)<!-- -->
 
 # Distance-based analysis
 
@@ -104,7 +115,7 @@ inspect the CLR-transformed values of Taxon 2.
 
 CLR-transformed values of Taxon 2 under the two replacement strategies.
 
-![](figures/CLR_mini_example/clr_exmpl_differential_distribution_plot-1.png)<!-- -->
+![](figures/clr_mini_example/clr_exmpl_differential_distribution_plot-1.png)<!-- -->
 
 # Differential abundance-style group contrast
 
@@ -151,7 +162,7 @@ Variance of the log-ratio between Taxon 2 and Taxon 3.
 ## Files written
 
 These files have been written to the target directory,
-`data/CLR_mini_example`:
+`data/clr_mini_example`:
 
     ## # A tibble: 0 × 4
     ## # ℹ 4 variables: path <fs::path>, type <fct>, size <fs::bytes>, modification_time <dttm>

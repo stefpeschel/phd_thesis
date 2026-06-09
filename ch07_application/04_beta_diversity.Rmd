@@ -87,7 +87,7 @@ cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00",
 ## Load data
 
 ```{r load_data}
-phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev10.rds"))
+phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev01.rds"))
 sampdata <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
 ```
 
@@ -322,7 +322,7 @@ plot_distance_heatmap <- function(dist_obj, metadata, ann_vars = NULL, title = N
 
 ## Prepare genus-level data
 
-For the PASTURE application, beta-diversity analyses are performed at genus level. Taxa observed in less than 10% of samples are removed before the beta-diversity matrices are computed. Bray-Curtis dissimilarity is computed on relative abundance profiles, whereas Euclidean distance is computed after multiplicative replacement and CLR transformation.
+For the PASTURE application, beta-diversity analyses are performed at genus level. Taxa observed in less than 1% of samples were removed before the beta-diversity matrices are computed. Bray-Curtis dissimilarity is computed on relative abundance profiles, whereas Euclidean distance is computed after multiplicative replacement and CLR transformation.
 
 ```{r}
 counts_raw <- get_sample_by_taxa(phylo_genus)

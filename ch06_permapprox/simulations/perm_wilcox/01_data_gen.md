@@ -1,7 +1,7 @@
 Generate exponential data for permutation p-value simulations
 (Mann–Whitney U)
 ================
-Compiled at 2026-02-02 19:37:00 UTC
+Compiled at 2026-06-10 11:12:43 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "a2428bff-9ba8-452e-89b9-af01268d0f2f")
@@ -319,5 +319,5 @@ projthis::proj_dir_info(path_target())
     ## # A tibble: 2 × 4
     ##   path              type             size modification_time  
     ##   <fs::path>        <fct>     <fs::bytes> <dttm>             
-    ## 1 sim_accuracy_data directory           0 2025-12-18 14:08:41
+    ## 1 sim_accuracy_data directory           0 2026-03-17 13:47:10
     ## 2 sim_error_data    directory           0 2025-10-22 16:43:59

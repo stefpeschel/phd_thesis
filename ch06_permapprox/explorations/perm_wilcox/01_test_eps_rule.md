@@ -1,7 +1,11 @@
 Wilcoxon (Mann–Whitney U) on exponential data - Test the SLLS epsilon
 rule
 ================
-Compiled at 2026-03-09 09:48:20 UTC
+Compiled at 2026-06-10 10:28:39 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "efcad4fd-ecce-4206-b899-b1726dff38ea")
+```
 
 In this script we evaluate our **standardized lifted log-saturation
 (SLLS)** ε-rule with the **Wilcoxon rank-sum / Mann–Whitney test**,
@@ -11,9 +15,7 @@ For equal group sizes (n), (U) counts pairwise “wins” of group 1 over
 group 2 and takes values in (\[0, n^2\]) with (E_0\[U\]=n^2/2). It is
 related to the Wilcoxon rank-sum (W) by a constant shift:
 
-$$
-U = W - \frac{n(n+1)}{2}.
-$$
+$$U = W - \frac{n(n+1)}{2}.$$
 
 We fit a GPD to the **right tail** of the permutation distribution of
 (U) and compare unconstrained vs. constrained (SLLS) fits.

@@ -80,7 +80,7 @@ phylo_genus
 
 ```{r sample-characteristics}
 # Derive variable order from sampdata column sequence
-var_order <- setdiff(names(sampdata), c("SampleID", "idx"))
+var_order <- base::setdiff(names(sampdata), c("SampleID", "idx"))
 
 tbl_sample_characteristics <- sampdata %>%
   select(all_of(var_order)) %>%
@@ -121,9 +121,9 @@ cols = c("#009E73", "#56B4E9", "#E69F00", "#D55E00",
 sampdata %>%
   select(all_of(var_order)) %>%
   pivot_longer(-Country, names_to = "Variable", values_to = "Value") %>%
-  mutate(Variable = factor(Variable, levels = setdiff(var_order, "Country"))) %>%
+  mutate(Variable = factor(Variable, levels = base::setdiff(var_order, "Country"))) %>%
   filter(!is.na(Value)) %>%
-  count(Country, Variable, Value) %>%
+  dplyr::count(Country, Variable, Value) %>%
   group_by(Country, Variable) %>%
   mutate(prop = n / sum(n)) %>%
   ungroup() %>%

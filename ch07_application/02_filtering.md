@@ -1,6 +1,10 @@
 Taxonomic aggregation and filtering
 ================
-Compiled at 2026-06-08 12:20:17 UTC
+Compiled at 2026-06-10 12:15:54 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "7426994c-47c1-4984-bc1e-aeb070dbe32b")
+```
 
 ## Load packages
 
@@ -97,14 +101,15 @@ proportion of zero entries.
 These files have been written to the target directory,
 `data/02_filtering`:
 
-    ## # A tibble: 8 × 4
+    ## # A tibble: 9 × 4
     ##   path                               type         size modification_time  
     ##   <fs::path>                         <fct> <fs::bytes> <dttm>             
-    ## 1 bact_phylo_2m_genus_prev10.rds     file        56.5K 2026-06-08 12:20:55
-    ## 2 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-08 12:20:55
-    ## 3 prevalence_filtering.csv           file          246 2026-06-08 12:20:54
-    ## 4 prevalence_filtering.tex           file          663 2026-06-08 12:20:54
-    ## 5 taxonomic_overview.csv             file          123 2026-06-08 12:20:42
-    ## 6 taxonomic_overview.tex             file          556 2026-06-08 12:20:42
-    ## 7 top_genera.csv                     file          283 2026-06-08 12:20:54
-    ## 8 top_genera.tex                     file          809 2026-06-08 12:20:54
+    ## 1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-06-10 12:16:49
+    ## 2 bact_phylo_2m_genus_prev10.rds     file        56.5K 2026-06-09 10:59:27
+    ## 3 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-10 12:16:49
+    ## 4 prevalence_filtering.csv           file          246 2026-06-10 12:16:49
+    ## 5 prevalence_filtering.tex           file          662 2026-06-10 12:16:49
+    ## 6 taxonomic_overview.csv             file          123 2026-06-10 12:16:34
+    ## 7 taxonomic_overview.tex             file          556 2026-06-10 12:16:34
+    ## 8 top_genera.csv                     file          283 2026-06-10 12:16:48
+    ## 9 top_genera.tex                     file          808 2026-06-10 12:16:48

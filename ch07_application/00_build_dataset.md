@@ -1,12 +1,22 @@
 Build reduced data set
 ================
-Compiled at 2026-06-08 11:52:57 UTC
+Compiled at 2026-06-10 12:10:08 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "8ad93c89-8d43-4945-9813-3d10fac8034c")
+```
 
 In this script, we load the original PASTURE data (not published) and
 build the reduced data set, which is the basis for all analyses
 conducted in this project.
 
+    ## Warning: package 'ggrepel' was built under R version 4.5.3
+
 ## Load data & set parameters
+
+    ## Warning in path_source("PASTURE_data", paste0("bact_2m_genus.rds")): PASTURE_data is not previous to 00_build_dataset
+
+    ## Warning in path_source("PASTURE_data", paste0("bact_2m_asv.rds")): PASTURE_data is not previous to 00_build_dataset
 
     ## phyloseq-class experiment-level object
     ## otu_table()   OTU Table:         [ 367 taxa and 740 samples ]
@@ -63,6 +73,6 @@ These files have been written to the target directory,
     ## # A tibble: 3 × 4
     ##   path                    type         size modification_time  
     ##   <fs::path>              <fct> <fs::bytes> <dttm>             
-    ## 1 bact_phylo_2m_asv.rds   file       212.8K 2026-06-08 11:52:59
-    ## 2 bact_phylo_2m_genus.rds file        67.5K 2026-06-08 11:52:59
-    ## 3 sampdata.rds            file         5.2K 2026-06-08 11:52:59
+    ## 1 bact_phylo_2m_asv.rds   file       212.8K 2026-06-10 12:10:15
+    ## 2 bact_phylo_2m_genus.rds file        67.5K 2026-06-10 12:10:15
+    ## 3 sampdata.rds            file         5.2K 2026-06-10 12:10:15

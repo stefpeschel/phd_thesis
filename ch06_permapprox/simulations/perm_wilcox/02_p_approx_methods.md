@@ -1,7 +1,22 @@
 Accuracy study (Exponential data, Mann-Whitney U) - Compare p-value
 approximation methods
 ================
-Compiled at 2026-02-05 14:31:36 UTC
+Compiled at 2026-06-10 11:12:47 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "b522dc4f-d47c-4984-b4b6-16d9e59a185e")
+```
+
+``` r
+# create or *empty* the target directory, used to write this file's data: 
+#projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
 
 ## Load permApprox functions
 
@@ -6128,8 +6143,7 @@ GPD (permApprox)
 These files have been written to the target directory,
 `data/02_p_approx_methods`:
 
-    ## # A tibble: 2 × 4
+    ## # A tibble: 1 × 4
     ##   path       type             size modification_time  
     ##   <fs::path> <fct>     <fs::bytes> <dttm>             
-    ## 1 accuracy   directory           0 2026-02-05 13:56:22
-    ## 2 gamma_old  directory           0 2026-02-05 12:41:04
+    ## 1 accuracy   directory           0 2026-03-17 13:47:11
