@@ -38,6 +38,7 @@ Some chapter folders mainly store figures used in the thesis, while others also 
 │   └── simulations/                → Simulation studies, outputs, and figures
 │
 └── ch07_application/             → Integrated analysis of the PASTURE cohort
+    ├── README.md                   → Chapter-specific notes
     ├── 00_build_dataset.Rmd        → Build and prepare the analysis dataset
     ├── 01_overview.Rmd             → Descriptive cohort and microbiome overview
     ├── 02_filtering.Rmd            → Taxonomic aggregation and prevalence filtering
