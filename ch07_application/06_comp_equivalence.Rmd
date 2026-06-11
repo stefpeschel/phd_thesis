@@ -26,13 +26,27 @@ knitr::opts_chunk$set(
   echo = FALSE)
 ```
 
-```{r packages}
-library("conflicted")
+```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
+library(phyloseq)
+library(tidyverse)
+library(zCompositions)
+library(permApprox)
+library(kableExtra)
+library(furrr)
+library(future)
+library(progressr)
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::rename)
+conflicts_prefer(dplyr::mutate)
+conflicts_prefer(dplyr::arrange)
 ```
 
 ```{r directories}
 # create or *empty* the target directory, used to write this file's data: 
-projthis::proj_create_dir_target(params$name, clean = TRUE)
+projthis::proj_create_dir_target(params$name, clean = FALSE)
 
 # function to get path to target directory: path_target("sample.csv")
 path_target <- projthis::proj_path_target(params$name)
@@ -41,9 +55,757 @@ path_target <- projthis::proj_path_target(params$name)
 path_source <- projthis::proj_path_source(params$name)
 ```
 
-## Tasks
+## Set global parameters
 
-The first task is ...
+```{r}
+zero_replacement_fraction <- 0.65
+n_perm <- 999
+permutation_seed <- 42
+alpha_perm_approx <- 0.05
+cores <- 10
+
+contrast_order <- c(
+  "C-section",
+  "BF duration",
+  "EBF duration",
+  "Sex",
+  "Smoking",
+  "Siblings"
+)
+
+diagnostic_contrasts <- c("C-section", "BF duration", "EBF duration")
+```
+
+## Load data
+
+```{r load_data}
+phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev01.rds"))
+sampdata <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
+```
+
+### Phyloseq object on genus level
+
+```{r}
+phylo_genus
+```
+
+## Helper functions
+
+Counts are transformed to relative abundances, zeros are replaced by
+multiplicative replacement, and the CLR transformation is applied after
+replacement. This follows the same preprocessing strategy as the beta-diversity
+and regression analyses.
+
+```{r helper_functions}
+get_sample_by_taxa <- function(phylo) {
+  mat <- as(otu_table(phylo), "matrix")
+  
+  if (taxa_are_rows(phylo)) {
+    mat <- t(mat)
+  }
+  
+  mat <- as.matrix(mat)
+  storage.mode(mat) <- "numeric"
+  
+  mat
+}
+
+counts_to_rel_abund <- function(count_mat) {
+  lib_size <- rowSums(count_mat)
+  
+  if (any(lib_size == 0)) {
+    stop("At least one sample has library size zero.")
+  }
+  
+  sweep(count_mat, 1, lib_size, "/")
+}
+
+compute_multrepl_clr <- function(rel_abund_mat, frac = 0.65) {
+  positive_values <- rel_abund_mat[rel_abund_mat > 0]
+  
+  if (length(positive_values) == 0) {
+    stop("No positive relative abundances found.")
+  }
+  
+  detection_limit <- min(positive_values, na.rm = TRUE)
+  detection_limit_mat <- matrix(
+    detection_limit,
+    nrow = nrow(rel_abund_mat),
+    ncol = ncol(rel_abund_mat),
+    dimnames = dimnames(rel_abund_mat)
+  )
+  
+  rel_abund_repl <- zCompositions::multRepl(
+    rel_abund_mat,
+    label = 0,
+    dl = detection_limit_mat,
+    frac = frac,
+    z.warning = 0.9,
+    z.delete = FALSE
+  )
+  
+  rel_abund_repl <- as.matrix(rel_abund_repl)
+  rownames(rel_abund_repl) <- rownames(rel_abund_mat)
+  colnames(rel_abund_repl) <- colnames(rel_abund_mat)
+  
+  log_repl <- log(rel_abund_repl)
+  z <- sweep(log_repl, 1, rowMeans(log_repl), "-")
+  
+  list(
+    z = z,
+    rel_abund_repl = rel_abund_repl,
+    detection_limit = detection_limit,
+    replacement_value = frac * detection_limit,
+    frac = frac
+  )
+}
+
+make_comp_metadata <- function(sampdata) {
+  sampdata %>%
+    mutate(
+      Country = factor(Country),
+      Sex = factor(Sex),
+      `C-section` = factor(
+        as.character(`C-section`),
+        levels = c("Yes", "No"),
+        labels = c("Cesarean", "Vaginal")
+      ),
+      `BF duration` = factor(
+        as.character(`BF duration`),
+        levels = c("0", "1", ">=2"),
+        labels = c("0 months", "1 month", ">=2 months")
+      ),
+      `EBF duration` = factor(
+        as.character(`EBF duration`),
+        levels = c("0", "1", ">=2"),
+        labels = c("0 months", "1 month", ">=2 months")
+      ),
+      Smoking = factor(Smoking),
+      Siblings = factor(
+        dplyr::case_when(
+          is.na(Siblings) ~ NA_character_,
+          as.character(Siblings) == "0" ~ "0",
+          TRUE ~ ">=1"
+        ),
+        levels = c("0", ">=1")
+      )
+    )
+}
+
+pooled_coordinate_variance <- function(y1, y2) {
+  n1 <- nrow(y1)
+  n2 <- nrow(y2)
+  
+  ((n1 - 1) * apply(y1, 2, stats::var) +
+    (n2 - 1) * apply(y2, 2, stats::var)) / (n1 + n2 - 2)
+}
+
+comp_equiv_components <- function(y, group) {
+  group <- droplevels(factor(group))
+  
+  if (nlevels(group) != 2) {
+    stop("Compositional equivalence requires exactly two groups.")
+  }
+  
+  group_levels <- levels(group)
+  y1 <- y[group == group_levels[[1]], , drop = FALSE]
+  y2 <- y[group == group_levels[[2]], , drop = FALSE]
+  
+  n1 <- nrow(y1)
+  n2 <- nrow(y2)
+  
+  if (n1 < 2 || n2 < 2) {
+    stop("Both groups must contain at least two samples.")
+  }
+  
+  mean1 <- colMeans(y1)
+  mean2 <- colMeans(y2)
+  mean_diff <- mean1 - mean2
+  pooled_var <- pooled_coordinate_variance(y1, y2)
+  
+  valid_taxa <- is.finite(pooled_var) & pooled_var > .Machine$double.eps
+  scale_factor <- n1 * n2 / (n1 + n2)
+  
+  standardized_diff <- rep(NA_real_, length(mean_diff))
+  standardized_diff[valid_taxa] <- mean_diff[valid_taxa] / sqrt(pooled_var[valid_taxa])
+  
+  coordinate_stat <- scale_factor * standardized_diff^2
+  statistic <- max(coordinate_stat[valid_taxa], na.rm = TRUE)
+  
+  list(
+    statistic = statistic,
+    n1 = n1,
+    n2 = n2,
+    group1 = group_levels[[1]],
+    group2 = group_levels[[2]],
+    n_taxa = ncol(y),
+    n_taxa_tested = sum(valid_taxa),
+    n_taxa_zero_variance = sum(!valid_taxa),
+    mean_diff = mean_diff,
+    pooled_var = pooled_var,
+    standardized_diff = standardized_diff,
+    coordinate_stat = coordinate_stat,
+    valid_taxa = valid_taxa
+  )
+}
+
+empirical_pvalue <- function(obs_stat, perm_stats) {
+  (1 + sum(perm_stats >= obs_stat, na.rm = TRUE)) / (1 + length(perm_stats))
+}
+
+run_comp_equiv_permutation_test <- function(
+    y,
+    metadata,
+    variable,
+    group_levels,
+    contrast_label,
+    n_perm = 999
+) {
+  test_data <- metadata %>%
+    select(SampleID, group = all_of(variable)) %>%
+    filter(!is.na(group), group %in% group_levels) %>%
+    mutate(group = factor(group, levels = group_levels)) %>%
+    droplevels()
+  
+  y_sub <- y[test_data$SampleID, , drop = FALSE]
+  
+  stopifnot(identical(rownames(y_sub), test_data$SampleID))
+  
+  obs <- comp_equiv_components(y = y_sub, group = test_data$group)
+  
+  perm_stats <- replicate(
+    n_perm,
+    {
+      group_perm <- sample(test_data$group, size = nrow(test_data), replace = FALSE)
+      comp_equiv_components(y = y_sub, group = group_perm)$statistic
+    }
+  )
+  
+  tibble(
+    variable = variable,
+    contrast = contrast_label,
+    group1 = obs$group1,
+    group2 = obs$group2,
+    n1 = obs$n1,
+    n2 = obs$n2,
+    n_samples = obs$n1 + obs$n2,
+    n_taxa = obs$n_taxa,
+    n_taxa_tested = obs$n_taxa_tested,
+    n_taxa_zero_variance = obs$n_taxa_zero_variance,
+    statistic_obs = obs$statistic,
+    p_empirical = empirical_pvalue(obs$statistic, perm_stats),
+    n_exceed = sum(perm_stats >= obs$statistic, na.rm = TRUE),
+    n_perm = n_perm,
+    perm_stats = list(as.numeric(perm_stats)),
+    components = list(obs)
+  )
+}
+
+taxon_labels_from_phyloseq <- function(phylo) {
+  tax_tab <- tryCatch(
+    as(tax_table(phylo), "matrix"),
+    error = function(e) NULL
+  )
+  
+  tax_ids <- taxa_names(phylo)
+  tax_labels <- tax_ids
+  
+  if (!is.null(tax_tab) && "Genus" %in% colnames(tax_tab)) {
+    genus <- as.character(tax_tab[tax_ids, "Genus"])
+    genus <- stringr::str_remove(genus, "^g__")
+    missing_label <- is.na(genus) | genus == "" | genus == "NA"
+    genus[missing_label] <- tax_ids[missing_label]
+    tax_labels <- make.unique(genus)
+  }
+  
+  tibble(taxon_id = tax_ids, taxon = tax_labels)
+}
+
+extract_taxon_contrasts <- function(comp_results, taxon_labels) {
+  purrr::map_dfr(
+    seq_len(nrow(comp_results)),
+    function(i) {
+      comp <- comp_results$components[[i]]
+      
+      tibble(
+        variable = as.character(comp_results$variable[[i]]),
+        contrast = as.character(comp_results$contrast[[i]]),
+        group1 = comp_results$group1[[i]],
+        group2 = comp_results$group2[[i]],
+        taxon_id = names(comp$mean_diff),
+        mean_diff_clr = as.numeric(comp$mean_diff),
+        standardized_diff = as.numeric(comp$standardized_diff),
+        coordinate_stat = as.numeric(comp$coordinate_stat),
+        valid_taxon = as.logical(comp$valid_taxa)
+      )
+    }
+  ) %>%
+    left_join(taxon_labels, by = "taxon_id")
+}
+
+reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
+  stats::reorder(paste(x, within, sep = sep), by, FUN = fun, ...)
+}
+
+scale_y_reordered <- function(..., sep = "___") {
+  scale_y_discrete(labels = function(x) gsub(paste0(sep, ".*$"), "", x), ...)
+}
+
+sig_stars <- function(p) {
+  dplyr::case_when(
+    p < 0.001 ~ "***",
+    p < 0.01  ~ "**",
+    p < 0.05  ~ "*",
+    p < 0.1   ~ ".",
+    TRUE      ~ ""
+  )
+}
+
+fmt_p_latex <- function(p_num) {
+  p_str <- formatC(p_num, format = "e", digits = 2)
+  stars <- sig_stars(p_num)
+  
+  ifelse(stars != "", paste0(p_str, "$^{", stars, "}$"), p_str)
+}
+
+fmt_p_table <- function(p_num) {
+  formatC(p_num, format = "e", digits = 2)
+}
+```
+
+## Prepare CLR matrix
+
+```{r prepare_clr_matrix}
+counts_raw <- get_sample_by_taxa(phylo_genus)
+
+sampdata_comp <- sampdata %>%
+  filter(SampleID %in% rownames(counts_raw)) %>%
+  arrange(match(SampleID, rownames(counts_raw))) %>%
+  make_comp_metadata()
+
+counts_raw <- counts_raw[sampdata_comp$SampleID, , drop = FALSE]
+
+stopifnot(identical(rownames(counts_raw), sampdata_comp$SampleID))
+
+counts_rel <- counts_to_rel_abund(counts_raw)
+
+clr_object <- compute_multrepl_clr(
+  rel_abund_mat = counts_rel,
+  frac = zero_replacement_fraction
+)
+
+counts_clr <- clr_object$z
+
+comp_preprocessing_summary <- tibble(
+  n_samples = nrow(counts_raw),
+  n_taxa = ncol(counts_raw),
+  min_library_size = min(rowSums(counts_raw)),
+  median_library_size = median(rowSums(counts_raw)),
+  max_library_size = max(rowSums(counts_raw)),
+  zero_fraction = mean(counts_raw == 0),
+  detection_limit = clr_object$detection_limit,
+  replacement_value = clr_object$replacement_value,
+  replacement_fraction = clr_object$frac
+)
+
+comp_preprocessing_summary
+```
+
+```{r save_clr_objects}
+saveRDS(
+  clr_object,
+  file = path_target("comp_equivalence_multrepl_clr_object.rds")
+)
+
+write_csv(
+  comp_preprocessing_summary,
+  file = path_target("comp_equivalence_preprocessing_summary.csv")
+)
+```
+
+## Contrast setup
+
+Compositional equivalence is a two-group procedure. Country is omitted, and the
+number of siblings is collapsed to a two-level variable contrasting children
+without siblings against children with at least one sibling. The sparse
+`EBF duration == "1 month"` category is set to missing only for the EBF-specific
+contrast setup; those samples remain in the CLR matrix and are available for all
+other contrasts.
+
+```{r contrast_setup}
+sampdata_test <- sampdata_comp %>%
+  mutate(
+    `EBF duration` = replace(
+      `EBF duration`,
+      `EBF duration` == "1 month",
+      NA
+    )
+  )
+
+contrast_spec <- tibble::tribble(
+  ~variable,       ~contrast,       ~group1,      ~group2,
+  "C-section",    "C-section",     "Cesarean",  "Vaginal",
+  "BF duration",  "BF duration",   "0 months",  ">=2 months",
+  "EBF duration", "EBF duration",  "0 months",  ">=2 months",
+  "Sex",          "Sex",           "Female",    "Male",
+  "Smoking",      "Smoking",       "No",        "Yes",
+  "Siblings",     "Siblings",      "0",         ">=1"
+) %>%
+  mutate(
+    variable = factor(variable, levels = contrast_order),
+    contrast = factor(contrast, levels = contrast_order)
+  )
+
+contrast_level_summary <- purrr::map_dfr(
+  seq_len(nrow(contrast_spec)),
+  function(i) {
+    spec <- contrast_spec[i, ]
+    vals <- sampdata_test[[as.character(spec$variable)]]
+    
+    tibble(
+      variable = as.character(spec$variable),
+      group1 = spec$group1,
+      group2 = spec$group2,
+      n_group1 = sum(vals == spec$group1, na.rm = TRUE),
+      n_group2 = sum(vals == spec$group2, na.rm = TRUE),
+      n_missing_or_other = sum(is.na(vals) | !vals %in% c(spec$group1, spec$group2))
+    )
+  }
+)
+
+contrast_level_summary
+```
+
+```{r save_contrast_setup}
+write_csv(
+  contrast_level_summary,
+  file = path_target("comp_equivalence_contrast_level_summary.csv")
+)
+```
+
+## Compositional equivalence tests
+
+For each contrast, the statistic is the largest standardized squared difference
+between group CLR means. Group labels are permuted while the CLR-transformed
+microbial profiles are kept fixed.
+
+```{r parallel_setup}
+future::plan(
+  future::multisession,
+  workers = cores
+)
+
+progressr::handlers("txtprogressbar")
+options(progressr.enable = TRUE)
+```
+
+```{r comp_equivalence_tests}
+set.seed(permutation_seed)
+path_comp_results <- path_target("comp_equivalence_results_multrepl_clr.rds")
+
+if (!file.exists(path_comp_results)) {
+  comp_results <- progressr::with_progress({
+    p <- progressr::progressor(steps = nrow(contrast_spec))
+    
+    furrr::future_map_dfr(
+      seq_len(nrow(contrast_spec)),
+      function(i) {
+        spec <- contrast_spec[i, ]
+        
+        out <- run_comp_equiv_permutation_test(
+          y = counts_clr,
+          metadata = sampdata_test,
+          variable = as.character(spec$variable),
+          group_levels = c(spec$group1, spec$group2),
+          contrast_label = as.character(spec$contrast),
+          n_perm = n_perm
+        )
+        
+        p(message = sprintf("Compositional equivalence: %s", spec$contrast))
+        
+        out
+      },
+      .options = furrr::furrr_options(seed = permutation_seed)
+    )
+  })
+  
+  saveRDS(comp_results, file = path_comp_results)
+} else {
+  comp_results <- readRDS(path_comp_results)
+}
+
+comp_results <- comp_results %>%
+  mutate(
+    variable = factor(variable, levels = contrast_order),
+    contrast = factor(contrast, levels = contrast_order)
+  )
+
+comp_results %>%
+  select(
+    contrast, group1, group2, n1, n2, n_taxa_tested,
+    statistic_obs, p_empirical, n_exceed, n_perm
+  ) %>%
+  mutate(p_empirical = fmt_p_table(p_empirical))
+```
+
+## p-value refinement with permApprox
+
+```{r comp_equivalence_permapprox}
+path_comp_permapprox <- path_target("comp_equivalence_permapprox_results_multrepl_clr.rds")
+
+comp_obs_stats <- comp_results$statistic_obs
+comp_perm_stats <- do.call(cbind, comp_results$perm_stats)
+
+gpd_ctrl <- permApprox::make_gpd_ctrl(
+  constraint = "support_at_obs",
+  sample_size = min(comp_results$n_samples)
+)
+
+if (!file.exists(path_comp_permapprox)) {
+  comp_permapprox <- permApprox::perm_approx(
+    obs_stats = comp_obs_stats,
+    perm_stats = comp_perm_stats,
+    method = "gpd",
+    alternative = "greater",
+    null_center = "median",
+    approx_thresh = 0.1,
+    adjust_method = "none",
+    gpd_ctrl = gpd_ctrl,
+    cores = cores,
+    verbose = TRUE
+  )
+  
+  saveRDS(comp_permapprox, file = path_comp_permapprox)
+} else {
+  comp_permapprox <- readRDS(path_comp_permapprox)
+}
+
+comp_permapprox
+```
+
+```{r comp_equivalence_results_table}
+comp_results_all <- comp_results %>%
+  select(
+    contrast, group1, group2, n1, n2, n_samples, n_taxa, n_taxa_tested,
+    n_taxa_zero_variance, statistic_obs, n_exceed, n_perm, p_empirical
+  ) %>%
+  mutate(
+    p_permapprox = comp_permapprox$p_unadjusted,
+    method_used = comp_permapprox$method_used
+  )
+
+comp_results_all %>%
+  arrange(contrast) %>%
+  mutate(
+    p_empirical = fmt_p_table(p_empirical),
+    p_permapprox = fmt_p_table(p_permapprox)
+  )
+```
+
+```{r comp_equivalence_results_csv}
+comp_results_all %>%
+  mutate(
+    contrast = as.character(contrast)
+  ) %>%
+  write_csv(path_target("comp_equivalence_results_multrepl_clr.csv"))
+```
+
+```{r comp_equivalence_latex}
+comp_tex_df <- comp_results_all %>%
+  arrange(contrast) %>%
+  transmute(
+    Contrast = as.character(contrast),
+    Groups = paste0(group1, " vs. ", group2),
+    n1 = n1,
+    n2 = n2,
+    M = round(statistic_obs, 2),
+    n_exceed = n_exceed,
+    p_emp = fmt_p_latex(p_empirical),
+    p_papp = fmt_p_latex(p_permapprox)
+  )
+
+tex_comp_equivalence <- kbl(
+  comp_tex_df,
+  format = "latex",
+  booktabs = TRUE,
+  escape = FALSE,
+  col.names = c("Contrast", "Groups", "$n_1$", "$n_2$", "$M_n$",
+                "\\# exceed", "$p$ (emp.)", "$p$ (GPD-refined)"),
+  align = "llrrrrrr",
+  caption = paste(
+    "Compositional equivalence results for selected two-group contrasts.",
+    "$M_n$ is the maximum standardized squared CLR mean difference.",
+    "\\# exceed: number of permuted statistics $\\geq$ observed.",
+    "$p$ (emp.): empirical permutation $p$-value ($999$ permutations);",
+    "$p$ (GPD-refined): $p$-value refined with \\texttt{permApprox}."
+  ),
+  label = "application:comp-equivalence"
+) %>%
+  kable_styling(latex_options = c("hold_position")) %>%
+  footnote(
+    general = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
+    general_title = "",
+    escape = FALSE,
+    threeparttable = TRUE
+  )
+
+tex_comp_equivalence
+save_kable(tex_comp_equivalence, file = path_target("comp_equivalence_table.tex"))
+```
+
+## Permutation distributions
+
+The following diagnostic plot shows selected empirical null distributions. These
+plots are used as a visual check of the permutation tail before relying on the
+GPD-based p-value refinement.
+
+```{r comp_equivalence_perm_dist_selected, fig.width=8, fig.height=4.5}
+perm_dist_df <- comp_results %>%
+  select(contrast, perm_stats) %>%
+  mutate(perm_id = purrr::map(perm_stats, seq_along)) %>%
+  tidyr::unnest(c(perm_stats, perm_id)) %>%
+  rename(statistic_perm = perm_stats) %>%
+  mutate(contrast = factor(contrast, levels = contrast_order))
+
+obs_df <- comp_results_all %>%
+  mutate(
+    contrast = factor(contrast, levels = contrast_order),
+    label = paste0(
+      "p_emp = ", formatC(p_empirical, format = "e", digits = 2),
+      ifelse(p_empirical < alpha_perm_approx, "*", ""), "\n",
+      "p_pApp = ", formatC(p_permapprox, format = "e", digits = 2),
+      ifelse(p_permapprox < alpha_perm_approx, "*", "")
+    )
+  )
+
+perm_dist_df %>%
+  filter(contrast %in% contrast_order) %>%
+  ggplot(aes(x = statistic_perm)) +
+  geom_histogram(bins = 40, fill = "grey75", color = "white") +
+  geom_vline(
+    data = obs_df %>% filter(contrast %in% contrast_order),
+    aes(xintercept = statistic_obs),
+    color = "#B2182B",
+    linewidth = 0.8
+  ) +
+  geom_text(
+    data = obs_df %>% filter(contrast %in% contrast_order),
+    aes(x = -Inf, y = Inf, label = label),
+    hjust = -0.05,
+    vjust = 1.3,
+    size = 3.5,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~ contrast, scales = "free", ncol = 3) +
+  labs(
+    x = expression(M[n]^"*"),
+    y = "Number of permutations"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    panel.grid = element_blank(),
+    strip.text = element_text(face = "bold")
+  )
+```
+
+## Taxon-wise CLR contrasts
+
+The test is global and does not provide taxon-level inference. The following
+plots are descriptive: they show the taxa with the largest coordinate-wise
+contributions to the maximum statistic for each contrast.
+
+```{r taxon_contrast_data}
+taxon_labels <- taxon_labels_from_phyloseq(phylo_genus)
+
+taxon_contrasts <- extract_taxon_contrasts(
+  comp_results = comp_results,
+  taxon_labels = taxon_labels
+)
+
+taxon_contrasts %>%
+  write_csv(path_target("comp_equivalence_taxon_contrasts.csv"))
+
+top10_taxon_contrasts <- taxon_contrasts %>%
+  filter(valid_taxon) %>%
+  group_by(contrast) %>%
+  slice_max(order_by = coordinate_stat, n = 10, with_ties = FALSE) %>%
+  ungroup() %>%
+  mutate(
+    contrast = factor(contrast, levels = contrast_order),
+    taxon_plot = reorder_within(taxon, coordinate_stat, contrast)
+  )
+
+top10_taxon_contrasts %>%
+  select(-taxon_plot) %>%
+  write_csv(path_target("comp_equivalence_top10_taxon_contrasts.csv"))
+```
+
+```{r taxon_contrast_top10_all, fig.width=12, fig.height=14}
+ggplot(
+  top10_taxon_contrasts,
+  aes(x = coordinate_stat, y = taxon_plot)
+) +
+  geom_segment(
+    aes(x = 0, xend = coordinate_stat, yend = taxon_plot),
+    color = "grey70"
+  ) +
+  geom_point(aes(color = standardized_diff), size = 2) +
+  scale_color_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    name = "Std. CLR\ndifference"
+  ) +
+  scale_y_reordered() +
+  facet_wrap(~ contrast, scales = "free", ncol = 2) +
+  labs(
+    x = "Coordinate-wise contribution to maximum statistic",
+    y = NULL
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    strip.text = element_text(face = "bold")
+  )
+```
+
+As we will use `EBF duration` as grouping variable in later analyses, we generate an isolated plot for this variable here, which will be shown in the thesis chapter.
+
+```{r taxon_contrast_top10_selected, fig.width=7, fig.height=3}
+top10_taxon_contrasts %>%
+  #filter(contrast %in% diagnostic_contrasts) %>%
+  filter(contrast == "EBF duration") %>%
+  ggplot(aes(
+    x = coordinate_stat,
+    y = taxon_plot
+  )) +
+  geom_segment(
+    aes(x = 0, xend = coordinate_stat, yend = taxon_plot),
+    color = "grey70"
+  ) +
+  geom_point(aes(color = standardized_diff), size = 2) +
+  scale_color_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    name = "Std. CLR\ndifference"
+  ) +
+  scale_y_reordered() +
+  #facet_wrap(~ contrast, scales = "free", ncol = 1) +
+  labs(
+    x = "Coordinate-wise contribution to maximum statistic",
+    y = NULL
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    axis.text.y = element_text(size = 12),
+    axis.text.x = element_text(size = 11),
+    legend.text = element_text(size = 11)
+  )
+```
 
 ## Files written
 

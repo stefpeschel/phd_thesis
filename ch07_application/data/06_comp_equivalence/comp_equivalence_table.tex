@@ -1,0 +1,23 @@
+\begin{table}[!h]
+\centering
+\caption{\label{tab:application:comp-equivalence}Compositional equivalence results for selected two-group contrasts. $M_n$ is the maximum standardized squared CLR mean difference. \# exceed: number of permuted statistics $\geq$ observed. $p$ (emp.): empirical permutation $p$-value ($999$ permutations); $p$ (GPD-refined): $p$-value refined with \texttt{permApprox}.}
+\centering
+\begin{threeparttable}
+\begin{tabular}[t]{llrrrrrr}
+\toprule
+Contrast & Groups & $n_1$ & $n_2$ & $M_n$ & \# exceed & $p$ (emp.) & $p$ (GPD-refined)\\
+\midrule
+C-section & Cesarean vs. Vaginal & 121 & 468 & 25.06 & 0 & 1.00e-03$^{**}$ & 5.26e-04$^{***}$\\
+BF duration & 0 months vs. >=2 months & 36 & 456 & 33.16 & 3 & 4.00e-03$^{**}$ & 2.99e-03$^{**}$\\
+EBF duration & 0 months vs. >=2 months & 179 & 375 & 74.72 & 0 & 1.00e-03$^{**}$ & 2.31e-66$^{***}$\\
+Sex & Female vs. Male & 294 & 298 & 9.79 & 157 & 1.58e-01 & 1.58e-01\\
+Smoking & No vs. Yes & 529 & 63 & 13.91 & 119 & 1.20e-01 & 1.20e-01\\
+\addlinespace
+Siblings & 0 vs. >=1 & 46 & 457 & 14.17 & 123 & 1.24e-01 & 1.24e-01\\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item $^{***}:p<0.001$; $^{**}:p<0.01$; $^{*}:p<0.05$; $^{.}:p<0.1$.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

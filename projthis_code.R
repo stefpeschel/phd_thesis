@@ -135,4 +135,5 @@ render_rmd("ch07_application/02_filtering.Rmd")
 render_rmd("ch07_application/03_alpha_diversity.Rmd")
 render_rmd("ch07_application/04_beta_diversity.Rmd")
 render_rmd("ch07_application/05_regression.Rmd")
+render_rmd("ch07_application/06_comp_equivalence.Rmd")
 

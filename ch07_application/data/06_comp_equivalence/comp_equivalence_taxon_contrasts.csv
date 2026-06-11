@@ -1,0 +1,703 @@
+variable,contrast,group1,group2,taxon_id,mean_diff_clr,standardized_diff,coordinate_stat,valid_taxon,taxon
+C-section,C-section,Cesarean,Vaginal,Phascolarctobacterium,-0.1159332286594702,-0.17758685730224624,3.032058470879565,TRUE,Phascolarctobacterium
+C-section,C-section,Cesarean,Vaginal,Veillonella,0.18505969082063412,0.07298662374069735,0.5121562502438108,TRUE,Veillonella
+C-section,C-section,Cesarean,Vaginal,Negativicoccus,-0.03860469767604713,-0.049322218337145944,0.23388433314475912,TRUE,Negativicoccus
+C-section,C-section,Cesarean,Vaginal,Dialister,-0.14158965415320862,-0.13414003111251818,1.7299467455606183,TRUE,Dialister
+C-section,C-section,Cesarean,Vaginal,Megasphaera,-0.05828954403722297,-0.07713107218801511,0.5719718636117366,TRUE,Megasphaera
+C-section,C-section,Cesarean,Vaginal,Anaeroglobus,-0.05691972945524726,-0.10344591870237771,1.0288277043640424,TRUE,Anaeroglobus
+C-section,C-section,Cesarean,Vaginal,Megamonas,-0.05799665954096567,-0.1410388146902113,1.912463818045529,TRUE,Megamonas
+C-section,C-section,Cesarean,Vaginal,Streptococcus,0.3464538754897504,0.23412617403848432,5.270063704187812,TRUE,Streptococcus
+C-section,C-section,Cesarean,Vaginal,Lactococcus,0.1281349132319504,0.08064707628562462,0.6253068460528206,TRUE,Lactococcus
+C-section,C-section,Cesarean,Vaginal,Gemella,0.07792718918899766,0.04216264448712282,0.17091162900318013,TRUE,Gemella
+C-section,C-section,Cesarean,Vaginal,Staphylococcus,0.11446122523450852,0.04862144211643792,0.22728543209647825,TRUE,Staphylococcus
+C-section,C-section,Cesarean,Vaginal,Turicibacter,0.051946574645961974,0.12171837879999475,1.4243878060075037,TRUE,Turicibacter
+C-section,C-section,Cesarean,Vaginal,Granulicatella,0.13347054560396654,0.1524719730239718,2.2350949073758724,TRUE,Granulicatella
+C-section,C-section,Cesarean,Vaginal,Enterococcus,0.6504897804620642,0.28144644087010223,7.615658313436928,TRUE,Enterococcus
+C-section,C-section,Cesarean,Vaginal,Dolosigranulum,-0.02819203668936543,-0.04349887787863379,0.18191647671949807,TRUE,Dolosigranulum
+C-section,C-section,Cesarean,Vaginal,Lactobacillus,-0.4672033762408707,-0.15176008255186746,2.214272349358983,TRUE,Lactobacillus
+C-section,C-section,Cesarean,Vaginal,Leuconostoc,-0.02356887330427626,-0.03315006271694943,0.10565368216811644,TRUE,Leuconostoc
+C-section,C-section,Cesarean,Vaginal,Family_XIII_AD3011_group,-0.057590612645176065,-0.14199918574718484,1.9385974481106187,TRUE,Family_XIII_AD3011_group
+C-section,C-section,Cesarean,Vaginal,Terrisporobacter,0.0774852027646542,0.06133023718098826,0.3616306375709204,TRUE,Terrisporobacter
+C-section,C-section,Cesarean,Vaginal,Paeniclostridium,-0.00444028913998562,-0.00774538820081026,0.005767695282603514,TRUE,Paeniclostridium
+C-section,C-section,Cesarean,Vaginal,Intestinibacter,0.20794626639398728,0.09382949901712039,0.8464371644028817,TRUE,Intestinibacter
+C-section,C-section,Cesarean,Vaginal,Clostridioides,0.08393973116928505,0.05792076046887989,0.32254063688661516,TRUE,Clostridioides
+C-section,C-section,Cesarean,Vaginal,Peptostreptococcus,-0.006885921806493389,-0.012757743155055262,0.01564817295334097,TRUE,Peptostreptococcus
+C-section,C-section,Cesarean,Vaginal,Romboutsia,0.07936153366274268,0.046983174786599205,0.21222700658974028,TRUE,Romboutsia
+C-section,C-section,Cesarean,Vaginal,Solobacterium,-0.042663224472724526,-0.07500649439403208,0.5408958693891259,TRUE,Solobacterium
+C-section,C-section,Cesarean,Vaginal,Holdemanella,0.06565313296454012,0.05869913336854271,0.33126786398364494,TRUE,Holdemanella
+C-section,C-section,Cesarean,Vaginal,Faecalicoccus,-0.035662795609817666,-0.05555690222242313,0.2967508507782752,TRUE,Faecalicoccus
+C-section,C-section,Cesarean,Vaginal,Faecalitalea,0.08815297222831908,0.11984996805828865,1.3809939432289322,TRUE,Faecalitalea
+C-section,C-section,Cesarean,Vaginal,[Clostridium]_innocuum_group,0.1826728031265949,0.09105391921852278,0.797100747130317,TRUE,[Clostridium]_innocuum_group
+C-section,C-section,Cesarean,Vaginal,Coprobacillus,0.07384095853233763,0.11956400214192973,1.3744116126330865,TRUE,Coprobacillus
+C-section,C-section,Cesarean,Vaginal,Erysipelotrichaceae_UCG-003,-0.18721206089618803,-0.13348454489152586,1.713081002196115,TRUE,Erysipelotrichaceae_UCG-003
+C-section,C-section,Cesarean,Vaginal,Erysipelatoclostridium,0.2645132209345058,0.1342969390738992,1.7339962626571506,TRUE,Erysipelatoclostridium
+C-section,C-section,Cesarean,Vaginal,Eubacterium,0.10580320308877555,0.10645045298158828,1.089459163961782,TRUE,Eubacterium
+C-section,C-section,Cesarean,Vaginal,Christensenellaceae_R-7_group,0.030796145743282155,0.08697634164768465,0.7273077275301448,TRUE,Christensenellaceae_R-7_group
+C-section,C-section,Cesarean,Vaginal,Stenotrophomonas,0.05729809160514476,0.17024901295547074,2.786667380774883,TRUE,Stenotrophomonas
+C-section,C-section,Cesarean,Vaginal,Pseudomonas,-0.014493885777806303,-0.035857712383331,0.12361782195236716,TRUE,Pseudomonas
+C-section,C-section,Cesarean,Vaginal,Halomonas,0.010266687442255118,0.017956826192448178,0.03100095599976442,TRUE,Halomonas
+C-section,C-section,Cesarean,Vaginal,8_Comamonadaceae(F),1.0056089768939458e-4,3.047301352810644e-4,8.927846970237845e-6,TRUE,8_Comamonadaceae(F)
+C-section,C-section,Cesarean,Vaginal,Delftia,0.13293181982461655,0.1735279002555736,2.8950398892343103,TRUE,Delftia
+C-section,C-section,Cesarean,Vaginal,Sutterella,-0.04969103863647639,-0.07693280445066525,0.5690351012829972,TRUE,Sutterella
+C-section,C-section,Cesarean,Vaginal,Haemophilus,-0.22844593754514625,-0.10256016348666297,1.0112844690109137,TRUE,Haemophilus
+C-section,C-section,Cesarean,Vaginal,9_Pasteurellaceae(F),-0.008546796468570372,-0.01987019994253086,0.037959492980440504,TRUE,9_Pasteurellaceae(F)
+C-section,C-section,Cesarean,Vaginal,Acinetobacter,-0.026105179776326426,-0.04041692781475831,0.15705165813407648,TRUE,Acinetobacter
+C-section,C-section,Cesarean,Vaginal,Bilophila,-0.15968591650000785,-0.2036533399698767,3.9874844519165067,TRUE,Bilophila
+C-section,C-section,Cesarean,Vaginal,Fusobacterium,-0.07800779729636342,-0.11430857220645022,1.2562426357760417,TRUE,Fusobacterium
+C-section,C-section,Cesarean,Vaginal,Brevundimonas,0.019640720772384657,0.04819215659415149,0.22328968001366872,TRUE,Brevundimonas
+C-section,C-section,Cesarean,Vaginal,Akkermansia,-0.02416683100550937,-0.015431461757389894,0.022894441965747178,TRUE,Akkermansia
+C-section,C-section,Cesarean,Vaginal,Blastococcus,0.01746290514567983,0.05547145930549046,0.2958387854936098,TRUE,Blastococcus
+C-section,C-section,Cesarean,Vaginal,Corynebacterium,-0.2414424160337981,-0.18884537208111177,3.428693161261208,TRUE,Corynebacterium
+C-section,C-section,Cesarean,Vaginal,Lawsonella,-0.06282975016710601,-0.1727017264692735,2.867538694123241,TRUE,Lawsonella
+C-section,C-section,Cesarean,Vaginal,Cutibacterium,0.020516313390056773,0.03578304857451245,0.12310355779119003,TRUE,Cutibacterium
+C-section,C-section,Cesarean,Vaginal,Actinomyces,0.22708863251947387,0.10098248324581155,0.9804106515225777,TRUE,Actinomyces
+C-section,C-section,Cesarean,Vaginal,Varibaculum,-0.2533333933113195,-0.17840397716959205,3.0600251252494073,TRUE,Varibaculum
+C-section,C-section,Cesarean,Vaginal,Dermabacter,0.11260202087547255,0.17418798317322579,2.917106668550431,TRUE,Dermabacter
+C-section,C-section,Cesarean,Vaginal,Actinotignum,-0.06683294150466468,-0.14449352330276174,2.0073018761266046,TRUE,Actinotignum
+C-section,C-section,Cesarean,Vaginal,Rothia,0.12260173408837716,0.053377995694838205,0.2739305397501177,TRUE,Rothia
+C-section,C-section,Cesarean,Vaginal,Parabacteroides,-0.36523922389115465,-0.1640808665086365,2.5884024983875262,TRUE,Parabacteroides
+C-section,C-section,Cesarean,Vaginal,Porphyromonas,0.00314768986937608,0.009289629062178633,0.008296839220739934,TRUE,Porphyromonas
+C-section,C-section,Cesarean,Vaginal,Coprobacter,-0.0024641137277079395,-0.004010527445410427,0.0015463895778387456,TRUE,Coprobacter
+C-section,C-section,Cesarean,Vaginal,Alistipes,-0.13574014128850642,-0.14804836816396694,2.107284526701549,TRUE,Alistipes
+C-section,C-section,Cesarean,Vaginal,Gordonibacter,-0.06936363260546685,-0.09187811466705414,0.8115963373562796,TRUE,Gordonibacter
+C-section,C-section,Cesarean,Vaginal,Senegalimassilia,-0.1934053633100537,-0.1324859678267933,1.6875462877173304,TRUE,Senegalimassilia
+C-section,C-section,Cesarean,Vaginal,Eggerthella,0.18282016871933232,0.09005796215507324,0.7797585752346745,TRUE,Eggerthella
+C-section,C-section,Cesarean,Vaginal,Slackia,0.0367630907664358,0.060925222690322134,0.35687011362589927,TRUE,Slackia
+C-section,C-section,Cesarean,Vaginal,Atopobium,0.02917053603408226,0.0265947151985178,0.06799964043784587,TRUE,Atopobium
+C-section,C-section,Cesarean,Vaginal,Olsenella,-0.12376613673350378,-0.15374522054884002,2.2725799786668484,TRUE,Olsenella
+C-section,C-section,Cesarean,Vaginal,Libanicoccus,-0.15003190610981165,-0.17835310303196023,3.0582801647911957,TRUE,Libanicoccus
+C-section,C-section,Cesarean,Vaginal,Collinsella,-0.5432538437786194,-0.23498042118114781,5.308591219543052,TRUE,Collinsella
+C-section,C-section,Cesarean,Vaginal,Anaerococcus,-0.019791559084050947,-0.02697330838505814,0.06994945965119344,TRUE,Anaerococcus
+C-section,C-section,Cesarean,Vaginal,Finegoldia,0.07317896455368977,0.10068506760803977,0.9746441056370632,TRUE,Finegoldia
+C-section,C-section,Cesarean,Vaginal,Peptoniphilus,-0.02966288302086828,-0.02993472349797487,0.08615221159208324,TRUE,Peptoniphilus
+C-section,C-section,Cesarean,Vaginal,Fenollaria,0.0024266489603025354,0.006783193095178657,0.00442368596384142,TRUE,Fenollaria
+C-section,C-section,Cesarean,Vaginal,Clostridium_sensu_strict18,-0.04822224801740993,-0.08345965854297054,0.6696827860806414,TRUE,Clostridium_sensu_strict18
+C-section,C-section,Cesarean,Vaginal,Sarcina,0.006940698885281149,0.01645149154134771,0.0260211499639952,TRUE,Sarcina
+C-section,C-section,Cesarean,Vaginal,Clostridium_sensu_strict1,0.593064061260514,0.26533805123839393,6.76885169626576,TRUE,Clostridium_sensu_strict1
+C-section,C-section,Cesarean,Vaginal,Butyricicoccus,0.05368972690962803,0.0905370602146843,0.7880770962186554,TRUE,Butyricicoccus
+C-section,C-section,Cesarean,Vaginal,Incertae_Sedis,-0.009296240283485302,-0.010952340253633503,0.011532667832210354,TRUE,Incertae_Sedis
+C-section,C-section,Cesarean,Vaginal,UBA1819,-0.03174072274167605,-0.03393489970815547,0.11071566390148582,TRUE,UBA1819
+C-section,C-section,Cesarean,Vaginal,Faecalibacterium,-0.08582544762420907,-0.051027104451985966,0.2503328122824364,TRUE,Faecalibacterium
+C-section,C-section,Cesarean,Vaginal,Subdoligranulum,-0.08825892663767237,-0.07101123967190161,0.484808379174484,TRUE,Subdoligranulum
+C-section,C-section,Cesarean,Vaginal,Ruminococcus,-0.007914524964018455,-0.016043013042814237,0.024745019578152377,TRUE,Ruminococcus
+C-section,C-section,Cesarean,Vaginal,CAG-352,-0.0328664019975351,-0.03203382019698904,0.09865824729846634,TRUE,CAG-352
+C-section,C-section,Cesarean,Vaginal,Flavonifractor,0.050313715344647014,0.041942866382372275,0.16913447605780305,TRUE,Flavonifractor
+C-section,C-section,Cesarean,Vaginal,[Eubacterium]_coprostanoligenegroup,-0.005455937420872581,-0.01282600209489821,0.015816068659460676,TRUE,[Eubacterium]_coprostanoligenegroup
+C-section,C-section,Cesarean,Vaginal,Clostridia_UCG-014,0.02057080438368486,0.04273518079623044,0.17558484148731968,TRUE,Clostridia_UCG-014
+C-section,C-section,Cesarean,Vaginal,Monoglobus,-0.03769978710131139,-0.09493281747012704,0.8664603009384215,TRUE,Monoglobus
+C-section,C-section,Cesarean,Vaginal,Epulopiscium,0.14028201760319603,0.2087361739605706,4.18900970156848,TRUE,Epulopiscium
+C-section,C-section,Cesarean,Vaginal,[Eubacterium]_hallii_group,0.012683978862737977,0.015543204985016951,0.023227211671422502,TRUE,[Eubacterium]_hallii_group
+C-section,C-section,Cesarean,Vaginal,Anaerostipes,-0.05689369751585316,-0.03588565108741343,0.12381053180522229,TRUE,Anaerostipes
+C-section,C-section,Cesarean,Vaginal,Lachnospiraceae_ND3007_group,0.009107452404004013,0.03115562758399494,0.09332305265582456,TRUE,Lachnospiraceae_ND3007_group
+C-section,C-section,Cesarean,Vaginal,[Eubacterium]_eligengroup,-0.013317937802777013,-0.021090711207414122,0.04276597508226441,TRUE,[Eubacterium]_eligengroup
+C-section,C-section,Cesarean,Vaginal,Lachnospira,-0.058822993411808966,-0.15091595522787424,2.189708188814479,TRUE,Lachnospira
+C-section,C-section,Cesarean,Vaginal,Hungatella,0.13945696417861042,0.13793940492561996,1.8293323932630345,TRUE,Hungatella
+C-section,C-section,Cesarean,Vaginal,Prevotella,-0.04438253613322363,-0.046906264325203735,0.21153275307038935,TRUE,Prevotella
+C-section,C-section,Cesarean,Vaginal,Bacteroides,-1.2744431995482812,-0.5105246477827883,25.058170351262326,TRUE,Bacteroides
+C-section,C-section,Cesarean,Vaginal,Bifidobacterium,-0.2077957655334366,-0.17402093794738813,2.91151437590332,TRUE,Bifidobacterium
+C-section,C-section,Cesarean,Vaginal,Scardovia,0.025940354344637817,0.03492342784068546,0.11725993726666512,TRUE,Scardovia
+C-section,C-section,Cesarean,Vaginal,[Ruminococcus]_torquegroup,0.18588072493504398,0.13041235155833897,1.6351341190599684,TRUE,[Ruminococcus]_torquegroup
+C-section,C-section,Cesarean,Vaginal,Sellimonas,-0.054300658739206975,-0.04731638437240781,0.2152479533935911,TRUE,Sellimonas
+C-section,C-section,Cesarean,Vaginal,uncultured18,0.04784253677743877,0.04824023445983003,0.223735422512783,TRUE,uncultured18
+C-section,C-section,Cesarean,Vaginal,Lachnoclostridium,0.22682045433008244,0.127651125122037,1.566625613302954,TRUE,Lachnoclostridium
+C-section,C-section,Cesarean,Vaginal,[Ruminococcus]_gnavugroup,0.1704034583831211,0.10690502320711918,1.0987835599507727,TRUE,[Ruminococcus]_gnavugroup
+C-section,C-section,Cesarean,Vaginal,Dorea,0.005188388781897424,0.004421764633207063,0.0018797806382937425,TRUE,Dorea
+C-section,C-section,Cesarean,Vaginal,Coprococcus,0.10197481276260323,0.21915053752898359,4.617437322994738,TRUE,Coprococcus
+C-section,C-section,Cesarean,Vaginal,Tyzzerella,0.29434805754210025,0.21266266503349196,4.348089077192713,TRUE,Tyzzerella
+C-section,C-section,Cesarean,Vaginal,22_Lachnospiraceae(F),-0.049751159610505136,-0.04141310503739866,0.16488893630525137,TRUE,22_Lachnospiraceae(F)
+C-section,C-section,Cesarean,Vaginal,Roseburia,0.1286983365056399,0.12794739728288745,1.5739061787879831,TRUE,Roseburia
+C-section,C-section,Cesarean,Vaginal,Agathobacter,0.04571237312045161,0.03006994399821141,0.08693229941806935,TRUE,Agathobacter
+C-section,C-section,Cesarean,Vaginal,Proteus,-0.04808522515954028,-0.05224292556572079,0.2624042754293221,TRUE,Proteus
+C-section,C-section,Cesarean,Vaginal,Morganella,-0.005912616914238722,-0.010934113653287269,0.011494315038771982,TRUE,Morganella
+C-section,C-section,Cesarean,Vaginal,24_Enterobacteriaceae(F),0.40778400137479576,0.1414476390164042,1.923567072298746,TRUE,24_Enterobacteriaceae(F)
+C-section,C-section,Cesarean,Vaginal,Escherichia-Shigella,-0.3760332833367679,-0.18765861325208144,3.385734773125758,TRUE,Escherichia-Shigella
+C-section,C-section,Cesarean,Vaginal,[Ruminococcus]_gauvreauii_group,0.08645197390554582,0.1085958198207216,1.1338148613408676,TRUE,[Ruminococcus]_gauvreauii_group
+C-section,C-section,Cesarean,Vaginal,Lachnoanaerobaculum,7.561086667337014e-4,0.0022386270125486405,4.8181399259681067e-4,TRUE,Lachnoanaerobaculum
+C-section,C-section,Cesarean,Vaginal,Fusicatenibacter,-0.14839617847187636,-0.08131743849759011,0.6357455198949337,TRUE,Fusicatenibacter
+C-section,C-section,Cesarean,Vaginal,Lachnospiraceae_NK4A136_group,-0.004725976518532127,-0.00965622778198973,0.00896460033330308,TRUE,Lachnospiraceae_NK4A136_group
+C-section,C-section,Cesarean,Vaginal,Blautia,0.1091583053705234,0.09696531069941512,0.9039589631829262,TRUE,Blautia
+BF duration,BF duration,0 months,>=2 months,Phascolarctobacterium,-0.25865496779182784,-0.3851575086109317,4.949701151440774,TRUE,Phascolarctobacterium
+BF duration,BF duration,0 months,>=2 months,Veillonella,0.9298703288008552,0.36803768893688615,4.519462950583164,TRUE,Veillonella
+BF duration,BF duration,0 months,>=2 months,Negativicoccus,-0.34199659891358314,-0.42194662176987413,5.940421605372601,TRUE,Negativicoccus
+BF duration,BF duration,0 months,>=2 months,Dialister,-0.11631906350152088,-0.11233304684034572,0.4210341450783292,TRUE,Dialister
+BF duration,BF duration,0 months,>=2 months,Megasphaera,-0.2738113125420444,-0.3698248463684752,4.563461718154289,TRUE,Megasphaera
+BF duration,BF duration,0 months,>=2 months,Anaeroglobus,-0.2066467856829789,-0.3968857348178196,5.255732095965187,TRUE,Anaeroglobus
+BF duration,BF duration,0 months,>=2 months,Megamonas,-0.19071861965490988,-0.5280963778920713,9.305262267825569,TRUE,Megamonas
+BF duration,BF duration,0 months,>=2 months,Streptococcus,0.6929415306838287,0.474155986409602,7.501441327925603,TRUE,Streptococcus
+BF duration,BF duration,0 months,>=2 months,Lactococcus,0.7499527672199606,0.6118255325774997,12.489856092809706,TRUE,Lactococcus
+BF duration,BF duration,0 months,>=2 months,Gemella,0.15421113789166413,0.08415645730021457,0.23630729584589372,TRUE,Gemella
+BF duration,BF duration,0 months,>=2 months,Staphylococcus,-1.4260082478890383,-0.6085394838315243,12.356053049426617,TRUE,Staphylococcus
+BF duration,BF duration,0 months,>=2 months,Turicibacter,-0.008066576789121371,-0.020881534699797668,0.014548796494170547,TRUE,Turicibacter
+BF duration,BF duration,0 months,>=2 months,Granulicatella,0.47755341918374233,0.6540774698502287,14.274490644435268,TRUE,Granulicatella
+BF duration,BF duration,0 months,>=2 months,Enterococcus,1.5375249522234826,0.6970430828075815,16.21143592947754,TRUE,Enterococcus
+BF duration,BF duration,0 months,>=2 months,Dolosigranulum,-0.3187870048757383,-0.4763245820607458,7.570215293323678,TRUE,Dolosigranulum
+BF duration,BF duration,0 months,>=2 months,Lactobacillus,-1.2407801487422845,-0.40478578205424576,5.467046150128531,TRUE,Lactobacillus
+BF duration,BF duration,0 months,>=2 months,Leuconostoc,-0.1226713620601374,-0.25681373691829956,2.200588004948295,TRUE,Leuconostoc
+BF duration,BF duration,0 months,>=2 months,Family_XIII_AD3011_group,-0.12367714238442806,-0.38897535037326875,5.048314491094485,TRUE,Family_XIII_AD3011_group
+BF duration,BF duration,0 months,>=2 months,Terrisporobacter,0.9630721338020081,0.9021862197902789,27.157802098671212,TRUE,Terrisporobacter
+BF duration,BF duration,0 months,>=2 months,Paeniclostridium,0.054080600757759,0.10577802062692143,0.3733301911736879,TRUE,Paeniclostridium
+BF duration,BF duration,0 months,>=2 months,Intestinibacter,1.9301613170446499,0.9968823748753268,33.15813351349059,TRUE,Intestinibacter
+BF duration,BF duration,0 months,>=2 months,Clostridioides,0.401907158954406,0.30977595954674086,3.2018255247494225,TRUE,Clostridioides
+BF duration,BF duration,0 months,>=2 months,Peptostreptococcus,-0.21580365839000115,-0.40133409594567043,5.374206570384077,TRUE,Peptostreptococcus
+BF duration,BF duration,0 months,>=2 months,Romboutsia,0.3380000569714643,0.2099746171642742,1.4710784614461427,TRUE,Romboutsia
+BF duration,BF duration,0 months,>=2 months,Solobacterium,0.10632509409359536,0.24102909492396069,1.9383900890881336,TRUE,Solobacterium
+BF duration,BF duration,0 months,>=2 months,Holdemanella,-0.11971673037022657,-0.11279088115086482,0.42447314554240695,TRUE,Holdemanella
+BF duration,BF duration,0 months,>=2 months,Faecalicoccus,-0.07074636592799255,-0.14156782508671525,0.6687000577683629,TRUE,Faecalicoccus
+BF duration,BF duration,0 months,>=2 months,Faecalitalea,0.46967777907416486,0.6473770094550251,13.983528916181328,TRUE,Faecalitalea
+BF duration,BF duration,0 months,>=2 months,[Clostridium]_innocuum_group,0.5928237354408743,0.3372369157200402,3.7946564063349277,TRUE,[Clostridium]_innocuum_group
+BF duration,BF duration,0 months,>=2 months,Coprobacillus,0.2342149686224254,0.545171430228095,9.91672837182788,TRUE,Coprobacillus
+BF duration,BF duration,0 months,>=2 months,Erysipelotrichaceae_UCG-003,-0.11290181675176741,-0.0825948068123691,0.22761858755428488,TRUE,Erysipelotrichaceae_UCG-003
+BF duration,BF duration,0 months,>=2 months,Erysipelatoclostridium,0.07371153456190349,0.039652423144745964,0.05246162089243853,TRUE,Erysipelatoclostridium
+BF duration,BF duration,0 months,>=2 months,Eubacterium,-0.127095480401485,-0.13608038807997133,0.6178646078866826,TRUE,Eubacterium
+BF duration,BF duration,0 months,>=2 months,Christensenellaceae_R-7_group,-0.13768061088018324,-0.41130275754561346,5.644500074214829,TRUE,Christensenellaceae_R-7_group
+BF duration,BF duration,0 months,>=2 months,Stenotrophomonas,-0.08216779661859908,-0.27370342466476644,2.499555035926024,TRUE,Stenotrophomonas
+BF duration,BF duration,0 months,>=2 months,Pseudomonas,-0.2104095263830732,-0.5512465076413366,10.138972445646381,TRUE,Pseudomonas
+BF duration,BF duration,0 months,>=2 months,Halomonas,-0.11611576735946805,-0.2153016618176247,1.5466676593999362,TRUE,Halomonas
+BF duration,BF duration,0 months,>=2 months,8_Comamonadaceae(F),-0.1844460662312838,-0.5977113522736062,11.920246862221083,TRUE,8_Comamonadaceae(F)
+BF duration,BF duration,0 months,>=2 months,Delftia,-0.0036369990538906993,-0.005022735287883952,8.417494109343322e-4,TRUE,Delftia
+BF duration,BF duration,0 months,>=2 months,Sutterella,-0.2684477374381269,-0.43301619151487947,6.256198396390767,TRUE,Sutterella
+BF duration,BF duration,0 months,>=2 months,Haemophilus,-0.7438263313115445,-0.33136562248664336,3.663676693849614,TRUE,Haemophilus
+BF duration,BF duration,0 months,>=2 months,9_Pasteurellaceae(F),-0.13590739932462115,-0.3300193452854036,3.6339674873962347,TRUE,9_Pasteurellaceae(F)
+BF duration,BF duration,0 months,>=2 months,Acinetobacter,-0.18858835665301432,-0.3229324323889212,3.479569923308274,TRUE,Acinetobacter
+BF duration,BF duration,0 months,>=2 months,Bilophila,-0.3263870567949939,-0.40350384895881275,5.432473345815134,TRUE,Bilophila
+BF duration,BF duration,0 months,>=2 months,Fusobacterium,0.2205793755232751,0.36024504558009596,4.330103469251888,TRUE,Fusobacterium
+BF duration,BF duration,0 months,>=2 months,Brevundimonas,-0.21052765882466262,-0.5417668492237533,9.793255714136478,TRUE,Brevundimonas
+BF duration,BF duration,0 months,>=2 months,Akkermansia,0.16376378206479641,0.11081396025930272,0.409723800547884,TRUE,Akkermansia
+BF duration,BF duration,0 months,>=2 months,Blastococcus,-0.08396214558845128,-0.311973357624963,3.247410980174168,TRUE,Blastococcus
+BF duration,BF duration,0 months,>=2 months,Corynebacterium,-0.09022405278423101,-0.06927510373526459,0.16012406625910547,TRUE,Corynebacterium
+BF duration,BF duration,0 months,>=2 months,Lawsonella,-0.10909961065946261,-0.25159387108458425,2.112041051787866,TRUE,Lawsonella
+BF duration,BF duration,0 months,>=2 months,Cutibacterium,-0.2821359507344319,-0.46635676055258013,7.256693738017465,TRUE,Cutibacterium
+BF duration,BF duration,0 months,>=2 months,Actinomyces,0.6544747234810167,0.2804488646348433,2.6242766303259173,TRUE,Actinomyces
+BF duration,BF duration,0 months,>=2 months,Varibaculum,-0.16278389279247596,-0.1084940189785599,0.3927478669960078,TRUE,Varibaculum
+BF duration,BF duration,0 months,>=2 months,Dermabacter,-0.2752128199746645,-0.4251987475012423,6.032345308078617,TRUE,Dermabacter
+BF duration,BF duration,0 months,>=2 months,Actinotignum,-0.2175135191701515,-0.44784751468238676,6.692102397196019,TRUE,Actinotignum
+BF duration,BF duration,0 months,>=2 months,Rothia,0.3702624184044043,0.15978487395531787,0.851870481284054,TRUE,Rothia
+BF duration,BF duration,0 months,>=2 months,Parabacteroides,-0.4290889177694409,-0.1875131354718653,1.1731826520268895,TRUE,Parabacteroides
+BF duration,BF duration,0 months,>=2 months,Porphyromonas,-0.18949354195450663,-0.5721817265602477,10.92371116562316,TRUE,Porphyromonas
+BF duration,BF duration,0 months,>=2 months,Coprobacter,-0.22352309562937123,-0.3583020000711819,4.283519078362259,TRUE,Coprobacter
+BF duration,BF duration,0 months,>=2 months,Alistipes,-0.2339503518390097,-0.24191911109590458,1.952731791140874,TRUE,Alistipes
+BF duration,BF duration,0 months,>=2 months,Gordonibacter,0.04747846518924437,0.06520065592846615,0.14184243243490363,TRUE,Gordonibacter
+BF duration,BF duration,0 months,>=2 months,Senegalimassilia,-0.5639281200006752,-0.39291859168835747,5.151187974192377,TRUE,Senegalimassilia
+BF duration,BF duration,0 months,>=2 months,Eggerthella,-0.24162851456490617,-0.11926099507922475,0.47456870750947405,TRUE,Eggerthella
+BF duration,BF duration,0 months,>=2 months,Slackia,0.09134312967040004,0.15538025561800442,0.8055526001837471,TRUE,Slackia
+BF duration,BF duration,0 months,>=2 months,Atopobium,-0.2974957514185188,-0.2827396861520778,2.6673240685735027,TRUE,Atopobium
+BF duration,BF duration,0 months,>=2 months,Olsenella,0.010623487772211337,0.014156201023622498,0.006686451256395517,TRUE,Olsenella
+BF duration,BF duration,0 months,>=2 months,Libanicoccus,-0.2916008046046118,-0.33056271178717295,3.645943765564745,TRUE,Libanicoccus
+BF duration,BF duration,0 months,>=2 months,Collinsella,-0.12218873583738743,-0.05613106864380613,0.10512569058992403,TRUE,Collinsella
+BF duration,BF duration,0 months,>=2 months,Anaerococcus,0.006371685232394619,0.008510427424625561,0.0024166011934476147,TRUE,Anaerococcus
+BF duration,BF duration,0 months,>=2 months,Finegoldia,-0.2164153572600056,-0.3287535876213673,3.606145474134698,TRUE,Finegoldia
+BF duration,BF duration,0 months,>=2 months,Peptoniphilus,-0.014280767904802927,-0.015106203319355957,0.007614000343824054,TRUE,Peptoniphilus
+BF duration,BF duration,0 months,>=2 months,Fenollaria,-0.1917180789602193,-0.523347366883,9.138655952857789,TRUE,Fenollaria
+BF duration,BF duration,0 months,>=2 months,Clostridium_sensu_strict18,0.05950745069872432,0.10405618554443839,0.3612751116604915,TRUE,Clostridium_sensu_strict18
+BF duration,BF duration,0 months,>=2 months,Sarcina,-0.11845070180708839,-0.28775755281654164,2.762839799747702,TRUE,Sarcina
+BF duration,BF duration,0 months,>=2 months,Clostridium_sensu_strict1,1.3396331223487539,0.6321824178665458,13.334817213188337,TRUE,Clostridium_sensu_strict1
+BF duration,BF duration,0 months,>=2 months,Butyricicoccus,-0.12438877554158001,-0.2871137705092713,2.750491364672124,TRUE,Butyricicoccus
+BF duration,BF duration,0 months,>=2 months,Incertae_Sedis,-0.01950669253045556,-0.0235732320563874,0.018541313775397795,TRUE,Incertae_Sedis
+BF duration,BF duration,0 months,>=2 months,UBA1819,0.17210198171890156,0.20002941222817758,1.335026720846026,TRUE,UBA1819
+BF duration,BF duration,0 months,>=2 months,Faecalibacterium,0.005982604011161685,0.003576413820228109,4.2677381933886507e-4,TRUE,Faecalibacterium
+BF duration,BF duration,0 months,>=2 months,Subdoligranulum,-0.23600427110298172,-0.2013117342915996,1.3521984109574756,TRUE,Subdoligranulum
+BF duration,BF duration,0 months,>=2 months,Ruminococcus,-0.16022283615533528,-0.33677752119696225,3.7843250520957135,TRUE,Ruminococcus
+BF duration,BF duration,0 months,>=2 months,CAG-352,-0.21937554963387434,-0.21590907346355892,1.555406924617681,TRUE,CAG-352
+BF duration,BF duration,0 months,>=2 months,Flavonifractor,0.04364259622724198,0.037836176730618704,0.047765764312194085,TRUE,Flavonifractor
+BF duration,BF duration,0 months,>=2 months,[Eubacterium]_coprostanoligenegroup,-0.21501057957506675,-0.5331262316961022,9.483362340633192,TRUE,[Eubacterium]_coprostanoligenegroup
+BF duration,BF duration,0 months,>=2 months,Clostridia_UCG-014,-0.1370127053936081,-0.28840669238910804,2.7753189964361322,TRUE,Clostridia_UCG-014
+BF duration,BF duration,0 months,>=2 months,Monoglobus,-0.07987260515114925,-0.21377297566435985,1.5247823134188376,TRUE,Monoglobus
+BF duration,BF duration,0 months,>=2 months,Epulopiscium,0.23838317283215227,0.4730381318631948,7.466112719536047,TRUE,Epulopiscium
+BF duration,BF duration,0 months,>=2 months,[Eubacterium]_hallii_group,-0.013278228850247875,-0.016618387357165983,0.009214674442601213,TRUE,[Eubacterium]_hallii_group
+BF duration,BF duration,0 months,>=2 months,Anaerostipes,0.12931388597489812,0.08633394457375855,0.24869405805827963,TRUE,Anaerostipes
+BF duration,BF duration,0 months,>=2 months,Lachnospiraceae_ND3007_group,-0.17796385651653923,-0.619071666341469,12.787454341350896,TRUE,Lachnospiraceae_ND3007_group
+BF duration,BF duration,0 months,>=2 months,[Eubacterium]_eligengroup,-0.051179707632001414,-0.0802466641586675,0.2148603191355257,TRUE,[Eubacterium]_eligengroup
+BF duration,BF duration,0 months,>=2 months,Lachnospira,-0.1033173052378753,-0.2573997930763189,2.210643072068319,TRUE,Lachnospira
+BF duration,BF duration,0 months,>=2 months,Hungatella,-0.3005762377010074,-0.28334387006222217,2.6787358103442345,TRUE,Hungatella
+BF duration,BF duration,0 months,>=2 months,Prevotella,0.09414836340548938,0.10049798692648929,0.33698996279869947,TRUE,Prevotella
+BF duration,BF duration,0 months,>=2 months,Bacteroides,-1.1560265077558727,-0.4528742674704686,6.843173163982871,TRUE,Bacteroides
+BF duration,BF duration,0 months,>=2 months,Bifidobacterium,-0.5045113758493525,-0.44487695678098416,6.603619832463483,TRUE,Bifidobacterium
+BF duration,BF duration,0 months,>=2 months,Scardovia,-0.3339730523424931,-0.4236447869041572,5.9883334313273675,TRUE,Scardovia
+BF duration,BF duration,0 months,>=2 months,[Ruminococcus]_torquegroup,0.20011399505526295,0.17805709137305306,1.057841961324416,TRUE,[Ruminococcus]_torquegroup
+BF duration,BF duration,0 months,>=2 months,Sellimonas,0.6202953862976955,0.5802024345277526,11.232109643016624,TRUE,Sellimonas
+BF duration,BF duration,0 months,>=2 months,uncultured18,-0.03594190009564813,-0.061713321920694855,0.12707499151713778,TRUE,uncultured18
+BF duration,BF duration,0 months,>=2 months,Lachnoclostridium,0.3164043373734503,0.1806021072808154,1.0882980911961695,TRUE,Lachnoclostridium
+BF duration,BF duration,0 months,>=2 months,[Ruminococcus]_gnavugroup,1.2049895033240663,0.8407308310377819,23.583930629078825,TRUE,[Ruminococcus]_gnavugroup
+BF duration,BF duration,0 months,>=2 months,Dorea,-0.2742530321862108,-0.23264476780615273,1.8058797162684803,TRUE,Dorea
+BF duration,BF duration,0 months,>=2 months,Coprococcus,-0.206838818398959,-0.4637341866881339,7.1753066730663715,TRUE,Coprococcus
+BF duration,BF duration,0 months,>=2 months,Tyzzerella,0.7007695765497876,0.6258558320614195,13.069255483282905,TRUE,Tyzzerella
+BF duration,BF duration,0 months,>=2 months,22_Lachnospiraceae(F),-0.025717125557527143,-0.022990839734722705,0.017636479941857065,TRUE,22_Lachnospiraceae(F)
+BF duration,BF duration,0 months,>=2 months,Roseburia,-0.00865443424743273,-0.009801580825618147,0.0032054904824336448,TRUE,Roseburia
+BF duration,BF duration,0 months,>=2 months,Agathobacter,-0.11150742081330905,-0.07485413390586294,0.18695359473917328,TRUE,Agathobacter
+BF duration,BF duration,0 months,>=2 months,Proteus,-0.18071751339110853,-0.18642822961871866,1.1596464196272425,TRUE,Proteus
+BF duration,BF duration,0 months,>=2 months,Morganella,-0.06623219730570173,-0.11495723062271145,0.44093525720737536,TRUE,Morganella
+BF duration,BF duration,0 months,>=2 months,24_Enterobacteriaceae(F),0.888639646232491,0.31465803988725444,3.3035425625820136,TRUE,24_Enterobacteriaceae(F)
+BF duration,BF duration,0 months,>=2 months,Escherichia-Shigella,-0.381852315367353,-0.1854574755558477,1.1476010275049138,TRUE,Escherichia-Shigella
+BF duration,BF duration,0 months,>=2 months,[Ruminococcus]_gauvreauii_group,-0.050956674630110776,-0.06951245939725467,0.1612232046748881,TRUE,[Ruminococcus]_gauvreauii_group
+BF duration,BF duration,0 months,>=2 months,Lachnoanaerobaculum,-0.18928023508639036,-0.5995621369456092,11.994182104595575,TRUE,Lachnoanaerobaculum
+BF duration,BF duration,0 months,>=2 months,Fusicatenibacter,-0.0349650383542468,-0.019522703833243345,0.01271692683087832,TRUE,Fusicatenibacter
+BF duration,BF duration,0 months,>=2 months,Lachnospiraceae_NK4A136_group,-0.22659400036602861,-0.5326152168383159,9.465190972589502,TRUE,Lachnospiraceae_NK4A136_group
+BF duration,BF duration,0 months,>=2 months,Blautia,0.5781177088518294,0.5894489642081969,11.592968569843098,TRUE,Blautia
+EBF duration,EBF duration,0 months,>=2 months,Phascolarctobacterium,-0.04927999565519903,-0.07626472125827548,0.7047286190251622,TRUE,Phascolarctobacterium
+EBF duration,EBF duration,0 months,>=2 months,Veillonella,0.5412715543674693,0.21572917639249953,5.638872888702973,TRUE,Veillonella
+EBF duration,EBF duration,0 months,>=2 months,Negativicoccus,-0.030878780979921805,-0.03844311009857476,0.17906535366549245,TRUE,Negativicoccus
+EBF duration,EBF duration,0 months,>=2 months,Dialister,-0.07141944830362373,-0.068918871236682,0.5755073118982617,TRUE,Dialister
+EBF duration,EBF duration,0 months,>=2 months,Megasphaera,-0.04410701647955595,-0.059600096238181896,0.43039622749311646,TRUE,Megasphaera
+EBF duration,EBF duration,0 months,>=2 months,Anaeroglobus,-0.06977711712315493,-0.16406354913543394,3.2613599862791802,TRUE,Anaeroglobus
+EBF duration,EBF duration,0 months,>=2 months,Megamonas,-0.07796535510017577,-0.24100522394400442,7.037646468631983,TRUE,Megamonas
+EBF duration,EBF duration,0 months,>=2 months,Streptococcus,0.6398077237309776,0.4396204784216917,23.416951857090275,TRUE,Streptococcus
+EBF duration,EBF duration,0 months,>=2 months,Lactococcus,0.9573574203764201,0.628750913402767,47.899589544965025,TRUE,Lactococcus
+EBF duration,EBF duration,0 months,>=2 months,Gemella,-0.01958066529003394,-0.010653425363672048,0.013751594867531747,TRUE,Gemella
+EBF duration,EBF duration,0 months,>=2 months,Staphylococcus,-0.6656465437323036,-0.28434110830159975,9.796114163422333,TRUE,Staphylococcus
+EBF duration,EBF duration,0 months,>=2 months,Turicibacter,-0.03874295903914238,-0.08907457855053708,0.9613512301679296,TRUE,Turicibacter
+EBF duration,EBF duration,0 months,>=2 months,Granulicatella,0.16732860639891822,0.1949644962062506,4.605593438035641,TRUE,Granulicatella
+EBF duration,EBF duration,0 months,>=2 months,Enterococcus,1.7278192364037954,0.7852789614820082,74.71752175653029,TRUE,Enterococcus
+EBF duration,EBF duration,0 months,>=2 months,Dolosigranulum,-0.22511584344621305,-0.35000107694315946,14.842713182210392,TRUE,Dolosigranulum
+EBF duration,EBF duration,0 months,>=2 months,Lactobacillus,-0.9881071624751221,-0.3241646164526169,12.732267402222785,TRUE,Lactobacillus
+EBF duration,EBF duration,0 months,>=2 months,Leuconostoc,0.24218564898777462,0.33612947075959376,13.6895041375785,TRUE,Leuconostoc
+EBF duration,EBF duration,0 months,>=2 months,Family_XIII_AD3011_group,-0.08570791417797008,-0.21103441375506551,5.3961137803842565,TRUE,Family_XIII_AD3011_group
+EBF duration,EBF duration,0 months,>=2 months,Terrisporobacter,0.522149958018828,0.4139037380307873,20.757413230842975,TRUE,Terrisporobacter
+EBF duration,EBF duration,0 months,>=2 months,Paeniclostridium,0.03356533215414825,0.05717305139569429,0.3960566204344437,TRUE,Paeniclostridium
+EBF duration,EBF duration,0 months,>=2 months,Intestinibacter,1.62253752102716,0.780493066908596,73.80956285275526,TRUE,Intestinibacter
+EBF duration,EBF duration,0 months,>=2 months,Clostridioides,0.16881335893266558,0.11578554202226905,1.6243634172217438,TRUE,Clostridioides
+EBF duration,EBF duration,0 months,>=2 months,Peptostreptococcus,-0.013068460601919019,-0.023646848175793482,0.06775183465354868,TRUE,Peptostreptococcus
+EBF duration,EBF duration,0 months,>=2 months,Romboutsia,8.924470677972307e-4,5.313668740693784e-4,3.4210820252456465e-5,TRUE,Romboutsia
+EBF duration,EBF duration,0 months,>=2 months,Solobacterium,0.032644094552461644,0.06586997116856694,0.5257139250087071,TRUE,Solobacterium
+EBF duration,EBF duration,0 months,>=2 months,Holdemanella,0.05693505639432528,0.05241468799150968,0.3328745128072665,TRUE,Holdemanella
+EBF duration,EBF duration,0 months,>=2 months,Faecalicoccus,0.03726991247577516,0.05747200588710434,0.40020936245241656,TRUE,Faecalicoccus
+EBF duration,EBF duration,0 months,>=2 months,Faecalitalea,0.009654904431237177,0.012765385791129916,0.019744330990716808,TRUE,Faecalitalea
+EBF duration,EBF duration,0 months,>=2 months,[Clostridium]_innocuum_group,0.7691717753479548,0.3936847921753486,18.778971857380224,TRUE,[Clostridium]_innocuum_group
+EBF duration,EBF duration,0 months,>=2 months,Coprobacillus,0.08222451595996239,0.12990179206107771,2.044583345402725,TRUE,Coprobacillus
+EBF duration,EBF duration,0 months,>=2 months,Erysipelotrichaceae_UCG-003,-0.11041687497418706,-0.08023082163147131,0.7799324921475492,TRUE,Erysipelotrichaceae_UCG-003
+EBF duration,EBF duration,0 months,>=2 months,Erysipelatoclostridium,0.2490106234249989,0.1283817507001866,1.9970140548731248,TRUE,Erysipelatoclostridium
+EBF duration,EBF duration,0 months,>=2 months,Eubacterium,0.0026296205218632185,0.002671604450912371,8.648063117613679e-4,TRUE,Eubacterium
+EBF duration,EBF duration,0 months,>=2 months,Christensenellaceae_R-7_group,-0.0767743919109325,-0.21457819940102604,5.578863394504997,TRUE,Christensenellaceae_R-7_group
+EBF duration,EBF duration,0 months,>=2 months,Stenotrophomonas,-0.08581795025270933,-0.252667170178874,7.73521103381982,TRUE,Stenotrophomonas
+EBF duration,EBF duration,0 months,>=2 months,Pseudomonas,-0.15034340360984866,-0.3877487932242546,18.216940660958237,TRUE,Pseudomonas
+EBF duration,EBF duration,0 months,>=2 months,Halomonas,-0.08641456640966438,-0.1534141622295033,2.8517105319665275,TRUE,Halomonas
+EBF duration,EBF duration,0 months,>=2 months,8_Comamonadaceae(F),-0.11349287313911471,-0.3439138787469569,14.330915606767828,TRUE,8_Comamonadaceae(F)
+EBF duration,EBF duration,0 months,>=2 months,Delftia,-0.0029153112693649508,-0.0036987775798195347,0.0016576428585586475,TRUE,Delftia
+EBF duration,EBF duration,0 months,>=2 months,Sutterella,-0.18892027107083076,-0.303911272773896,11.19098085359421,TRUE,Sutterella
+EBF duration,EBF duration,0 months,>=2 months,Haemophilus,-0.8148981756290173,-0.37171379015034084,16.741404138113555,TRUE,Haemophilus
+EBF duration,EBF duration,0 months,>=2 months,9_Pasteurellaceae(F),-0.13651158689174225,-0.34295589883664573,14.25118862131302,TRUE,9_Pasteurellaceae(F)
+EBF duration,EBF duration,0 months,>=2 months,Acinetobacter,-0.1101478828392185,-0.18319597038070323,4.066365079810845,TRUE,Acinetobacter
+EBF duration,EBF duration,0 months,>=2 months,Bilophila,-0.23462426517937718,-0.2932537976115582,10.419858558191242,TRUE,Bilophila
+EBF duration,EBF duration,0 months,>=2 months,Fusobacterium,0.04833908472841697,0.07133219718261738,0.6165179658351074,TRUE,Fusobacterium
+EBF duration,EBF duration,0 months,>=2 months,Brevundimonas,-0.14353524154376163,-0.3503199587386702,14.86977153982093,TRUE,Brevundimonas
+EBF duration,EBF duration,0 months,>=2 months,Akkermansia,-0.11606478250902424,-0.07486478313022055,0.6790936596194654,TRUE,Akkermansia
+EBF duration,EBF duration,0 months,>=2 months,Blastococcus,-0.08523087017888398,-0.2697779847437386,8.818354351339115,TRUE,Blastococcus
+EBF duration,EBF duration,0 months,>=2 months,Corynebacterium,-0.47068675440964247,-0.3727471048714127,16.834611247752868,TRUE,Corynebacterium
+EBF duration,EBF duration,0 months,>=2 months,Lawsonella,-0.059130649168952054,-0.13151086811041535,2.0955490134319192,TRUE,Lawsonella
+EBF duration,EBF duration,0 months,>=2 months,Cutibacterium,-0.2217269012992633,-0.3876100331907441,18.20390474160191,TRUE,Cutibacterium
+EBF duration,EBF duration,0 months,>=2 months,Actinomyces,-0.12543675941321109,-0.055652394210397346,0.37526861078173834,TRUE,Actinomyces
+EBF duration,EBF duration,0 months,>=2 months,Varibaculum,-0.10812869356690591,-0.07438302152280943,0.670381723689821,TRUE,Varibaculum
+EBF duration,EBF duration,0 months,>=2 months,Dermabacter,-0.16032163984819725,-0.24612007998948388,7.339536407187292,TRUE,Dermabacter
+EBF duration,EBF duration,0 months,>=2 months,Actinotignum,-0.13713379464998898,-0.3093087172088415,11.5920128440254,TRUE,Actinotignum
+EBF duration,EBF duration,0 months,>=2 months,Rothia,0.24648547563838497,0.1074731021394468,1.3995038686883108,TRUE,Rothia
+EBF duration,EBF duration,0 months,>=2 months,Parabacteroides,-0.5088566938505532,-0.22546740575379726,6.1594519218852835,TRUE,Parabacteroides
+EBF duration,EBF duration,0 months,>=2 months,Porphyromonas,-0.11362686623217844,-0.33480625146050375,13.58193510179316,TRUE,Porphyromonas
+EBF duration,EBF duration,0 months,>=2 months,Coprobacter,-0.11588733398153772,-0.1846077834265962,4.129282061778593,TRUE,Coprobacter
+EBF duration,EBF duration,0 months,>=2 months,Alistipes,-0.19461149826366464,-0.20929282928816487,5.307417253205307,TRUE,Alistipes
+EBF duration,EBF duration,0 months,>=2 months,Gordonibacter,0.04055147940204329,0.05231624981808343,0.33162536717736857,TRUE,Gordonibacter
+EBF duration,EBF duration,0 months,>=2 months,Senegalimassilia,-0.14101538460189061,-0.0986530829766998,1.1792227728550742,TRUE,Senegalimassilia
+EBF duration,EBF duration,0 months,>=2 months,Eggerthella,0.24791801855732504,0.12281070688566607,1.8274562822047613,TRUE,Eggerthella
+EBF duration,EBF duration,0 months,>=2 months,Slackia,-0.02307677819960119,-0.037448701334144935,0.16992139200738085,TRUE,Slackia
+EBF duration,EBF duration,0 months,>=2 months,Atopobium,-0.07079178697524802,-0.06981574604883352,0.5905834880060354,TRUE,Atopobium
+EBF duration,EBF duration,0 months,>=2 months,Olsenella,-0.03555352180517524,-0.04693687281176064,0.266933349674989,TRUE,Olsenella
+EBF duration,EBF duration,0 months,>=2 months,Libanicoccus,-0.16230950973273228,-0.19323035798950106,4.5240276535602755,TRUE,Libanicoccus
+EBF duration,EBF duration,0 months,>=2 months,Collinsella,0.1391807741563662,0.0605626547122569,0.4444105309775452,TRUE,Collinsella
+EBF duration,EBF duration,0 months,>=2 months,Anaerococcus,0.03920033738691309,0.05034743764697898,0.30713497844765936,TRUE,Anaerococcus
+EBF duration,EBF duration,0 months,>=2 months,Finegoldia,0.05999959240179675,0.08145331923633566,0.8038816349839826,TRUE,Finegoldia
+EBF duration,EBF duration,0 months,>=2 months,Peptoniphilus,0.02078663149013482,0.021279861841222672,0.05486711715480117,TRUE,Peptoniphilus
+EBF duration,EBF duration,0 months,>=2 months,Fenollaria,-0.10473150605667814,-0.2908833674499164,10.252087695732097,TRUE,Fenollaria
+EBF duration,EBF duration,0 months,>=2 months,Clostridium_sensu_strict18,-0.0196359014697306,-0.03265355031553471,0.12919191899555899,TRUE,Clostridium_sensu_strict18
+EBF duration,EBF duration,0 months,>=2 months,Sarcina,-0.1364189848916636,-0.3429341378383866,14.249380165747338,TRUE,Sarcina
+EBF duration,EBF duration,0 months,>=2 months,Clostridium_sensu_strict1,0.6785595144934087,0.3071681780557305,11.432125343098223,TRUE,Clostridium_sensu_strict1
+EBF duration,EBF duration,0 months,>=2 months,Butyricicoccus,-0.09985628761563003,-0.21248502474688788,5.470552491715962,TRUE,Butyricicoccus
+EBF duration,EBF duration,0 months,>=2 months,Incertae_Sedis,-0.005075490323680709,-0.005911737122098047,0.004234525592289115,TRUE,Incertae_Sedis
+EBF duration,EBF duration,0 months,>=2 months,UBA1819,-0.02356522246996029,-0.026107032356854954,0.08258278956786214,TRUE,UBA1819
+EBF duration,EBF duration,0 months,>=2 months,Faecalibacterium,-0.10885008383109807,-0.0649641902723696,0.5113551018792583,TRUE,Faecalibacterium
+EBF duration,EBF duration,0 months,>=2 months,Subdoligranulum,-0.18130374701050142,-0.14872209775635298,2.679942889865515,TRUE,Subdoligranulum
+EBF duration,EBF duration,0 months,>=2 months,Ruminococcus,-0.12466540748011856,-0.24892022035059452,7.507492162764359,TRUE,Ruminococcus
+EBF duration,EBF duration,0 months,>=2 months,CAG-352,-0.23067283136510103,-0.22714645144142104,6.251531833507406,TRUE,CAG-352
+EBF duration,EBF duration,0 months,>=2 months,Flavonifractor,0.10172844024226091,0.08705724549527072,0.9182995632583932,TRUE,Flavonifractor
+EBF duration,EBF duration,0 months,>=2 months,[Eubacterium]_coprostanoligenegroup,-0.16120755792532437,-0.4059237656981851,19.964732312943493,TRUE,[Eubacterium]_coprostanoligenegroup
+EBF duration,EBF duration,0 months,>=2 months,Clostridia_UCG-014,-0.033157159560581295,-0.06798365398501018,0.5599942150982576,TRUE,Clostridia_UCG-014
+EBF duration,EBF duration,0 months,>=2 months,Monoglobus,-0.08834541238833327,-0.22152868484856775,5.9461309925914385,TRUE,Monoglobus
+EBF duration,EBF duration,0 months,>=2 months,Epulopiscium,0.09879259492976589,0.15019908222781264,2.7334371458067395,TRUE,Epulopiscium
+EBF duration,EBF duration,0 months,>=2 months,[Eubacterium]_hallii_group,-0.09636750565392593,-0.12416825117744834,1.8680808259138513,TRUE,[Eubacterium]_hallii_group
+EBF duration,EBF duration,0 months,>=2 months,Anaerostipes,-0.0425072517654681,-0.027641827336511778,0.09257805102331261,TRUE,Anaerostipes
+EBF duration,EBF duration,0 months,>=2 months,Lachnospiraceae_ND3007_group,-0.11428176773202214,-0.4298238321086102,22.38491850412026,TRUE,Lachnospiraceae_ND3007_group
+EBF duration,EBF duration,0 months,>=2 months,[Eubacterium]_eligengroup,-0.14656961827365678,-0.23274063160416547,6.563250058423883,TRUE,[Eubacterium]_eligengroup
+EBF duration,EBF duration,0 months,>=2 months,Lachnospira,-0.12968596765983642,-0.3545456744144916,15.230666770558738,TRUE,Lachnospira
+EBF duration,EBF duration,0 months,>=2 months,Hungatella,-0.1630097795925054,-0.15564197330746907,2.935134388573566,TRUE,Hungatella
+EBF duration,EBF duration,0 months,>=2 months,Prevotella,-0.01657349464609459,-0.01727876864751653,0.0361742981246058,TRUE,Prevotella
+EBF duration,EBF duration,0 months,>=2 months,Bacteroides,-0.872640849891567,-0.34739676674485837,14.622649768399747,TRUE,Bacteroides
+EBF duration,EBF duration,0 months,>=2 months,Bifidobacterium,-0.3563332274171298,-0.3083245790589933,11.51836478562121,TRUE,Bifidobacterium
+EBF duration,EBF duration,0 months,>=2 months,Scardovia,-0.2872264705072095,-0.38288267407028204,17.762576558985486,TRUE,Scardovia
+EBF duration,EBF duration,0 months,>=2 months,[Ruminococcus]_torquegroup,0.3310792898866774,0.2343126900118271,6.652213111058371,TRUE,[Ruminococcus]_torquegroup
+EBF duration,EBF duration,0 months,>=2 months,Sellimonas,0.13041317451786527,0.11583711284354632,1.6258107207368222,TRUE,Sellimonas
+EBF duration,EBF duration,0 months,>=2 months,uncultured18,0.2181248005817551,0.21954349509349874,5.840038115915096,TRUE,uncultured18
+EBF duration,EBF duration,0 months,>=2 months,Lachnoclostridium,0.22603827523101944,0.12926684334670246,2.0246447011725706,TRUE,Lachnoclostridium
+EBF duration,EBF duration,0 months,>=2 months,[Ruminococcus]_gnavugroup,0.8056086155381426,0.520039879859211,32.767841371348965,TRUE,[Ruminococcus]_gnavugroup
+EBF duration,EBF duration,0 months,>=2 months,Dorea,0.1733724271246755,0.14700868567462055,2.618547905561717,TRUE,Dorea
+EBF duration,EBF duration,0 months,>=2 months,Coprococcus,-0.08713249258348266,-0.20051897244907857,4.8717553956593935,TRUE,Coprococcus
+EBF duration,EBF duration,0 months,>=2 months,Tyzzerella,0.3787954211480158,0.28250016111847615,9.669676248683482,TRUE,Tyzzerella
+EBF duration,EBF duration,0 months,>=2 months,22_Lachnospiraceae(F),0.11824023468723044,0.10812065648189055,1.4164194504256014,TRUE,22_Lachnospiraceae(F)
+EBF duration,EBF duration,0 months,>=2 months,Roseburia,0.1659264167019594,0.1689086316821631,3.4568315850789078,TRUE,Roseburia
+EBF duration,EBF duration,0 months,>=2 months,Agathobacter,-0.2489682555810901,-0.1643281344756268,3.271887661098536,TRUE,Agathobacter
+EBF duration,EBF duration,0 months,>=2 months,Proteus,-0.19951377946792914,-0.22169531933389502,5.955079749101416,TRUE,Proteus
+EBF duration,EBF duration,0 months,>=2 months,Morganella,-0.09270039282739151,-0.16790775445039344,3.4159856769982024,TRUE,Morganella
+EBF duration,EBF duration,0 months,>=2 months,24_Enterobacteriaceae(F),0.13715023717274777,0.04829984960160573,0.2826611300125818,TRUE,24_Enterobacteriaceae(F)
+EBF duration,EBF duration,0 months,>=2 months,Escherichia-Shigella,-0.30771592250445945,-0.1520283150780787,2.800422114260499,TRUE,Escherichia-Shigella
+EBF duration,EBF duration,0 months,>=2 months,[Ruminococcus]_gauvreauii_group,-0.06301239097642575,-0.08089034714759392,0.7928078331476723,TRUE,[Ruminococcus]_gauvreauii_group
+EBF duration,EBF duration,0 months,>=2 months,Lachnoanaerobaculum,-0.11445315193881267,-0.36381328992128587,16.03731476282462,TRUE,Lachnoanaerobaculum
+EBF duration,EBF duration,0 months,>=2 months,Fusicatenibacter,-0.3944901370144738,-0.21698070374853667,5.704489181898893,TRUE,Fusicatenibacter
+EBF duration,EBF duration,0 months,>=2 months,Lachnospiraceae_NK4A136_group,-0.13310977348689723,-0.270585088845697,8.871197629540909,TRUE,Lachnospiraceae_NK4A136_group
+EBF duration,EBF duration,0 months,>=2 months,Blautia,0.39801795112809835,0.3657687206276913,16.210173398787205,TRUE,Blautia
+Sex,Sex,Female,Male,Phascolarctobacterium,-8.452404185382845e-4,-0.0012941853750050383,2.4787621916323943e-4,TRUE,Phascolarctobacterium
+Sex,Sex,Female,Male,Veillonella,0.41581907880904345,0.16462776004841873,4.010957184382391,TRUE,Veillonella
+Sex,Sex,Female,Male,Negativicoccus,0.055128633376574365,0.0706136883656758,0.7379376705526924,TRUE,Negativicoccus
+Sex,Sex,Female,Male,Dialister,-0.08159729263115484,-0.077125870896157675,0.880323002409004,TRUE,Dialister
+Sex,Sex,Female,Male,Megasphaera,-0.056553968106710095,-0.07501303756143482,0.8327514390489483,TRUE,Megasphaera
+Sex,Sex,Female,Male,Anaeroglobus,0.010954420927246633,0.019227454040511238,0.0547123604151218,TRUE,Anaeroglobus
+Sex,Sex,Female,Male,Megamonas,-0.07724006000224426,-0.18870272879294472,5.269849938919269,TRUE,Megamonas
+Sex,Sex,Female,Male,Streptococcus,-0.10042526170481736,-0.06762895474847573,0.6768730738019886,TRUE,Streptococcus
+Sex,Sex,Female,Male,Lactococcus,0.18630355746967528,0.11753252815445264,2.04436314867827,TRUE,Lactococcus
+Sex,Sex,Female,Male,Gemella,0.15821568491010657,0.0856710015103886,1.0861994426146366,TRUE,Gemella
+Sex,Sex,Female,Male,Staphylococcus,0.265902531806816,0.11336686672245411,1.9020160394772403,TRUE,Staphylococcus
+Sex,Sex,Female,Male,Turicibacter,-0.07299832036948739,-0.1717553755272942,4.365787211623623,TRUE,Turicibacter
+Sex,Sex,Female,Male,Granulicatella,-0.024133320996229446,-0.027579005754731902,0.1125638914463722,TRUE,Granulicatella
+Sex,Sex,Female,Male,Enterococcus,0.1758461992042335,0.0756152687610774,0.8461763598341061,TRUE,Enterococcus
+Sex,Sex,Female,Male,Dolosigranulum,0.014451421027185773,0.022338143744901326,0.07384754299117804,TRUE,Dolosigranulum
+Sex,Sex,Female,Male,Lactobacillus,-0.12706248143266663,-0.041251258185408424,0.25183511493284244,TRUE,Lactobacillus
+Sex,Sex,Female,Male,Leuconostoc,0.08173422367161942,0.11538607100026256,1.9703739572794785,TRUE,Leuconostoc
+Sex,Sex,Female,Male,Family_XIII_AD3011_group,-0.0018010896644894414,-0.004441414681258898,0.0029193390419991094,TRUE,Family_XIII_AD3011_group
+Sex,Sex,Female,Male,Terrisporobacter,0.1034061045346405,0.0820624841197373,0.9966236906875439,TRUE,Terrisporobacter
+Sex,Sex,Female,Male,Paeniclostridium,-0.021467662803832166,-0.0375310608156799,0.20846040040465277,TRUE,Paeniclostridium
+Sex,Sex,Female,Male,Intestinibacter,0.3864084307821929,0.17471731986245387,4.517662737552746,TRUE,Intestinibacter
+Sex,Sex,Female,Male,Clostridioides,0.09885451225090064,0.06765468024172945,0.6773881255462786,TRUE,Clostridioides
+Sex,Sex,Female,Male,Peptostreptococcus,-0.06308054368171612,-0.11731307930877335,2.0367360804728656,TRUE,Peptostreptococcus
+Sex,Sex,Female,Male,Romboutsia,0.040456307122046176,0.02398450368896398,0.08513406287879335,TRUE,Romboutsia
+Sex,Sex,Female,Male,Solobacterium,-0.030362560274300066,-0.05348025486401114,0.4232810484728373,TRUE,Solobacterium
+Sex,Sex,Female,Male,Holdemanella,-0.07951937130477182,-0.07101975933249591,0.7464492401438274,TRUE,Holdemanella
+Sex,Sex,Female,Male,Faecalicoccus,-0.08131522365423771,-0.12717489942607108,2.3935620664149826,TRUE,Faecalicoccus
+Sex,Sex,Female,Male,Faecalitalea,-0.17082188569927004,-0.23407825426096565,8.108938888976459,TRUE,Faecalitalea
+Sex,Sex,Female,Male,[Clostridium]_innocuum_group,0.2428595749433557,0.12137504486234078,2.180221884394512,TRUE,[Clostridium]_innocuum_group
+Sex,Sex,Female,Male,Coprobacillus,-0.09153128289897439,-0.14876778906090227,3.275365009624999,TRUE,Coprobacillus
+Sex,Sex,Female,Male,Erysipelotrichaceae_UCG-003,-0.0607185598328302,-0.04330575120108879,0.27754476534828026,TRUE,Erysipelotrichaceae_UCG-003
+Sex,Sex,Female,Male,Erysipelatoclostridium,0.09664579665427153,0.04913174050423349,0.35724502257253254,TRUE,Erysipelatoclostridium
+Sex,Sex,Female,Male,Eubacterium,0.06200385614476678,0.062496635102420116,0.5780363603313242,TRUE,Eubacterium
+Sex,Sex,Female,Male,Christensenellaceae_R-7_group,-0.05754085152239008,-0.16319980981483317,3.941678372030817,TRUE,Christensenellaceae_R-7_group
+Sex,Sex,Female,Male,Stenotrophomonas,-0.039224969388003905,-0.11664689968543789,2.013669946715795,TRUE,Stenotrophomonas
+Sex,Sex,Female,Male,Pseudomonas,-0.017631451740886428,-0.04369965795447493,0.28261679248121957,TRUE,Pseudomonas
+Sex,Sex,Female,Male,Halomonas,0.0033944151331277705,0.005948748889827797,0.005237127670930025,TRUE,Halomonas
+Sex,Sex,Female,Male,8_Comamonadaceae(F),-0.029545234039830337,-0.08975044903571452,1.1921067524700522,TRUE,8_Comamonadaceae(F)
+Sex,Sex,Female,Male,Delftia,-0.03389877095085081,-0.04424837516782458,0.28975873915845907,TRUE,Delftia
+Sex,Sex,Female,Male,Sutterella,0.017447814339651813,0.02705879035031332,0.10835741686332466,TRUE,Sutterella
+Sex,Sex,Female,Male,Haemophilus,0.15776900219752987,0.07090487745611604,0.7440362741601678,TRUE,Haemophilus
+Sex,Sex,Female,Male,9_Pasteurellaceae(F),-0.027167178598669572,-0.06330736559184406,0.5931306557685367,TRUE,9_Pasteurellaceae(F)
+Sex,Sex,Female,Male,Acinetobacter,-0.07832666564034185,-0.12171441996214559,2.192431106657311,TRUE,Acinetobacter
+Sex,Sex,Female,Male,Bilophila,-0.14342291174663668,-0.18345764460667952,4.980965279780452,TRUE,Bilophila
+Sex,Sex,Female,Male,Fusobacterium,0.033009609442889665,0.04843149019699158,0.3471343192086919,TRUE,Fusobacterium
+Sex,Sex,Female,Male,Brevundimonas,0.009707579294282676,0.023857506077270763,0.08423488242675832,TRUE,Brevundimonas
+Sex,Sex,Female,Male,Akkermansia,-0.08289948295629768,-0.05302957780172787,0.4161771451110253,TRUE,Akkermansia
+Sex,Sex,Female,Male,Blastococcus,-0.01517652301003658,-0.048276350036259075,0.34491393664021075,TRUE,Blastococcus
+Sex,Sex,Female,Male,Corynebacterium,0.09674332212244138,0.07561719522353218,0.8462194767278118,TRUE,Corynebacterium
+Sex,Sex,Female,Male,Lawsonella,-0.05071090002922374,-0.11458009021645614,1.9429436602166754,TRUE,Lawsonella
+Sex,Sex,Female,Male,Cutibacterium,-0.03456037922174415,-0.06041893768530653,0.5402416434017024,TRUE,Cutibacterium
+Sex,Sex,Female,Male,Actinomyces,-0.14388666957858343,-0.06331051223009114,0.5931896193337588,TRUE,Actinomyces
+Sex,Sex,Female,Male,Varibaculum,0.006500204239667462,0.004536059987376327,0.003045085324995967,TRUE,Varibaculum
+Sex,Sex,Female,Male,Dermabacter,-0.06111123564730958,-0.09460437391875647,1.3245376866659138,TRUE,Dermabacter
+Sex,Sex,Female,Male,Actinotignum,-0.1179618778674395,-0.2571962760963736,9.789741857851716,TRUE,Actinotignum
+Sex,Sex,Female,Male,Rothia,0.3017843458057228,0.13145354563974776,2.5573283728757104,TRUE,Rothia
+Sex,Sex,Female,Male,Parabacteroides,-0.20777548107603133,-0.09341680542374771,1.2914925670795432,TRUE,Parabacteroides
+Sex,Sex,Female,Male,Porphyromonas,-0.027965337299748483,-0.08272633511858614,1.0128134444237082,TRUE,Porphyromonas
+Sex,Sex,Female,Male,Coprobacter,-0.026386944717445848,-0.043049554475426535,0.27427057074383854,TRUE,Coprobacter
+Sex,Sex,Female,Male,Alistipes,0.010890011441786362,0.011881193397160927,0.020891134165620523,TRUE,Alistipes
+Sex,Sex,Female,Male,Gordonibacter,0.07236665021374222,0.09610720971934886,1.3669537630549469,TRUE,Gordonibacter
+Sex,Sex,Female,Male,Senegalimassilia,0.007269360452361151,0.004983134163178466,0.0036749128798016267,TRUE,Senegalimassilia
+Sex,Sex,Female,Male,Eggerthella,-0.10533126723336073,-0.05177498809346488,0.39671799753171527,TRUE,Eggerthella
+Sex,Sex,Female,Male,Slackia,-0.09763339751584155,-0.16262990154118034,3.914197055564627,TRUE,Slackia
+Sex,Sex,Female,Male,Atopobium,0.2291069977757907,0.21041218341794826,6.552147321914217,TRUE,Atopobium
+Sex,Sex,Female,Male,Olsenella,-0.0500544016366703,-0.0622301909003963,0.5731181394123201,TRUE,Olsenella
+Sex,Sex,Female,Male,Libanicoccus,-0.02601616059652989,-0.03092053333101678,0.14149328846240816,TRUE,Libanicoccus
+Sex,Sex,Female,Male,Collinsella,-0.390290766521447,-0.16870170003956297,4.2119267131649725,TRUE,Collinsella
+Sex,Sex,Female,Male,Anaerococcus,-0.16684704824054675,-0.22122126738697964,7.242619005457005,TRUE,Anaerococcus
+Sex,Sex,Female,Male,Finegoldia,0.02001894757962497,0.027577787768018395,0.11255394922452552,TRUE,Finegoldia
+Sex,Sex,Female,Male,Peptoniphilus,-0.06539177796921036,-0.06616051554537838,0.6477980691810425,TRUE,Peptoniphilus
+Sex,Sex,Female,Male,Fenollaria,-0.04496269186882462,-0.12613761289376232,2.3546757084953507,TRUE,Fenollaria
+Sex,Sex,Female,Male,Clostridium_sensu_strict18,-0.09707898531613102,-0.16634557894177687,4.095099076540549,TRUE,Clostridium_sensu_strict18
+Sex,Sex,Female,Male,Sarcina,0.010692838978895725,0.025392735822199076,0.09542471611916106,TRUE,Sarcina
+Sex,Sex,Female,Male,Clostridium_sensu_strict1,0.24170506280026371,0.10765686917029892,1.715241908152719,TRUE,Clostridium_sensu_strict1
+Sex,Sex,Female,Male,Butyricicoccus,0.026107839595115312,0.04409805427970007,0.2877933424572058,TRUE,Butyricicoccus
+Sex,Sex,Female,Male,Incertae_Sedis,-0.12709167620916073,-0.15047265639221755,3.350866020992299,TRUE,Incertae_Sedis
+Sex,Sex,Female,Male,UBA1819,-0.025568868801107092,-0.027396386432955014,0.11107810309360816,TRUE,UBA1819
+Sex,Sex,Female,Male,Faecalibacterium,0.13709506393450976,0.08163126907532407,0.9861772606881276,TRUE,Faecalibacterium
+Sex,Sex,Female,Male,Subdoligranulum,-0.029915022332520746,-0.02408847092073302,0.08587373519420272,TRUE,Subdoligranulum
+Sex,Sex,Female,Male,Ruminococcus,-6.402461099519474e-4,-0.0013002465733767034,2.5020346718249896e-4,TRUE,Ruminococcus
+Sex,Sex,Female,Male,CAG-352,0.02959404000575222,0.028830948288757537,0.12301547335035834,TRUE,CAG-352
+Sex,Sex,Female,Male,Flavonifractor,0.05310586188361677,0.04429082481024096,0.2903149654555541,TRUE,Flavonifractor
+Sex,Sex,Female,Male,[Eubacterium]_coprostanoligenegroup,-0.03638382439168486,-0.08575979765116583,1.0884522539802608,TRUE,[Eubacterium]_coprostanoligenegroup
+Sex,Sex,Female,Male,Clostridia_UCG-014,-0.07282910974460755,-0.15199988701914666,3.4192308088912964,TRUE,Clostridia_UCG-014
+Sex,Sex,Female,Male,Monoglobus,0.014478731539150247,0.03649989128312513,0.19716282378906774,TRUE,Monoglobus
+Sex,Sex,Female,Male,Epulopiscium,0.03328391319525914,0.04947068886615496,0.3621911242777262,TRUE,Epulopiscium
+Sex,Sex,Female,Male,[Eubacterium]_hallii_group,-0.0389476958501116,-0.04783600943739267,0.3386505408593399,TRUE,[Eubacterium]_hallii_group
+Sex,Sex,Female,Male,Anaerostipes,-0.013771376674802216,-0.008705094112283223,0.011214730180552142,TRUE,Anaerostipes
+Sex,Sex,Female,Male,Lachnospiraceae_ND3007_group,-0.031573139326514066,-0.10829068586978338,1.7354979160039317,TRUE,Lachnospiraceae_ND3007_group
+Sex,Sex,Female,Male,[Eubacterium]_eligengroup,-0.003031306335095074,-0.00478189162611395,0.0033840856502429296,TRUE,[Eubacterium]_eligengroup
+Sex,Sex,Female,Male,Lachnospira,-0.011848602791700857,-0.030397191418329635,0.13674416525555888,TRUE,Lachnospira
+Sex,Sex,Female,Male,Hungatella,0.022029604744588704,0.02154884456689154,0.06872106240261368,TRUE,Hungatella
+Sex,Sex,Female,Male,Prevotella,-0.14755218432916029,-0.1567146230252633,3.634636071967049,TRUE,Prevotella
+Sex,Sex,Female,Male,Bacteroides,-0.1184467738797812,-0.04653351009566297,0.3204597682879246,TRUE,Bacteroides
+Sex,Sex,Female,Male,Bifidobacterium,-0.11002485478920043,-0.09223210723085169,1.2589432393090647,TRUE,Bifidobacterium
+Sex,Sex,Female,Male,Scardovia,-0.03689003822867676,-0.049780786463099844,0.3667460076316119,TRUE,Scardovia
+Sex,Sex,Female,Male,[Ruminococcus]_torquegroup,-0.15307987024587832,-0.10746624228265599,1.7091729643544258,TRUE,[Ruminococcus]_torquegroup
+Sex,Sex,Female,Male,Sellimonas,-0.06009302168217723,-0.05248816546870294,0.40772249719631415,TRUE,Sellimonas
+Sex,Sex,Female,Male,uncultured18,0.09142100210707227,0.09247343099805427,1.2655398659081647,TRUE,uncultured18
+Sex,Sex,Female,Male,Lachnoclostridium,-0.029810029447535746,-0.016727177656128835,0.04140828337605646,TRUE,Lachnoclostridium
+Sex,Sex,Female,Male,[Ruminococcus]_gnavugroup,-0.11719405474194744,-0.07356273519605189,0.8008618853825274,TRUE,[Ruminococcus]_gnavugroup
+Sex,Sex,Female,Male,Dorea,0.024273489146943494,0.020734612060594865,0.06362586742807856,TRUE,Dorea
+Sex,Sex,Female,Male,Coprococcus,-0.042736326456322304,-0.09175719335828443,1.246011727162643,TRUE,Coprococcus
+Sex,Sex,Female,Male,Tyzzerella,-0.17137242614660175,-0.12370710830765083,2.264806997904407,TRUE,Tyzzerella
+Sex,Sex,Female,Male,22_Lachnospiraceae(F),-0.015187620626954779,-0.012667951163154783,0.023749509723503048,TRUE,22_Lachnospiraceae(F)
+Sex,Sex,Female,Male,Roseburia,-0.0020123783894020475,-0.001993744983294376,5.882759624080197e-4,TRUE,Roseburia
+Sex,Sex,Female,Male,Agathobacter,0.16149854334714084,0.10629630257287973,1.6721614392729043,TRUE,Agathobacter
+Sex,Sex,Female,Male,Proteus,-0.054226048351327605,-0.059060164154649875,0.5162156742527344,TRUE,Proteus
+Sex,Sex,Female,Male,Morganella,-0.06453639375509368,-0.11980925730117281,2.1243332157580355,TRUE,Morganella
+Sex,Sex,Female,Male,24_Enterobacteriaceae(F),0.4572548591991574,0.15924858897811908,3.75312538542976,TRUE,24_Enterobacteriaceae(F)
+Sex,Sex,Female,Male,Escherichia-Shigella,0.2601661155859585,0.12989728844547557,2.4971352119108348,TRUE,Escherichia-Shigella
+Sex,Sex,Female,Male,[Ruminococcus]_gauvreauii_group,-0.10077105919271623,-0.12699916737036318,2.386951721588535,TRUE,[Ruminococcus]_gauvreauii_group
+Sex,Sex,Female,Male,Lachnoanaerobaculum,0.027484651726251808,0.08155868478889472,0.9844242768217458,TRUE,Lachnoanaerobaculum
+Sex,Sex,Female,Male,Fusicatenibacter,0.03654766854624936,0.020045578394344194,0.059467416513018144,TRUE,Fusicatenibacter
+Sex,Sex,Female,Male,Lachnospiraceae_NK4A136_group,-0.017918399906690308,-0.0366866983807215,0.19918615402312953,TRUE,Lachnospiraceae_NK4A136_group
+Sex,Sex,Female,Male,Blautia,0.025987956133805667,0.02300571046185408,0.07832730555107209,TRUE,Blautia
+Smoking,Smoking,No,Yes,Phascolarctobacterium,0.22022374409512946,0.3390384457579674,6.471015076526735,TRUE,Phascolarctobacterium
+Smoking,Smoking,No,Yes,Veillonella,-0.3419525548643998,-0.13504260550270988,1.02663515568431,TRUE,Veillonella
+Smoking,Smoking,No,Yes,Negativicoccus,-0.02465050786844203,-0.03155634877335862,0.05605934376732826,TRUE,Negativicoccus
+Smoking,Smoking,No,Yes,Dialister,-0.04096228112355427,-0.03869151390746457,0.08427639707963505,TRUE,Dialister
+Smoking,Smoking,No,Yes,Megasphaera,0.04750674600028815,0.06298031770214835,0.22329767899685504,TRUE,Megasphaera
+Smoking,Smoking,No,Yes,Anaeroglobus,-0.01625959776321062,-0.02853900935086231,0.04585136849483152,TRUE,Anaeroglobus
+Smoking,Smoking,No,Yes,Megamonas,0.13995573602409705,0.3423021113722737,6.596197804627306,TRUE,Megamonas
+Smoking,Smoking,No,Yes,Streptococcus,-0.26723417974327024,-0.1801374558097685,1.8267645033811393,TRUE,Streptococcus
+Smoking,Smoking,No,Yes,Lactococcus,-0.5248969692121442,-0.33230422806626003,6.216504449983937,TRUE,Lactococcus
+Smoking,Smoking,No,Yes,Gemella,-0.018935089839473784,-0.010243643328118607,0.005907223621073674,TRUE,Gemella
+Smoking,Smoking,No,Yes,Staphylococcus,0.18785643001143493,0.07998772688639855,0.36018135278868907,TRUE,Staphylococcus
+Smoking,Smoking,No,Yes,Turicibacter,0.04979107685927575,0.116796694924911,0.7679547334725849,TRUE,Turicibacter
+Smoking,Smoking,No,Yes,Granulicatella,-0.3013750279811884,-0.34633669794431954,6.752607996193111,TRUE,Granulicatella
+Smoking,Smoking,No,Yes,Enterococcus,-0.6183559705265065,-0.26660703919584855,4.001453168876152,TRUE,Enterococcus
+Smoking,Smoking,No,Yes,Dolosigranulum,0.15135606260365386,0.23455575629489445,3.0971818521698093,TRUE,Dolosigranulum
+Smoking,Smoking,No,Yes,Lactobacillus,0.9196317380240895,0.29977482599862865,5.059001799702173,TRUE,Lactobacillus
+Smoking,Smoking,No,Yes,Leuconostoc,-0.11162728573099578,-0.1575104087885154,1.3966675149909151,TRUE,Leuconostoc
+Smoking,Smoking,No,Yes,Family_XIII_AD3011_group,0.04861370670772891,0.11996142461542285,0.81013565059215,TRUE,Family_XIII_AD3011_group
+Smoking,Smoking,No,Yes,Terrisporobacter,-0.018853551521868073,-0.014949607485895605,0.012581548464931827,TRUE,Terrisporobacter
+Smoking,Smoking,No,Yes,Paeniclostridium,0.10393181089678583,0.18195447624527025,1.8638029850067417,TRUE,Paeniclostridium
+Smoking,Smoking,No,Yes,Intestinibacter,-0.3696893393265044,-0.1667420798230121,1.5651823552184025,TRUE,Intestinibacter
+Smoking,Smoking,No,Yes,Clostridioides,-0.3582053057341656,-0.24571493575211986,3.398894045272217,TRUE,Clostridioides
+Smoking,Smoking,No,Yes,Peptostreptococcus,0.10273960489124456,0.19107140213019647,2.0552558636635117,TRUE,Peptostreptococcus
+Smoking,Smoking,No,Yes,Romboutsia,-0.1475095759334103,-0.0874765954270194,0.4307827048479958,TRUE,Romboutsia
+Smoking,Smoking,No,Yes,Solobacterium,0.011394149337498272,0.020062709929138563,0.02265967637151531,TRUE,Solobacterium
+Smoking,Smoking,No,Yes,Holdemanella,-0.005351903283019821,-0.004776837126165284,0.001284562921005311,TRUE,Holdemanella
+Smoking,Smoking,No,Yes,Faecalicoccus,0.20745957487871514,0.32543722653685936,5.9622334252367155,TRUE,Faecalicoccus
+Smoking,Smoking,No,Yes,Faecalitalea,0.065627903616227945,0.08935262327206324,0.44945801499183524,TRUE,Faecalitalea
+Smoking,Smoking,No,Yes,[Clostridium]_innocuum_group,-0.9720722516903559,-0.49045527789055937,13.541704718388502,TRUE,[Clostridium]_innocuum_group
+Smoking,Smoking,No,Yes,Coprobacillus,0.029841674727605905,0.0483736522164193,0.13173229880696086,TRUE,Coprobacillus
+Smoking,Smoking,No,Yes,Erysipelotrichaceae_UCG-003,0.10285095574873698,0.07335703823586252,0.30294102591647726,TRUE,Erysipelotrichaceae_UCG-003
+Smoking,Smoking,No,Yes,Erysipelatoclostridium,-0.2702048656103919,-0.1374459561950945,1.0635023372814023,TRUE,Erysipelatoclostridium
+Smoking,Smoking,No,Yes,Eubacterium,0.05422920316601043,0.05464121785390104,0.16807969665803196,TRUE,Eubacterium
+Smoking,Smoking,No,Yes,Christensenellaceae_R-7_group,0.02411102814502042,0.06817253923518059,0.26163356315890424,TRUE,Christensenellaceae_R-7_group
+Smoking,Smoking,No,Yes,Stenotrophomonas,0.056495812294484304,0.16794636487503706,1.5878728794064683,TRUE,Stenotrophomonas
+Smoking,Smoking,No,Yes,Pseudomonas,0.0988471635214131,0.24563869076488237,3.3967850287764287,TRUE,Pseudomonas
+Smoking,Smoking,No,Yes,Halomonas,0.10609850382251862,0.18624538819899822,1.9527451593421574,TRUE,Halomonas
+Smoking,Smoking,No,Yes,8_Comamonadaceae(F),0.1568691494139849,0.481277268785352,13.039628387707912,TRUE,8_Comamonadaceae(F)
+Smoking,Smoking,No,Yes,Delftia,-0.14097124282695528,-0.18426363542308052,1.9114096989152851,TRUE,Delftia
+Smoking,Smoking,No,Yes,Sutterella,0.2048151590401489,0.31914624320080426,5.733951138937081,TRUE,Sutterella
+Smoking,Smoking,No,Yes,Haemophilus,0.31172711369994965,0.14013992296115935,1.105600594591117,TRUE,Haemophilus
+Smoking,Smoking,No,Yes,9_Pasteurellaceae(F),0.16672202793465696,0.391139288811434,8.612661889791472,TRUE,9_Pasteurellaceae(F)
+Smoking,Smoking,No,Yes,Acinetobacter,-0.0036653146145581017,-0.00568511039760063,0.0018195010890575752,TRUE,Acinetobacter
+Smoking,Smoking,No,Yes,Bilophila,0.19538714244892952,0.2496174302684957,3.5077152483200154,TRUE,Bilophila
+Smoking,Smoking,No,Yes,Fusobacterium,0.10696904239758265,0.15708274427090904,1.3890934853522379,TRUE,Fusobacterium
+Smoking,Smoking,No,Yes,Brevundimonas,0.12544213429894047,0.3096737832283769,5.398627895669604,TRUE,Brevundimonas
+Smoking,Smoking,No,Yes,Akkermansia,0.20716172077868059,0.1325826338780632,0.9895729142247414,TRUE,Akkermansia
+Smoking,Smoking,No,Yes,Blastococcus,0.08222872090308175,0.26234945482296224,3.874671130122792,TRUE,Blastococcus
+Smoking,Smoking,No,Yes,Corynebacterium,0.19724834812005682,0.15423895221797154,1.3392530600768728,TRUE,Corynebacterium
+Smoking,Smoking,No,Yes,Lawsonella,0.03166322894065032,0.07144220497209526,0.2873321449004015,TRUE,Lawsonella
+Smoking,Smoking,No,Yes,Cutibacterium,0.08149092948118508,0.1425363569179887,1.1437360859782661,TRUE,Cutibacterium
+Smoking,Smoking,No,Yes,Actinomyces,-0.3734729845877198,-0.16445834427640182,1.5226018107097468,TRUE,Actinomyces
+Smoking,Smoking,No,Yes,Varibaculum,0.11809815413519115,0.08243934717407686,0.382598799310535,TRUE,Varibaculum
+Smoking,Smoking,No,Yes,Dermabacter,0.0335162806549032,0.05183399536691421,0.15125296118878948,TRUE,Dermabacter
+Smoking,Smoking,No,Yes,Actinotignum,0.10572498491694038,0.22919906183147867,2.95733270408449,TRUE,Actinotignum
+Smoking,Smoking,No,Yes,Rothia,-0.7423870662618226,-0.3242910027460517,5.92030817441959,TRUE,Rothia
+Smoking,Smoking,No,Yes,Parabacteroides,0.36858729261950696,0.16575428852797386,1.5466927935486137,TRUE,Parabacteroides
+Smoking,Smoking,No,Yes,Porphyromonas,0.11447832798597135,0.3402198672161269,6.516191758588389,TRUE,Porphyromonas
+Smoking,Smoking,No,Yes,Coprobacter,0.17076816044117493,0.27957542990605,4.4002010217996235,TRUE,Coprobacter
+Smoking,Smoking,No,Yes,Alistipes,0.2931638972591406,0.32141378556756345,5.8157203410347185,TRUE,Alistipes
+Smoking,Smoking,No,Yes,Gordonibacter,-0.288837062770549,-0.38586116928376324,8.381787898708355,TRUE,Gordonibacter
+Smoking,Smoking,No,Yes,Senegalimassilia,0.3628445779970717,0.24946595366156143,3.5034593308831883,TRUE,Senegalimassilia
+Smoking,Smoking,No,Yes,Eggerthella,-0.6877212717172906,-0.33978819899119983,6.499666865419494,TRUE,Eggerthella
+Smoking,Smoking,No,Yes,Slackia,0.20951440003039112,0.3498658139714258,6.890925148041047,TRUE,Slackia
+Smoking,Smoking,No,Yes,Atopobium,-0.04847727683429598,-0.04428056622773049,0.11038265762526973,TRUE,Atopobium
+Smoking,Smoking,No,Yes,Olsenella,0.19407454101500454,0.2418382632176838,3.2924906117393045,TRUE,Olsenella
+Smoking,Smoking,No,Yes,Libanicoccus,0.250390437945337,0.29882142042004384,5.026873614639935,TRUE,Libanicoccus
+Smoking,Smoking,No,Yes,Collinsella,0.6907384749266945,0.29877334359515256,5.025256215989128,TRUE,Collinsella
+Smoking,Smoking,No,Yes,Anaerococcus,0.32449450081728004,0.4314084145210926,10.477356903591224,TRUE,Anaerococcus
+Smoking,Smoking,No,Yes,Finegoldia,0.032711958042203726,0.04506354708689053,0.11432080172465935,TRUE,Finegoldia
+Smoking,Smoking,No,Yes,Peptoniphilus,0.18568680718289332,0.18808329112782857,1.9914753992026597,TRUE,Peptoniphilus
+Smoking,Smoking,No,Yes,Fenollaria,0.15454953781123892,0.4366260107222281,10.732322703113278,TRUE,Fenollaria
+Smoking,Smoking,No,Yes,Clostridium_sensu_strict18,0.11004409359541689,0.1882277436442769,1.9945355764389028,TRUE,Clostridium_sensu_strict18
+Smoking,Smoking,No,Yes,Sarcina,0.1700534189417785,0.4069786882519727,9.32433461020749,TRUE,Sarcina
+Smoking,Smoking,No,Yes,Clostridium_sensu_strict1,-0.8479046404699404,-0.3796989701396869,8.116211451386997,TRUE,Clostridium_sensu_strict1
+Smoking,Smoking,No,Yes,Butyricicoccus,0.016965022672471575,0.028649302058948486,0.046206450438528245,TRUE,Butyricicoccus
+Smoking,Smoking,No,Yes,Incertae_Sedis,-0.05693600577386837,-0.06723436904599081,0.25448206607770807,TRUE,Incertae_Sedis
+Smoking,Smoking,No,Yes,UBA1819,0.21031685770709274,0.22587569915047798,2.872192437992036,TRUE,UBA1819
+Smoking,Smoking,No,Yes,Faecalibacterium,-0.18279189735718027,-0.10881134837134587,0.6665349071834943,TRUE,Faecalibacterium
+Smoking,Smoking,No,Yes,Subdoligranulum,0.18542996185111382,0.1494619218107464,1.2575800499328893,TRUE,Subdoligranulum
+Smoking,Smoking,No,Yes,Ruminococcus,0.06961228545636589,0.14150737209975953,1.127282192267549,TRUE,Ruminococcus
+Smoking,Smoking,No,Yes,CAG-352,0.14266768655025552,0.13910270013501988,1.089295313526359,TRUE,CAG-352
+Smoking,Smoking,No,Yes,Flavonifractor,-0.18150193840342577,-0.151502850921554,1.292159501448734,TRUE,Flavonifractor
+Smoking,Smoking,No,Yes,[Eubacterium]_coprostanoligenegroup,0.1290570571152102,0.3052665258238916,5.246055525605227,TRUE,[Eubacterium]_coprostanoligenegroup
+Smoking,Smoking,No,Yes,Clostridia_UCG-014,0.10886750457546146,0.22711606214264976,2.903823488688296,TRUE,Clostridia_UCG-014
+Smoking,Smoking,No,Yes,Monoglobus,-0.040266726309126866,-0.10154261786682901,0.5804585682225589,TRUE,Monoglobus
+Smoking,Smoking,No,Yes,Epulopiscium,-0.07144078716836588,-0.10620871174879766,0.635030810594225,TRUE,Epulopiscium
+Smoking,Smoking,No,Yes,[Eubacterium]_hallii_group,-0.0861318764305058,-0.10581429495855836,0.6303230659472663,TRUE,[Eubacterium]_hallii_group
+Smoking,Smoking,No,Yes,Anaerostipes,-0.48083903472566814,-0.3052911881316357,5.246903211487113,TRUE,Anaerostipes
+Smoking,Smoking,No,Yes,Lachnospiraceae_ND3007_group,0.05439279325873614,0.1865937488951681,1.9600569737386806,TRUE,Lachnospiraceae_ND3007_group
+Smoking,Smoking,No,Yes,[Eubacterium]_eligengroup,0.0510578244807538,0.08056852567365606,0.3654309676032671,TRUE,[Eubacterium]_eligengroup
+Smoking,Smoking,No,Yes,Lachnospira,0.12840876160981696,0.3311085379526459,6.171848742173241,TRUE,Lachnospira
+Smoking,Smoking,No,Yes,Hungatella,-0.005201502425091209,-0.005087698115497205,0.0014571933573610401,TRUE,Hungatella
+Smoking,Smoking,No,Yes,Prevotella,0.364620794275877,0.38885006748941287,8.512142238472608,TRUE,Prevotella
+Smoking,Smoking,No,Yes,Bacteroides,0.7439803640412452,0.2934015950709164,4.846179050445938,TRUE,Bacteroides
+Smoking,Smoking,No,Yes,Bifidobacterium,0.3367337650007496,0.2830537084334409,4.510370448849683,TRUE,Bifidobacterium
+Smoking,Smoking,No,Yes,Scardovia,0.1825105798089911,0.24692519089485654,3.4324586266317922,TRUE,Scardovia
+Smoking,Smoking,No,Yes,[Ruminococcus]_torquegroup,-0.0904653653812541,-0.06342953371482418,0.2264944436479749,TRUE,[Ruminococcus]_torquegroup
+Smoking,Smoking,No,Yes,Sellimonas,-0.42685571250415716,-0.37520259774164805,7.925126223204058,TRUE,Sellimonas
+Smoking,Smoking,No,Yes,uncultured18,-0.1349046429851245,-0.1364325315438509,1.0478771978990886,TRUE,uncultured18
+Smoking,Smoking,No,Yes,Lachnoclostridium,0.0506085939908327,0.028397885579989086,0.04539902487793487,TRUE,Lachnoclostridium
+Smoking,Smoking,No,Yes,[Ruminococcus]_gnavugroup,-0.6319129773895238,-0.39938805877086114,8.979758695533445,TRUE,[Ruminococcus]_gnavugroup
+Smoking,Smoking,No,Yes,Dorea,-0.02487895769560844,-0.021251120265640577,0.025423665913476133,TRUE,Dorea
+Smoking,Smoking,No,Yes,Coprococcus,0.08591709688940086,0.18457340752061485,1.9178417775138425,TRUE,Coprococcus
+Smoking,Smoking,No,Yes,Tyzzerella,-0.6820267755155458,-0.4971467736507024,13.913736211573086,TRUE,Tyzzerella
+Smoking,Smoking,No,Yes,22_Lachnospiraceae(F),-0.21214458390142932,-0.17721053543078652,1.7678832876481525,TRUE,22_Lachnospiraceae(F)
+Smoking,Smoking,No,Yes,Roseburia,0.08783999562591616,0.08705806887638715,0.426670457550002,TRUE,Roseburia
+Smoking,Smoking,No,Yes,Agathobacter,0.3777807741229058,0.2490324891928037,3.491294899168689,TRUE,Agathobacter
+Smoking,Smoking,No,Yes,Proteus,-0.140820264407716,-0.153479174696616,1.3260912980130586,TRUE,Proteus
+Smoking,Smoking,No,Yes,Morganella,-0.11130311705171902,-0.20667874381135456,2.404729002468597,TRUE,Morganella
+Smoking,Smoking,No,Yes,24_Enterobacteriaceae(F),-0.5084764695972042,-0.17679003835380677,1.759503336981129,TRUE,24_Enterobacteriaceae(F)
+Smoking,Smoking,No,Yes,Escherichia-Shigella,0.1030441701441962,0.051346432663380626,0.14842090206008457,TRUE,Escherichia-Shigella
+Smoking,Smoking,No,Yes,[Ruminococcus]_gauvreauii_group,0.06862977044527407,0.08634859805738555,0.4197445794596001,TRUE,[Ruminococcus]_gauvreauii_group
+Smoking,Smoking,No,Yes,Lachnoanaerobaculum,0.15201567478581446,0.45515232629763464,11.662403099241159,TRUE,Lachnoanaerobaculum
+Smoking,Smoking,No,Yes,Fusicatenibacter,-0.26273643827084314,-0.1442407541731651,1.1712523727118354,TRUE,Fusicatenibacter
+Smoking,Smoking,No,Yes,Lachnospiraceae_NK4A136_group,0.041380889047376135,0.08473925732728972,0.40424422249163694,TRUE,Lachnospiraceae_NK4A136_group
+Smoking,Smoking,No,Yes,Blautia,-0.30435722147440636,-0.2703506523835173,4.114616455174381,TRUE,Blautia
+Siblings,Siblings,0,>=1,Phascolarctobacterium,-0.07635496281075127,-0.1302495994813406,0.7090205776255936,TRUE,Phascolarctobacterium
+Siblings,Siblings,0,>=1,Veillonella,0.8965852702698764,0.35528477275239295,5.275446649460444,TRUE,Veillonella
+Siblings,Siblings,0,>=1,Negativicoccus,0.13462509341958373,0.1606759373401677,1.078965929012832,TRUE,Negativicoccus
+Siblings,Siblings,0,>=1,Dialister,-0.029639940556432487,-0.027482816071352754,0.03156665104849019,TRUE,Dialister
+Siblings,Siblings,0,>=1,Megasphaera,-0.1284063570401599,-0.17025668550530484,1.211474830221474,TRUE,Megasphaera
+Siblings,Siblings,0,>=1,Anaeroglobus,-0.05739596768476263,-0.1115281605706173,0.5198465015482687,TRUE,Anaeroglobus
+Siblings,Siblings,0,>=1,Megamonas,0.008333953266757788,0.021086751802524634,0.018583410452170143,TRUE,Megamonas
+Siblings,Siblings,0,>=1,Streptococcus,0.5579780226547104,0.37042018464285115,5.734497060632051,TRUE,Streptococcus
+Siblings,Siblings,0,>=1,Lactococcus,0.3436889025934936,0.22227975861637628,2.0649325950410273,TRUE,Lactococcus
+Siblings,Siblings,0,>=1,Gemella,0.149651059606779,0.08176368076887501,0.2794003298990214,TRUE,Gemella
+Siblings,Siblings,0,>=1,Staphylococcus,0.09101721475977032,0.03845160339989311,0.06179238459674871,TRUE,Staphylococcus
+Siblings,Siblings,0,>=1,Turicibacter,-0.06235882046773389,-0.14580615732964886,0.8885007025871567,TRUE,Turicibacter
+Siblings,Siblings,0,>=1,Granulicatella,0.24740454045687743,0.2780987076087389,3.2322428832057417,TRUE,Granulicatella
+Siblings,Siblings,0,>=1,Enterococcus,0.22227279616752948,0.09546701707902457,0.3809015611908576,TRUE,Enterococcus
+Siblings,Siblings,0,>=1,Dolosigranulum,-0.07628482413185367,-0.11945420537967756,0.5963605876714065,TRUE,Dolosigranulum
+Siblings,Siblings,0,>=1,Lactobacillus,-0.580270907003742,-0.1869057031634476,1.4599942777270956,TRUE,Lactobacillus
+Siblings,Siblings,0,>=1,Leuconostoc,0.052224648058113554,0.06935455755376413,0.20102777122350401,TRUE,Leuconostoc
+Siblings,Siblings,0,>=1,Family_XIII_AD3011_group,-0.04497841576490558,-0.10603723897117842,0.4699188523545063,TRUE,Family_XIII_AD3011_group
+Siblings,Siblings,0,>=1,Terrisporobacter,-0.2997963839856068,-0.2413875776369639,2.4352069792530626,TRUE,Terrisporobacter
+Siblings,Siblings,0,>=1,Paeniclostridium,0.057084591626105574,0.10030990573582918,0.4205268124483136,TRUE,Paeniclostridium
+Siblings,Siblings,0,>=1,Intestinibacter,0.1904242991261169,0.08675092072477461,0.31452432021460003,TRUE,Intestinibacter
+Siblings,Siblings,0,>=1,Clostridioides,0.03023619243789688,0.02258048967312701,0.02130947538518375,TRUE,Clostridioides
+Siblings,Siblings,0,>=1,Peptostreptococcus,0.2119994738078601,0.40314976192591867,6.79264412610601,TRUE,Peptostreptococcus
+Siblings,Siblings,0,>=1,Romboutsia,-0.16788974932708445,-0.10079543642310927,0.42460762210399255,TRUE,Romboutsia
+Siblings,Siblings,0,>=1,Solobacterium,-0.03249323512647584,-0.06694159051517656,0.18728288914240268,TRUE,Solobacterium
+Siblings,Siblings,0,>=1,Holdemanella,-0.02515563345667493,-0.02232787475668332,0.02083535101780947,TRUE,Holdemanella
+Siblings,Siblings,0,>=1,Faecalicoccus,-0.08549211477706053,-0.12866874617374388,0.6919141059596665,TRUE,Faecalicoccus
+Siblings,Siblings,0,>=1,Faecalitalea,-0.07438191386865878,-0.12208052647437483,0.6228720362589362,TRUE,Faecalitalea
+Siblings,Siblings,0,>=1,[Clostridium]_innocuum_group,0.014139663960126225,0.007091982359454318,0.002102041761881403,TRUE,[Clostridium]_innocuum_group
+Siblings,Siblings,0,>=1,Coprobacillus,-0.057971926182538214,-0.09752038710582148,0.39746315883992567,TRUE,Coprobacillus
+Siblings,Siblings,0,>=1,Erysipelotrichaceae_UCG-003,-0.03554462886743681,-0.02616003343877088,0.028601093402702206,TRUE,Erysipelotrichaceae_UCG-003
+Siblings,Siblings,0,>=1,Erysipelatoclostridium,-0.2381901974327203,-0.12173817739671076,0.6193835081465658,TRUE,Erysipelatoclostridium
+Siblings,Siblings,0,>=1,Eubacterium,-0.06264589406401111,-0.05859515988391978,0.1434926096203273,TRUE,Eubacterium
+Siblings,Siblings,0,>=1,Christensenellaceae_R-7_group,0.06950078456198105,0.18750035588425254,1.469299190908939,TRUE,Christensenellaceae_R-7_group
+Siblings,Siblings,0,>=1,Stenotrophomonas,0.0614026097824425,0.2071715696147586,1.7937683612189748,TRUE,Stenotrophomonas
+Siblings,Siblings,0,>=1,Pseudomonas,0.041834264910590946,0.1085799907833591,0.49272619062737294,TRUE,Pseudomonas
+Siblings,Siblings,0,>=1,Halomonas,0.04422457079340547,0.07250964674721631,0.2197341840451272,TRUE,Halomonas
+Siblings,Siblings,0,>=1,8_Comamonadaceae(F),-0.03028046689044428,-0.092783383047621,0.35978781749647637,TRUE,8_Comamonadaceae(F)
+Siblings,Siblings,0,>=1,Delftia,0.4115087417052723,0.5336061031602365,11.900018131889002,TRUE,Delftia
+Siblings,Siblings,0,>=1,Sutterella,-0.10031852830555432,-0.16793610863325098,1.1786753957162701,TRUE,Sutterella
+Siblings,Siblings,0,>=1,Haemophilus,0.218405585734547,0.10115696455294033,0.42765900819357416,TRUE,Haemophilus
+Siblings,Siblings,0,>=1,9_Pasteurellaceae(F),-0.0370993058313287,-0.08880885755473535,0.3296238391126971,TRUE,9_Pasteurellaceae(F)
+Siblings,Siblings,0,>=1,Acinetobacter,0.03533810040961538,0.05804734684648199,0.14082209318628544,TRUE,Acinetobacter
+Siblings,Siblings,0,>=1,Bilophila,-0.16841622203213824,-0.2066985533169975,1.7855866108009666,TRUE,Bilophila
+Siblings,Siblings,0,>=1,Fusobacterium,-0.029821119960108833,-0.04678515235620476,0.09147915469471367,TRUE,Fusobacterium
+Siblings,Siblings,0,>=1,Brevundimonas,0.038714377540627454,0.11019972087838162,0.5075362139994719,TRUE,Brevundimonas
+Siblings,Siblings,0,>=1,Akkermansia,-0.3346180219330155,-0.21309494089051864,1.8978082275947021,TRUE,Akkermansia
+Siblings,Siblings,0,>=1,Blastococcus,0.15302150920557656,0.4713990834099336,9.287172542232026,TRUE,Blastococcus
+Siblings,Siblings,0,>=1,Corynebacterium,-0.18271819002668188,-0.13888258532360284,0.8061235920967396,TRUE,Corynebacterium
+Siblings,Siblings,0,>=1,Lawsonella,0.0269875275561694,0.059812386566936486,0.14951622027514083,TRUE,Lawsonella
+Siblings,Siblings,0,>=1,Cutibacterium,0.13686356219133766,0.23090885376034065,2.2283695614624057,TRUE,Cutibacterium
+Siblings,Siblings,0,>=1,Actinomyces,0.298450467506731,0.13233139952098022,0.7318664820425227,TRUE,Actinomyces
+Siblings,Siblings,0,>=1,Varibaculum,-0.1601497926051551,-0.11281696934122723,0.5319305143274293,TRUE,Varibaculum
+Siblings,Siblings,0,>=1,Dermabacter,0.21933186257259463,0.3482556165845673,5.0687667347420655,TRUE,Dermabacter
+Siblings,Siblings,0,>=1,Actinotignum,0.041034670133525464,0.08820456913066078,0.32515333466874236,TRUE,Actinotignum
+Siblings,Siblings,0,>=1,Rothia,0.24352081935712744,0.1053797436036714,0.4641093542533786,TRUE,Rothia
+Siblings,Siblings,0,>=1,Parabacteroides,-0.12625277965579512,-0.055283696930985386,0.12773214391792795,TRUE,Parabacteroides
+Siblings,Siblings,0,>=1,Porphyromonas,-0.036052483696948134,-0.10177850029637035,0.43293045837542776,TRUE,Porphyromonas
+Siblings,Siblings,0,>=1,Coprobacter,-0.06012144529249708,-0.09891761238507159,0.40893407178550256,TRUE,Coprobacter
+Siblings,Siblings,0,>=1,Alistipes,-0.030148162006169432,-0.03393616730382908,0.04813174765938579,TRUE,Alistipes
+Siblings,Siblings,0,>=1,Gordonibacter,0.18186392423888997,0.2629208998818025,2.889058040315856,TRUE,Gordonibacter
+Siblings,Siblings,0,>=1,Senegalimassilia,-0.14062334316007596,-0.09331896086444072,0.36395344536630103,TRUE,Senegalimassilia
+Siblings,Siblings,0,>=1,Eggerthella,0.09038451692683869,0.04449322775505019,0.08273587649755769,TRUE,Eggerthella
+Siblings,Siblings,0,>=1,Slackia,-0.07502284251023605,-0.13053067106485552,0.7120839353785723,TRUE,Slackia
+Siblings,Siblings,0,>=1,Atopobium,0.18127922617676645,0.17515411012389615,1.2821732511523363,TRUE,Atopobium
+Siblings,Siblings,0,>=1,Olsenella,-0.08787501727527147,-0.11259312710558704,0.5298217820470846,TRUE,Olsenella
+Siblings,Siblings,0,>=1,Libanicoccus,-0.0982254930058909,-0.12648308954720155,0.6686070897658538,TRUE,Libanicoccus
+Siblings,Siblings,0,>=1,Collinsella,-0.9315550383209978,-0.4030730983797225,6.790060973526923,TRUE,Collinsella
+Siblings,Siblings,0,>=1,Anaerococcus,-0.02568169512387941,-0.03637497006342809,0.055298243410054904,TRUE,Anaerococcus
+Siblings,Siblings,0,>=1,Finegoldia,0.1459671386092647,0.19717147828019937,1.6247787550930817,TRUE,Finegoldia
+Siblings,Siblings,0,>=1,Peptoniphilus,0.0013463351297640092,0.0013864940243578296,8.034189128455294e-5,TRUE,Peptoniphilus
+Siblings,Siblings,0,>=1,Fenollaria,-0.02699629761063238,-0.07617167318511611,0.24248955553823245,TRUE,Fenollaria
+Siblings,Siblings,0,>=1,Clostridium_sensu_strict18,0.06120239965263752,0.12038208214686048,0.6056611935342486,TRUE,Clostridium_sensu_strict18
+Siblings,Siblings,0,>=1,Sarcina,-0.04210051805568704,-0.10086488016969784,0.42519289664758225,TRUE,Sarcina
+Siblings,Siblings,0,>=1,Clostridium_sensu_strict1,0.652601009071093,0.292459171603445,3.574674791709042,TRUE,Clostridium_sensu_strict1
+Siblings,Siblings,0,>=1,Butyricicoccus,0.029405527328022152,0.05642711735071164,0.13307049593106535,TRUE,Butyricicoccus
+Siblings,Siblings,0,>=1,Incertae_Sedis,-0.08433260766965156,-0.10203960051839966,0.43515456722599083,TRUE,Incertae_Sedis
+Siblings,Siblings,0,>=1,UBA1819,-0.09926200891592252,-0.10237078606367951,0.4379838762180376,TRUE,UBA1819
+Siblings,Siblings,0,>=1,Faecalibacterium,0.10533758010023497,0.06303939347752872,0.16608488064248278,TRUE,Faecalibacterium
+Siblings,Siblings,0,>=1,Subdoligranulum,-0.26320703386599376,-0.21363942592880533,1.907518907017546,TRUE,Subdoligranulum
+Siblings,Siblings,0,>=1,Ruminococcus,0.01973243714191697,0.03899667585020414,0.06355668304311299,TRUE,Ruminococcus
+Siblings,Siblings,0,>=1,CAG-352,-0.1324623132128555,-0.12900578862974418,0.6955437343074086,TRUE,CAG-352
+Siblings,Siblings,0,>=1,Flavonifractor,0.41238832529997205,0.36042362716020354,5.429158897662033,TRUE,Flavonifractor
+Siblings,Siblings,0,>=1,[Eubacterium]_coprostanoligenegroup,-0.01130228722409743,-0.02707141705123828,0.03062866202797045,TRUE,[Eubacterium]_coprostanoligenegroup
+Siblings,Siblings,0,>=1,Clostridia_UCG-014,0.09476091621371097,0.18845349286045812,1.4842751932700005,TRUE,Clostridia_UCG-014
+Siblings,Siblings,0,>=1,Monoglobus,-0.04470209597287078,-0.118494995272297,0.5868215614356187,TRUE,Monoglobus
+Siblings,Siblings,0,>=1,Epulopiscium,0.08846456243767309,0.18349659935371634,1.407220285298967,TRUE,Epulopiscium
+Siblings,Siblings,0,>=1,[Eubacterium]_hallii_group,-0.03994355644562397,-0.054846522585617986,0.12571996210199393,TRUE,[Eubacterium]_hallii_group
+Siblings,Siblings,0,>=1,Anaerostipes,0.08340607937343636,0.05205418957497723,0.11324458001751848,TRUE,Anaerostipes
+Siblings,Siblings,0,>=1,Lachnospiraceae_ND3007_group,-0.0030218668566964757,-0.01091048198756554,0.0049750095642132315,TRUE,Lachnospiraceae_ND3007_group
+Siblings,Siblings,0,>=1,[Eubacterium]_eligengroup,-0.04387204098265329,-0.06758744132960312,0.1909141234673838,TRUE,[Eubacterium]_eligengroup
+Siblings,Siblings,0,>=1,Lachnospira,-0.0368130697764556,-0.09647784759466467,0.38901044146753316,TRUE,Lachnospira
+Siblings,Siblings,0,>=1,Hungatella,0.11954302011382889,0.11032905756162086,0.5087282600633757,TRUE,Hungatella
+Siblings,Siblings,0,>=1,Prevotella,-0.10250584459208656,-0.10297155691222229,0.4431396447419326,TRUE,Prevotella
+Siblings,Siblings,0,>=1,Bacteroides,-0.6365874123061186,-0.24924394052907614,2.596302337219254,TRUE,Bacteroides
+Siblings,Siblings,0,>=1,Bifidobacterium,-0.33224460365166486,-0.27597752143077076,3.183123336119033,TRUE,Bifidobacterium
+Siblings,Siblings,0,>=1,Scardovia,0.02772316480099002,0.034993218237235175,0.05117688137509206,TRUE,Scardovia
+Siblings,Siblings,0,>=1,[Ruminococcus]_torquegroup,-0.0623956856115801,-0.04246673816517727,0.07537092680495582,TRUE,[Ruminococcus]_torquegroup
+Siblings,Siblings,0,>=1,Sellimonas,-0.16627352829077868,-0.14363626203471788,0.862252050625045,TRUE,Sellimonas
+Siblings,Siblings,0,>=1,uncultured18,0.04509155221605221,0.05649523604095411,0.1333919746701444,TRUE,uncultured18
+Siblings,Siblings,0,>=1,Lachnoclostridium,0.41612770439029323,0.2422952074059246,2.453554416411892,TRUE,Lachnoclostridium
+Siblings,Siblings,0,>=1,[Ruminococcus]_gnavugroup,-0.34595673398442006,-0.2200039971489655,2.022866347285718,TRUE,[Ruminococcus]_gnavugroup
+Siblings,Siblings,0,>=1,Dorea,-0.21298558476006135,-0.17913069723033426,1.3410534239402072,TRUE,Dorea
+Siblings,Siblings,0,>=1,Coprococcus,-0.03483810018091327,-0.0931307350622246,0.3624867264845462,TRUE,Coprococcus
+Siblings,Siblings,0,>=1,Tyzzerella,-0.307664603541042,-0.22776982735183698,2.168195465930695,TRUE,Tyzzerella
+Siblings,Siblings,0,>=1,22_Lachnospiraceae(F),-0.05903460641817915,-0.0537335819029098,0.120669532522031,TRUE,22_Lachnospiraceae(F)
+Siblings,Siblings,0,>=1,Roseburia,0.11066892818915053,0.11429974498498648,0.5460049369259874,TRUE,Roseburia
+Siblings,Siblings,0,>=1,Agathobacter,-0.1249740773180012,-0.08058578433975348,0.27140817276490414,TRUE,Agathobacter
+Siblings,Siblings,0,>=1,Proteus,-0.09228494104492713,-0.0933131214614482,0.3639078982593837,TRUE,Proteus
+Siblings,Siblings,0,>=1,Morganella,0.08190214663986872,0.14199029062013044,0.8426036631730411,TRUE,Morganella
+Siblings,Siblings,0,>=1,24_Enterobacteriaceae(F),0.5766675133987809,0.20398434954401168,1.7390006432677134,TRUE,24_Enterobacteriaceae(F)
+Siblings,Siblings,0,>=1,Escherichia-Shigella,-0.5222681925232386,-0.2600579317280974,2.8264822023089744,TRUE,Escherichia-Shigella
+Siblings,Siblings,0,>=1,[Ruminococcus]_gauvreauii_group,0.09029249475776868,0.11242314701773608,0.5282232622275937,TRUE,[Ruminococcus]_gauvreauii_group
+Siblings,Siblings,0,>=1,Lachnoanaerobaculum,0.0035032977578273172,0.010797853927408604,0.00487282643832674,TRUE,Lachnoanaerobaculum
+Siblings,Siblings,0,>=1,Fusicatenibacter,-0.4528695849062352,-0.2488197247145848,2.587471990391316,TRUE,Fusicatenibacter
+Siblings,Siblings,0,>=1,Lachnospiraceae_NK4A136_group,0.28983892778382203,0.5823301559321664,14.172439375146682,TRUE,Lachnospiraceae_NK4A136_group
+Siblings,Siblings,0,>=1,Blautia,-0.08617288802255896,-0.07712384161755427,0.24858982857982145,TRUE,Blautia

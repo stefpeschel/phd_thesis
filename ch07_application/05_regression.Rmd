@@ -25,6 +25,7 @@ knitr::opts_chunk$set(
   fig.path = paste0('figures/', params$name, "/regression_"),
   echo = FALSE)
 ```
+
 ```{r packages, message=FALSE, warning=FALSE}
 library(conflicted)
 library(phyloseq)
@@ -45,7 +46,7 @@ conflicts_prefer(dplyr::arrange)
 
 ```{r directories}
 # create or *empty* the target directory, used to write this file's data: 
-projthis::proj_create_dir_target(params$name, clean = FALSE)
+#projthis::proj_create_dir_target(params$name, clean = FALSE)
 
 # function to get path to target directory: path_target("sample.csv")
 path_target <- projthis::proj_path_target(params$name)
@@ -368,6 +369,9 @@ full-versus-reduced model comparisons. This ensures that differences in the test
 statistics reflect the covariate being omitted rather than changes in the sample
 composition. The number of taxa is fixed by the filtered genus-level phyloseq
 object used to construct the CLR response matrix.
+
+Then, a linear regression model (`lm()`) is fitted to the data, using the CLR transformed 
+data as response.
 
 ```{r regression_setup}
 model_data <- sampdata_reg %>%

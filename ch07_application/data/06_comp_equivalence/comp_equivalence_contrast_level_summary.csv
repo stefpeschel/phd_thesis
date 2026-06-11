@@ -1,0 +1,7 @@
+variable,group1,group2,n_group1,n_group2,n_missing_or_other
+C-section,Cesarean,Vaginal,121,468,3
+BF duration,0 months,>=2 months,36,456,100
+EBF duration,0 months,>=2 months,179,375,38
+Sex,Female,Male,294,298,0
+Smoking,No,Yes,529,63,0
+Siblings,0,>=1,46,457,89
