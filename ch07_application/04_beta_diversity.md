@@ -1,6 +1,6 @@
-Beta diversity analysis
+Between-sample dissimilarity
 ================
-Compiled at 2026-06-11 07:24:38 UTC
+Compiled at 2026-06-11 10:28:23 UTC
 
 ## Load packages
 
@@ -165,22 +165,22 @@ distort results.
 ### PERMANOVA
 
     ## # A tibble: 14 × 12
-    ##    analysis  distance   variable n_samples n_groups statistic_obs p_empirical statistic_adonis2 r2_adonis2 p_adonis2 n_exceed n_perm
-    ##    <chr>     <chr>      <fct>        <int>    <int>         <dbl>       <dbl>             <dbl>      <dbl>     <dbl>    <int>  <dbl>
-    ##  1 PERMANOVA Bray-Curt… Country        589        3          4.52       0.001              4.52    0.0152      0.001        0    999
-    ##  2 PERMANOVA Bray-Curt… Sex            589        2          1.38       0.213              1.38    0.00235     0.194      212    999
-    ##  3 PERMANOVA Bray-Curt… C-secti…       586        2          3.72       0.006              3.72    0.00633     0.003        5    999
-    ##  4 PERMANOVA Bray-Curt… BF dura…       577        3         14.4        0.001             14.4     0.0477      0.001        0    999
-    ##  5 PERMANOVA Bray-Curt… EBF dur…       554        2         19.6        0.001             19.6     0.0343      0.001        0    999
-    ##  6 PERMANOVA Bray-Curt… Smoking        589        2          5.72       0.001              5.72    0.00965     0.002        0    999
-    ##  7 PERMANOVA Bray-Curt… Siblings       501        3          2.25       0.021              2.25    0.00894     0.02        20    999
-    ##  8 PERMANOVA Aitchison  Country        589        3          2.58       0.001              2.58    0.00873     0.001        0    999
-    ##  9 PERMANOVA Aitchison  Sex            589        2          1.41       0.065              1.41    0.00240     0.045       64    999
-    ## 10 PERMANOVA Aitchison  C-secti…       586        2          2.45       0.001              2.45    0.00418     0.001        0    999
-    ## 11 PERMANOVA Aitchison  BF dura…       577        3          6.34       0.001              6.34    0.0216      0.001        0    999
-    ## 12 PERMANOVA Aitchison  EBF dur…       554        2         10.2        0.001             10.2     0.0181      0.001        0    999
-    ## 13 PERMANOVA Aitchison  Smoking        589        2          3.08       0.001              3.08    0.00521     0.001        0    999
-    ## 14 PERMANOVA Aitchison  Siblings       501        3          1.57       0.005              1.57    0.00625     0.004        4    999
+    ##    analysis  distance    variable     n_samples n_groups statistic_obs p_empirical statistic_adonis2 r2_adonis2 p_adonis2 n_exceed n_perm
+    ##    <chr>     <chr>       <fct>            <int>    <int>         <dbl>       <dbl>             <dbl>      <dbl>     <dbl>    <int>  <dbl>
+    ##  1 PERMANOVA Bray-Curtis Country            589        3          4.52       0.001              4.52    0.0152      0.001        0    999
+    ##  2 PERMANOVA Bray-Curtis Sex                589        2          1.38       0.213              1.38    0.00235     0.194      212    999
+    ##  3 PERMANOVA Bray-Curtis C-section          586        2          3.72       0.006              3.72    0.00633     0.003        5    999
+    ##  4 PERMANOVA Bray-Curtis BF duration        577        3         14.4        0.001             14.4     0.0477      0.001        0    999
+    ##  5 PERMANOVA Bray-Curtis EBF duration       554        2         19.6        0.001             19.6     0.0343      0.001        0    999
+    ##  6 PERMANOVA Bray-Curtis Smoking            589        2          5.72       0.001              5.72    0.00965     0.002        0    999
+    ##  7 PERMANOVA Bray-Curtis Siblings           501        3          2.25       0.021              2.25    0.00894     0.02        20    999
+    ##  8 PERMANOVA Aitchison   Country            589        3          2.58       0.001              2.58    0.00873     0.001        0    999
+    ##  9 PERMANOVA Aitchison   Sex                589        2          1.41       0.065              1.41    0.00240     0.045       64    999
+    ## 10 PERMANOVA Aitchison   C-section          586        2          2.45       0.001              2.45    0.00418     0.001        0    999
+    ## 11 PERMANOVA Aitchison   BF duration        577        3          6.34       0.001              6.34    0.0216      0.001        0    999
+    ## 12 PERMANOVA Aitchison   EBF duration       554        2         10.2        0.001             10.2     0.0181      0.001        0    999
+    ## 13 PERMANOVA Aitchison   Smoking            589        2          3.08       0.001              3.08    0.00521     0.001        0    999
+    ## 14 PERMANOVA Aitchison   Siblings           501        3          1.57       0.005              1.57    0.00625     0.004        4    999
 
 ![](figures/04_beta_diversity/beta_permanova_perm_dist-1.png)<!-- -->
 
@@ -400,13 +400,13 @@ These files have been written to the target directory,
     ## # A tibble: 10 × 4
     ##    path                                          type         size modification_time  
     ##    <fs::path>                                    <fct> <fs::bytes> <dttm>             
-    ##  1 beta_clr_summary.csv                          file          232 2026-06-11 07:24:45
-    ##  2 beta_data_summary.csv                         file          131 2026-06-11 07:24:45
-    ##  3 beta_diversity_objects.rds                    file        3.06M 2026-06-11 07:24:45
-    ##  4 beta_pcoa_coordinates.csv                     file      137.82K 2026-06-11 07:24:47
+    ##  1 beta_clr_summary.csv                          file          232 2026-06-11 10:28:28
+    ##  2 beta_data_summary.csv                         file          131 2026-06-11 10:28:28
+    ##  3 beta_diversity_objects.rds                    file        3.06M 2026-06-11 10:28:28
+    ##  4 beta_pcoa_coordinates.csv                     file      137.82K 2026-06-11 10:28:30
     ##  5 permanova_permapprox_results_multrepl_clr.rds file       76.17K 2026-06-10 14:56:33
     ##  6 permanova_results_multrepl_clr.rds            file      103.85K 2026-06-10 14:52:51
-    ##  7 permanova_table.tex                           file        2.14K 2026-06-11 07:25:40
+    ##  7 permanova_table.tex                           file        2.23K 2026-06-11 10:29:39
     ##  8 permdisp_permapprox_results_multrepl_clr.rds  file       74.67K 2026-06-11 06:50:38
     ##  9 permdisp_results_multrepl_clr.rds             file       105.4K 2026-06-11 06:50:27
-    ## 10 permdisp_table.tex                            file        2.17K 2026-06-11 07:25:45
+    ## 10 permdisp_table.tex                            file        2.26K 2026-06-11 10:29:48

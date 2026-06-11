@@ -3,38 +3,38 @@
 \caption{\label{tab:beta:permdisp}PERMDISP results for beta diversity dispersion across cohort variables. $F$ is the observed $F$-statistic from the ANOVA on betadisper distances to group centroids. \# exceed: number of permuted statistics $\geq$ observed. $p$ (emp.): empirical permutation $p$-value ($999$ permutations); $p$ (GPD-refined): $p$-value refined with \texttt{permApprox} (GPD tail approximation).}
 \centering
 \begin{threeparttable}
-\begin{tabular}[t]{l@{\hspace*{1.5em}}rrrr}
+\begin{tabular}[t]{l@{\hspace*{1.5em}}rrrrr}
 \toprule
-Measure & $F$ & \# exceed & $p$ (emp.) & $p$ (GPD-refined)\\
+Measure & $n$ & $F$ & \# exceed & $p$ (emp.) & $p$ (GPD-refined)\\
 \midrule
 \addlinespace[0.3em]
-\multicolumn{5}{l}{\textbf{Country}}\\
-\hspace{1em}Bray-Curtis & 10.59 & 2 & 3.00e-03$^{**}$ & 2.04e-03$^{**}$\\
-\hspace{1em}Aitchison & 13.10 & 0 & 1.00e-03$^{**}$ & 2.10e-06$^{***}$\\
+\multicolumn{6}{l}{\textbf{Country}}\\
+\hspace{1em}Bray-Curtis & 589 & 10.59 & 2 & 3.00e-03$^{**}$ & 2.04e-03$^{**}$\\
+\hspace{1em}Aitchison & 589 & 13.10 & 0 & 1.00e-03$^{**}$ & 2.10e-06$^{***}$\\
 \addlinespace[0.3em]
-\multicolumn{5}{l}{\textbf{Sex}}\\
-\hspace{1em}Bray-Curtis & 2.79 & 215 & 2.16e-01 & 2.16e-01\\
-\hspace{1em}Aitchison & 0.61 & 429 & 4.30e-01 & 4.30e-01\\
+\multicolumn{6}{l}{\textbf{Sex}}\\
+\hspace{1em}Bray-Curtis & 589 & 2.79 & 215 & 2.16e-01 & 2.16e-01\\
+\hspace{1em}Aitchison & 589 & 0.61 & 429 & 4.30e-01 & 4.30e-01\\
 \addlinespace[0.3em]
-\multicolumn{5}{l}{\textbf{C-section}}\\
-\hspace{1em}Bray-Curtis & 8.78 & 31 & 3.20e-02$^{*}$ & 3.01e-02$^{*}$\\
-\hspace{1em}Aitchison & 3.64 & 59 & 6.00e-02$^{.}$ & 6.19e-02$^{.}$\\
+\multicolumn{6}{l}{\textbf{C-section}}\\
+\hspace{1em}Bray-Curtis & 586 & 8.78 & 31 & 3.20e-02$^{*}$ & 3.01e-02$^{*}$\\
+\hspace{1em}Aitchison & 586 & 3.64 & 59 & 6.00e-02$^{.}$ & 6.19e-02$^{.}$\\
 \addlinespace[0.3em]
-\multicolumn{5}{l}{\textbf{BF duration}}\\
-\hspace{1em}Bray-Curtis & 15.33 & 0 & 1.00e-03$^{**}$ & 1.55e-05$^{***}$\\
-\hspace{1em}Aitchison & 31.88 & 0 & 1.00e-03$^{**}$ & 5.60e-60$^{***}$\\
+\multicolumn{6}{l}{\textbf{BF duration}}\\
+\hspace{1em}Bray-Curtis & 577 & 15.33 & 0 & 1.00e-03$^{**}$ & 1.55e-05$^{***}$\\
+\hspace{1em}Aitchison & 577 & 31.88 & 0 & 1.00e-03$^{**}$ & 5.60e-60$^{***}$\\
 \addlinespace[0.3em]
-\multicolumn{5}{l}{\textbf{EBF duration}}\\
-\hspace{1em}Bray-Curtis & 16.00 & 4 & 5.00e-03$^{**}$ & 4.21e-03$^{**}$\\
-\hspace{1em}Aitchison & 61.04 & 0 & 1.00e-03$^{**}$ & 2.78e-14$^{***}$\\
+\multicolumn{6}{l}{\textbf{EBF duration}}\\
+\hspace{1em}Bray-Curtis & 554 & 16.00 & 4 & 5.00e-03$^{**}$ & 4.21e-03$^{**}$\\
+\hspace{1em}Aitchison & 554 & 61.04 & 0 & 1.00e-03$^{**}$ & 2.78e-14$^{***}$\\
 \addlinespace[0.3em]
-\multicolumn{5}{l}{\textbf{Smoking}}\\
-\hspace{1em}Bray-Curtis & 6.68 & 35 & 3.60e-02$^{*}$ & 4.20e-02$^{*}$\\
-\hspace{1em}Aitchison & 15.78 & 0 & 1.00e-03$^{**}$ & 1.12e-04$^{***}$\\
+\multicolumn{6}{l}{\textbf{Smoking}}\\
+\hspace{1em}Bray-Curtis & 589 & 6.68 & 35 & 3.60e-02$^{*}$ & 4.20e-02$^{*}$\\
+\hspace{1em}Aitchison & 589 & 15.78 & 0 & 1.00e-03$^{**}$ & 1.12e-04$^{***}$\\
 \addlinespace[0.3em]
-\multicolumn{5}{l}{\textbf{Siblings}}\\
-\hspace{1em}Bray-Curtis & 5.91 & 32 & 3.30e-02$^{*}$ & 3.76e-02$^{*}$\\
-\hspace{1em}Aitchison & 2.68 & 76 & 7.70e-02$^{.}$ & 8.12e-02$^{.}$\\
+\multicolumn{6}{l}{\textbf{Siblings}}\\
+\hspace{1em}Bray-Curtis & 501 & 5.91 & 32 & 3.30e-02$^{*}$ & 3.76e-02$^{*}$\\
+\hspace{1em}Aitchison & 501 & 2.68 & 76 & 7.70e-02$^{.}$ & 8.12e-02$^{.}$\\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}

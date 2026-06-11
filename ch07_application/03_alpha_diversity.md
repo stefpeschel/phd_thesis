@@ -1,6 +1,6 @@
-Alpha diversity analysis
+Within-sample diversity
 ================
-Compiled at 2026-06-11 07:37:42 UTC
+Compiled at 2026-06-11 10:23:39 UTC
 
 ## Load packages
 
@@ -641,8 +641,8 @@ the 484 samples with complete covariate data.
 
 **Computed measures:**
 
-    ##  [1] "shannon"              "simpson"              "bray-curtis"          "euclidean"            "shannon-variance"    
-    ##  [6] "simpson-variance"     "bray-curtis-variance" "euclidean-variance"   "X"                    "fitted_z"
+    ##  [1] "shannon"              "simpson"              "bray-curtis"          "euclidean"            "shannon-variance"     "simpson-variance"    
+    ##  [7] "bray-curtis-variance" "euclidean-variance"   "X"                    "fitted_z"
 
 #### Richness
 
@@ -768,4 +768,4 @@ These files have been written to the target directory,
     ## 11 perm_results_Prenatal_smoke.rds file       10.08M 2026-06-09 10:59:28
     ## 12 perm_results_Sex.rds            file       11.26M 2026-06-09 10:59:28
     ## 13 perm_results_Siblings.rds       file       19.81M 2026-06-09 10:59:28
-    ## 14 perm_table.tex                  file        2.94K 2026-06-11 07:38:11
+    ## 14 perm_table.tex                  file        2.94K 2026-06-11 10:24:12
