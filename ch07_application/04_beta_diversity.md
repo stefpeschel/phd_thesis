@@ -1,6 +1,6 @@
 Between-sample dissimilarity
 ================
-Compiled at 2026-06-11 10:28:23 UTC
+Compiled at 2026-06-11 19:15:36 UTC
 
 ## Load packages
 
@@ -151,9 +151,11 @@ transformation. PERMANOVA is used to test for differences in group
 centroids, while PERMDISP assesses differences in within-group
 dispersion.
 
-We remove samples with EBF duration == “1 month” from all permutation
-tests, as these three samples form a singleton-like group that can
-distort results.
+For the EBF duration tests only, samples with EBF duration == “1 month”
+are set to missing before PERMANOVA and PERMDISP. These three samples
+form a singleton-like group that can distort EBF duration results, but
+they remain in the distance matrices and ordination plots, and they
+remain available for tests of the other variables.
 
     ##        Country            Sex      C-section    BF duration   EBF duration        Smoking       Siblings 
     ##      "Country"          "Sex"    "C-section"  "BF duration" "EBF duration"      "Smoking"     "Siblings"
@@ -165,22 +167,22 @@ distort results.
 ### PERMANOVA
 
     ## # A tibble: 14 × 12
-    ##    analysis  distance    variable     n_samples n_groups statistic_obs p_empirical statistic_adonis2 r2_adonis2 p_adonis2 n_exceed n_perm
-    ##    <chr>     <chr>       <fct>            <int>    <int>         <dbl>       <dbl>             <dbl>      <dbl>     <dbl>    <int>  <dbl>
-    ##  1 PERMANOVA Bray-Curtis Country            589        3          4.52       0.001              4.52    0.0152      0.001        0    999
-    ##  2 PERMANOVA Bray-Curtis Sex                589        2          1.38       0.213              1.38    0.00235     0.194      212    999
-    ##  3 PERMANOVA Bray-Curtis C-section          586        2          3.72       0.006              3.72    0.00633     0.003        5    999
-    ##  4 PERMANOVA Bray-Curtis BF duration        577        3         14.4        0.001             14.4     0.0477      0.001        0    999
-    ##  5 PERMANOVA Bray-Curtis EBF duration       554        2         19.6        0.001             19.6     0.0343      0.001        0    999
-    ##  6 PERMANOVA Bray-Curtis Smoking            589        2          5.72       0.001              5.72    0.00965     0.002        0    999
-    ##  7 PERMANOVA Bray-Curtis Siblings           501        3          2.25       0.021              2.25    0.00894     0.02        20    999
-    ##  8 PERMANOVA Aitchison   Country            589        3          2.58       0.001              2.58    0.00873     0.001        0    999
-    ##  9 PERMANOVA Aitchison   Sex                589        2          1.41       0.065              1.41    0.00240     0.045       64    999
-    ## 10 PERMANOVA Aitchison   C-section          586        2          2.45       0.001              2.45    0.00418     0.001        0    999
-    ## 11 PERMANOVA Aitchison   BF duration        577        3          6.34       0.001              6.34    0.0216      0.001        0    999
-    ## 12 PERMANOVA Aitchison   EBF duration       554        2         10.2        0.001             10.2     0.0181      0.001        0    999
-    ## 13 PERMANOVA Aitchison   Smoking            589        2          3.08       0.001              3.08    0.00521     0.001        0    999
-    ## 14 PERMANOVA Aitchison   Siblings           501        3          1.57       0.005              1.57    0.00625     0.004        4    999
+    ##    analysis  distance    variable  n_samples n_groups statistic_obs p_empirical statistic_adonis2 r2_adonis2 p_adonis2 n_exceed n_perm
+    ##    <chr>     <chr>       <fct>         <int>    <int>         <dbl>       <dbl>             <dbl>      <dbl>     <dbl>    <int>  <dbl>
+    ##  1 PERMANOVA Bray-Curtis Country         592        3          4.54       0.001              4.54    0.0152      0.001        0    999
+    ##  2 PERMANOVA Bray-Curtis Sex             592        2          1.36       0.184              1.36    0.00230     0.163      183    999
+    ##  3 PERMANOVA Bray-Curtis C-section       589        2          3.69       0.011              3.69    0.00624     0.005       10    999
+    ##  4 PERMANOVA Bray-Curtis BF durat…       580        3         14.3        0.001             14.3     0.0473      0.001        0    999
+    ##  5 PERMANOVA Bray-Curtis EBF dura…       554        2         19.6        0.001             19.6     0.0343      0.001        0    999
+    ##  6 PERMANOVA Bray-Curtis Smoking         592        2          5.70       0.002              5.70    0.00957     0.001        1    999
+    ##  7 PERMANOVA Bray-Curtis Siblings        503        3          2.23       0.021              2.23    0.00884     0.02        20    999
+    ##  8 PERMANOVA Aitchison   Country         592        3          2.58       0.001              2.58    0.00868     0.001        0    999
+    ##  9 PERMANOVA Aitchison   Sex             592        2          1.45       0.034              1.45    0.00245     0.03        33    999
+    ## 10 PERMANOVA Aitchison   C-section       589        2          2.48       0.001              2.48    0.00420     0.001        0    999
+    ## 11 PERMANOVA Aitchison   BF durat…       580        3          6.36       0.001              6.36    0.0216      0.001        0    999
+    ## 12 PERMANOVA Aitchison   EBF dura…       554        2         10.2        0.001             10.2     0.0181      0.001        0    999
+    ## 13 PERMANOVA Aitchison   Smoking         592        2          3.09       0.001              3.09    0.00521     0.001        0    999
+    ## 14 PERMANOVA Aitchison   Siblings        503        3          1.58       0.006              1.58    0.00626     0.006        5    999
 
 ![](figures/04_beta_diversity/beta_permanova_perm_dist-1.png)<!-- -->
 
@@ -196,20 +198,20 @@ distort results.
     ## # Groups:   distance [2]
     ##    distance    variable      mean median
     ##    <fct>       <fct>        <dbl>  <dbl>
-    ##  1 Bray-Curtis Country      1.01   0.924
-    ##  2 Bray-Curtis Sex          1.03   0.905
-    ##  3 Bray-Curtis C-section    0.996  0.863
-    ##  4 Bray-Curtis BF duration  1.03   0.937
+    ##  1 Bray-Curtis Country      1.02   0.914
+    ##  2 Bray-Curtis Sex          0.974  0.851
+    ##  3 Bray-Curtis C-section    1.00   0.850
+    ##  4 Bray-Curtis BF duration  0.984  0.888
     ##  5 Bray-Curtis EBF duration 1.02   0.886
-    ##  6 Bray-Curtis Smoking      1.00   0.846
-    ##  7 Bray-Curtis Siblings     1.00   0.927
-    ##  8 Aitchison   Country      1.00   0.992
-    ##  9 Aitchison   Sex          1.01   0.974
-    ## 10 Aitchison   C-section    0.997  0.973
-    ## 11 Aitchison   BF duration  0.997  0.980
+    ##  6 Bray-Curtis Smoking      0.993  0.853
+    ##  7 Bray-Curtis Siblings     1.00   0.922
+    ##  8 Aitchison   Country      1.00   0.994
+    ##  9 Aitchison   Sex          0.985  0.961
+    ## 10 Aitchison   C-section    0.997  0.970
+    ## 11 Aitchison   BF duration  0.998  0.986
     ## 12 Aitchison   EBF duration 0.994  0.966
-    ## 13 Aitchison   Smoking      0.994  0.966
-    ## 14 Aitchison   Siblings     1.00   0.988
+    ## 13 Aitchison   Smoking      1.01   0.969
+    ## 14 Aitchison   Siblings     1.000  0.988
 
 ### PERMANOVA p-value refinement with permApprox
 
@@ -228,7 +230,7 @@ distort results.
     ## Not selected for fitting : 1
     ## 
     ## Final p-values:
-    ##   min = 1.107e-87, median = 3.209e-05, max = 2.130e-01
+    ##   min = 3.907e-97, median = 5.948e-05, max = 1.840e-01
     ## 
     ## Use summary() for detailed fit diagnostics.
 
@@ -250,65 +252,65 @@ distort results.
     ## GPD parameter summary (successful fits)
     ## --------------------------------------
     ##   shape:
-    ##     min = -0.232, median = -0.0243, mean = -0.0313, max = 0.114
+    ##     min = -0.12, median = -0.0221, mean = -0.00935, max = 0.149
     ##   scale:
-    ##     min = 0.128, median = 0.231, mean = 0.316, max = 0.558
+    ##     min = 0.117, median = 0.202, mean = 0.303, max = 0.554
     ##   n_exceed:
-    ##     min =  220, median =  250, mean =  248, max =  250
+    ##     min =  220, median =  250, mean =  247, max =  250
     ## 
     ## P-value summary
     ## ---------------
     ## Empirical p-values:
     ##   empirical:
-    ##     min = 1.000e-03, median = 1.000e-03, mean = 2.279e-02, max = 2.130e-01
+    ##     min = 1.000e-03, median = 1.000e-03, mean = 1.900e-02, max = 1.840e-01
     ## 
     ## Final p-values (unadjusted):
     ##   unadjusted:
-    ##     min = 1.107e-87, median = 3.209e-05, mean = 2.184e-02, max = 2.130e-01
+    ##     min = 3.907e-97, median = 5.948e-05, mean = 1.779e-02, max = 1.840e-01
 
     ## # A tibble: 14 × 9
     ##    distance    variable     n_samples statistic_obs n_exceed n_perm p_empirical p_permapprox method_used
     ##    <fct>       <fct>            <int>         <dbl>    <int>  <dbl>       <dbl>        <dbl> <chr>      
-    ##  1 Bray-Curtis Country            589          4.52        0    999       0.001     6.27e- 5 gpd        
-    ##  2 Bray-Curtis Sex                589          1.38      212    999       0.213     2.13e- 1 empirical  
-    ##  3 Bray-Curtis C-section          586          3.72        5    999       0.006     4.36e- 3 gpd        
-    ##  4 Bray-Curtis BF duration        577         14.4         0    999       0.001     2.29e-55 gpd        
+    ##  1 Bray-Curtis Country            592          4.54        0    999       0.001     1.18e- 4 gpd        
+    ##  2 Bray-Curtis Sex                592          1.36      183    999       0.184     1.84e- 1 empirical  
+    ##  3 Bray-Curtis C-section          589          3.69       10    999       0.011     7.56e- 3 gpd        
+    ##  4 Bray-Curtis BF duration        580         14.3         0    999       0.001     3.00e-11 gpd        
     ##  5 Bray-Curtis EBF duration       554         19.6         0    999       0.001     1.82e- 8 gpd        
-    ##  6 Bray-Curtis Smoking            589          5.72        0    999       0.001     8.49e- 4 gpd        
-    ##  7 Bray-Curtis Siblings           501          2.25       20    999       0.021     1.63e- 2 gpd        
-    ##  8 Aitchison   Country            589          2.58        0    999       0.001     4.38e-12 gpd        
-    ##  9 Aitchison   Sex                589          1.41       64    999       0.065     6.72e- 2 gpd        
-    ## 10 Aitchison   C-section          586          2.45        0    999       0.001     1.54e- 6 gpd        
-    ## 11 Aitchison   BF duration        577          6.34        0    999       0.001     1.11e-87 gpd        
+    ##  6 Bray-Curtis Smoking            592          5.70        1    999       0.002     6.81e- 4 gpd        
+    ##  7 Bray-Curtis Siblings           503          2.23       20    999       0.021     1.99e- 2 gpd        
+    ##  8 Aitchison   Country            592          2.58        0    999       0.001     9.72e-14 gpd        
+    ##  9 Aitchison   Sex                592          1.45       33    999       0.034     3.51e- 2 gpd        
+    ## 10 Aitchison   C-section          589          2.48        0    999       0.001     4.79e- 7 gpd        
+    ## 11 Aitchison   BF duration        580          6.36        0    999       0.001     3.91e-97 gpd        
     ## 12 Aitchison   EBF duration       554         10.2         0    999       0.001     1.18e-13 gpd        
-    ## 13 Aitchison   Smoking            589          3.08        0    999       0.001     1.29e- 9 gpd        
-    ## 14 Aitchison   Siblings           501          1.57        4    999       0.005     4.02e- 3 gpd
+    ## 13 Aitchison   Smoking            592          3.09        0    999       0.001     5.28e-10 gpd        
+    ## 14 Aitchison   Siblings           503          1.58        5    999       0.006     1.80e- 3 gpd
 
 **Bray-Curtis sorted**
 
     ## # A tibble: 7 × 4
     ##   variable     statistic_obs p_empirical p_permapprox
     ##   <fct>                <dbl>       <dbl>        <dbl>
-    ## 1 BF duration          14.4        0.001     2.29e-55
+    ## 1 BF duration          14.3        0.001     3.00e-11
     ## 2 EBF duration         19.6        0.001     1.82e- 8
-    ## 3 Country               4.52       0.001     6.27e- 5
-    ## 4 Smoking               5.72       0.001     8.49e- 4
-    ## 5 C-section             3.72       0.006     4.36e- 3
-    ## 6 Siblings              2.25       0.021     1.63e- 2
-    ## 7 Sex                   1.38       0.213     2.13e- 1
+    ## 3 Country               4.54       0.001     1.18e- 4
+    ## 4 Smoking               5.70       0.002     6.81e- 4
+    ## 5 C-section             3.69       0.011     7.56e- 3
+    ## 6 Siblings              2.23       0.021     1.99e- 2
+    ## 7 Sex                   1.36       0.184     1.84e- 1
 
 **Aitchison sorted**
 
     ## # A tibble: 7 × 4
     ##   variable     statistic_obs p_empirical p_permapprox
     ##   <fct>                <dbl>       <dbl>        <dbl>
-    ## 1 BF duration           6.34       0.001     1.11e-87
-    ## 2 EBF duration         10.2        0.001     1.18e-13
-    ## 3 Country               2.58       0.001     4.38e-12
-    ## 4 Smoking               3.08       0.001     1.29e- 9
-    ## 5 C-section             2.45       0.001     1.54e- 6
-    ## 6 Siblings              1.57       0.005     4.02e- 3
-    ## 7 Sex                   1.41       0.065     6.72e- 2
+    ## 1 BF duration           6.36       0.001     3.91e-97
+    ## 2 Country               2.58       0.001     9.72e-14
+    ## 3 EBF duration         10.2        0.001     1.18e-13
+    ## 4 Smoking               3.09       0.001     5.28e-10
+    ## 5 C-section             2.48       0.001     4.79e- 7
+    ## 6 Siblings              1.58       0.006     1.80e- 3
+    ## 7 Sex                   1.45       0.034     3.51e- 2
 
 ![](figures/04_beta_diversity/beta_permanova_permapprox_perm_dist-1.png)<!-- -->
 
@@ -321,22 +323,27 @@ distort results.
     ## # A tibble: 14 × 11
     ##    analysis distance    variable     n_samples n_groups statistic_obs p_empirical statistic_betadisper p_betadisper n_exceed n_perm
     ##    <chr>    <chr>       <fct>            <int>    <int>         <dbl>       <dbl>                <dbl>        <dbl>    <int>  <dbl>
-    ##  1 PERMDISP Bray-Curtis Country            589        3        10.6         0.003               10.6          0.001        2    999
-    ##  2 PERMDISP Bray-Curtis Sex                589        2         2.79        0.216                2.79         0.095      215    999
-    ##  3 PERMDISP Bray-Curtis C-section          586        2         8.78        0.032                8.78         0.001       31    999
-    ##  4 PERMDISP Bray-Curtis BF duration        577        3        15.3         0.001               15.3          0.001        0    999
+    ##  1 PERMDISP Bray-Curtis Country            592        3        10.6         0.005               10.6          0.001        4    999
+    ##  2 PERMDISP Bray-Curtis Sex                592        2         2.67        0.216                2.67         0.104      215    999
+    ##  3 PERMDISP Bray-Curtis C-section          589        2         8.87        0.035                8.87         0.003       34    999
+    ##  4 PERMDISP Bray-Curtis BF duration        580        3        14.9         0.002               14.9          0.001        1    999
     ##  5 PERMDISP Bray-Curtis EBF duration       554        2        16.0         0.005               16.0          0.001        4    999
-    ##  6 PERMDISP Bray-Curtis Smoking            589        2         6.68        0.036                6.68         0.013       35    999
-    ##  7 PERMDISP Bray-Curtis Siblings           501        3         5.91        0.033                5.91         0.004       32    999
-    ##  8 PERMDISP Aitchison   Country            589        3        13.1         0.001               13.1          0.001        0    999
-    ##  9 PERMDISP Aitchison   Sex                589        2         0.609       0.43                 0.609        0.436      429    999
-    ## 10 PERMDISP Aitchison   C-section          586        2         3.64        0.06                 3.64         0.056       59    999
-    ## 11 PERMDISP Aitchison   BF duration        577        3        31.9         0.001               31.9          0.001        0    999
+    ##  6 PERMDISP Bray-Curtis Smoking            592        2         6.74        0.048                6.74         0.011       47    999
+    ##  7 PERMDISP Bray-Curtis Siblings           503        3         5.88        0.043                5.88         0.006       42    999
+    ##  8 PERMDISP Aitchison   Country            592        3        13.3         0.001               13.3          0.001        0    999
+    ##  9 PERMDISP Aitchison   Sex                592        2         0.610       0.434                0.610        0.414      433    999
+    ## 10 PERMDISP Aitchison   C-section          589        2         3.54        0.067                3.54         0.074       66    999
+    ## 11 PERMDISP Aitchison   BF duration        580        3        32.1         0.001               32.1          0.001        0    999
     ## 12 PERMDISP Aitchison   EBF duration       554        2        61.0         0.001               61.0          0.001        0    999
-    ## 13 PERMDISP Aitchison   Smoking            589        2        15.8         0.001               15.8          0.001        0    999
-    ## 14 PERMDISP Aitchison   Siblings           501        3         2.68        0.077                2.68         0.072       76    999
+    ## 13 PERMDISP Aitchison   Smoking            592        2        15.7         0.001               15.7          0.001        0    999
+    ## 14 PERMDISP Aitchison   Siblings           503        3         2.63        0.084                2.63         0.062       83    999
 
 ### PERMDISP p-value refinement with permApprox
+
+    ## Run threshold detection ...
+    ## Done.
+    ## Run GPD fit ...
+    ## Done.
 
     ## permApprox result
     ## -----------------
@@ -353,27 +360,27 @@ distort results.
     ## Not selected for fitting : 2
     ## 
     ## Final p-values:
-    ##   min = 5.599e-60, median = 1.713e-02, max = 4.300e-01
+    ##   min = 2.140e-26, median = 1.634e-02, max = 4.340e-01
     ## 
     ## Use summary() for detailed fit diagnostics.
 
     ## # A tibble: 14 × 9
     ##    distance    variable     n_samples statistic_obs n_exceed n_perm p_empirical p_permapprox method_used
     ##    <chr>       <fct>            <int>         <dbl>    <int>  <dbl>       <dbl>        <dbl> <chr>      
-    ##  1 Bray-Curtis Country            589        10.6          2    999       0.003     2.04e- 3 gpd        
-    ##  2 Bray-Curtis Sex                589         2.79       215    999       0.216     2.16e- 1 empirical  
-    ##  3 Bray-Curtis C-section          586         8.78        31    999       0.032     3.01e- 2 gpd        
-    ##  4 Bray-Curtis BF duration        577        15.3          0    999       0.001     1.55e- 5 gpd        
+    ##  1 Bray-Curtis Country            592        10.6          4    999       0.005     2.89e- 3 gpd        
+    ##  2 Bray-Curtis Sex                592         2.67       215    999       0.216     2.16e- 1 empirical  
+    ##  3 Bray-Curtis C-section          589         8.87        34    999       0.035     2.85e- 2 gpd        
+    ##  4 Bray-Curtis BF duration        580        14.9          1    999       0.002     5.88e- 4 gpd        
     ##  5 Bray-Curtis EBF duration       554        16.0          4    999       0.005     4.21e- 3 gpd        
-    ##  6 Bray-Curtis Smoking            589         6.68        35    999       0.036     4.20e- 2 gpd        
-    ##  7 Bray-Curtis Siblings           501         5.91        32    999       0.033     3.76e- 2 gpd        
-    ##  8 Aitchison   Country            589        13.1          0    999       0.001     2.10e- 6 gpd        
-    ##  9 Aitchison   Sex                589         0.609      429    999       0.43      4.3 e- 1 empirical  
-    ## 10 Aitchison   C-section          586         3.64        59    999       0.06      6.19e- 2 gpd        
-    ## 11 Aitchison   BF duration        577        31.9          0    999       0.001     5.60e-60 gpd        
+    ##  6 Bray-Curtis Smoking            592         6.74        47    999       0.048     4.63e- 2 gpd        
+    ##  7 Bray-Curtis Siblings           503         5.88        42    999       0.043     4.77e- 2 gpd        
+    ##  8 Aitchison   Country            592        13.3          0    999       0.001     2.22e-10 gpd        
+    ##  9 Aitchison   Sex                592         0.610      433    999       0.434     4.34e- 1 empirical  
+    ## 10 Aitchison   C-section          589         3.54        66    999       0.067     6.93e- 2 gpd        
+    ## 11 Aitchison   BF duration        580        32.1          0    999       0.001     2.14e-26 gpd        
     ## 12 Aitchison   EBF duration       554        61.0          0    999       0.001     2.78e-14 gpd        
-    ## 13 Aitchison   Smoking            589        15.8          0    999       0.001     1.12e- 4 gpd        
-    ## 14 Aitchison   Siblings           501         2.68        76    999       0.077     8.12e- 2 gpd
+    ## 13 Aitchison   Smoking            592        15.7          0    999       0.001     2.63e- 4 gpd        
+    ## 14 Aitchison   Siblings           503         2.63        83    999       0.084     8.03e- 2 gpd
 
 ![](figures/04_beta_diversity/beta_permdisp_permapprox_perm_dist-1.png)<!-- -->
 
@@ -400,13 +407,13 @@ These files have been written to the target directory,
     ## # A tibble: 10 × 4
     ##    path                                          type         size modification_time  
     ##    <fs::path>                                    <fct> <fs::bytes> <dttm>             
-    ##  1 beta_clr_summary.csv                          file          232 2026-06-11 10:28:28
-    ##  2 beta_data_summary.csv                         file          131 2026-06-11 10:28:28
-    ##  3 beta_diversity_objects.rds                    file        3.06M 2026-06-11 10:28:28
-    ##  4 beta_pcoa_coordinates.csv                     file      137.82K 2026-06-11 10:28:30
-    ##  5 permanova_permapprox_results_multrepl_clr.rds file       76.17K 2026-06-10 14:56:33
-    ##  6 permanova_results_multrepl_clr.rds            file      103.85K 2026-06-10 14:52:51
-    ##  7 permanova_table.tex                           file        2.23K 2026-06-11 10:29:39
-    ##  8 permdisp_permapprox_results_multrepl_clr.rds  file       74.67K 2026-06-11 06:50:38
-    ##  9 permdisp_results_multrepl_clr.rds             file       105.4K 2026-06-11 06:50:27
-    ## 10 permdisp_table.tex                            file        2.26K 2026-06-11 10:29:48
+    ##  1 beta_clr_summary.csv                          file          232 2026-06-11 19:15:44
+    ##  2 beta_data_summary.csv                         file          131 2026-06-11 19:15:44
+    ##  3 beta_diversity_objects.rds                    file        3.06M 2026-06-11 19:15:42
+    ##  4 beta_pcoa_coordinates.csv                     file      137.82K 2026-06-11 19:15:49
+    ##  5 permanova_permapprox_results_multrepl_clr.rds file       76.12K 2026-06-11 14:47:17
+    ##  6 permanova_results_multrepl_clr.rds            file      103.83K 2026-06-11 14:46:06
+    ##  7 permanova_table.tex                           file        2.23K 2026-06-11 19:17:01
+    ##  8 permdisp_permapprox_results_multrepl_clr.rds  file       74.98K 2026-06-11 19:17:16
+    ##  9 permdisp_results_multrepl_clr.rds             file      105.39K 2026-06-11 15:31:32
+    ## 10 permdisp_table.tex                            file        2.26K 2026-06-11 19:17:17

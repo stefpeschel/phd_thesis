@@ -584,16 +584,22 @@ The CLR heatmap is considerably more homogeneous: distances are more uniformly d
 
 The following analyses are performed for both beta-diversity representations: Bray-Curtis dissimilarity on relative abundance profiles and Euclidean distance after multiplicative replacement and CLR transformation. PERMANOVA is used to test for differences in group centroids, while PERMDISP assesses differences in within-group dispersion.
 
-We remove samples with EBF duration == "1 month" from all permutation tests, as these three samples form a singleton-like group that can distort results.
+For the EBF duration tests only, samples with EBF duration == "1 month" are set to missing before PERMANOVA and PERMDISP. These three samples form a singleton-like group that can distort EBF duration results, but they remain in the distance matrices and ordination plots, and they remain available for tests of the other variables.
 
 ```{r beta_test_setup}
 # Use the same variables as for the PCoA plots.
 variables_to_test <- variables_to_plot
 
-# Remove samples with EBF duration == "1 month" from all permutation tests,
-# as these three samples form a singleton-like group that can distort results.
+# Exclude the sparse "1 month" EBF group only from EBF duration tests.
+# Samples remain available for ordination and for tests of the other variables.
 sampdata_test <- sampdata_plot %>%
-  dplyr::filter(`EBF duration` != "1 month" | is.na(`EBF duration`))
+  mutate(
+    `EBF duration` = replace(
+      `EBF duration`,
+      `EBF duration` == "1 month",
+      NA
+    )
+  )
 
 distance_list <- list(
   bray = list(
@@ -611,7 +617,7 @@ variables_to_test <- variables_to_test[
   vapply(
     variables_to_test,
     function(var) {
-      x <- sampdata_plot[[var]]
+      x <- sampdata_test[[var]]
       length(unique(stats::na.omit(x))) >= 2
     },
     logical(1)
