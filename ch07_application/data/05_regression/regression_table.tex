@@ -1,0 +1,24 @@
+\begin{table}[!h]
+\centering
+\caption{\label{tab:application:regression}CLR-based multivariate regression results for cohort variables. $t_j$ is the reduction in multivariate residual sum of squares when the covariate is added to the model. \# exceed: number of permuted statistics $\geq$ observed. $p$ (emp.): empirical permutation $p$-value ($999$ permutations); $p$ (GPD-refined): $p$-value refined with \texttt{permApprox}.}
+\centering
+\begin{threeparttable}
+\begin{tabular}[t]{lrrrr}
+\toprule
+Variable & $t_j$ & \# exceed & $p$ (emp.) & $p$ (GPD-refined)\\
+\midrule
+Country & 699.03 & 0 & 1.00e-03$^{**}$ & 3.51e-06$^{***}$\\
+Sex & 225.51 & 107 & 1.08e-01 & 1.08e-01\\
+C-section & 217.65 & 147 & 1.48e-01 & 1.48e-01\\
+BF duration & 641.49 & 0 & 1.00e-03$^{**}$ & 4.14e-05$^{***}$\\
+EBF duration & 450.95 & 0 & 1.00e-03$^{**}$ & 8.78e-07$^{***}$\\
+\addlinespace
+Smoking & 274.78 & 29 & 3.00e-02$^{*}$ & 2.41e-02$^{*}$\\
+Siblings & 436.92 & 77 & 7.80e-02$^{.}$ & 7.22e-02$^{.}$\\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item $^{***}:p<0.001$; $^{**}:p<0.01$; $^{*}:p<0.05$; $^{.}:p<0.1$.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

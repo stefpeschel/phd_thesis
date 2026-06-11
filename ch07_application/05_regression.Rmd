@@ -1,0 +1,642 @@
+---
+title: "05_regression"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output: 
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+params:
+  name: "05_regression" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "9b9d6ec0-81d9-43a9-9e04-c99b38578ef2")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params$name, "/regression_"),
+  echo = FALSE)
+```
+```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
+library(phyloseq)
+library(tidyverse)
+library(zCompositions)
+library(permApprox)
+library(kableExtra)
+library(furrr)
+library(future)
+library(progressr)
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::rename)
+conflicts_prefer(dplyr::mutate)
+conflicts_prefer(dplyr::arrange)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+projthis::proj_create_dir_target(params$name, clean = FALSE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Set global parameters
+
+```{r}
+zero_replacement_fraction <- 0.65
+n_perm <- 999
+permutation_seed <- 42
+cores <- 10
+
+covariates_regression <- c(
+  "Country", "Sex", "C-section", "BF duration",
+  "EBF duration", "Smoking", "Siblings"
+)
+```
+
+## Load data
+
+```{r load_data}
+phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev01.rds"))
+sampdata <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
+```
+
+### Phyloseq object on genus level
+
+```{r}
+phylo_genus
+```
+
+## Helper functions
+
+Counts are first transformed to relative abundances. Zeros are then replaced with
+the multiplicative replacement implemented in `zCompositions::multRepl()`, using
+the global minimum non-zero relative abundance as detection limit and
+`frac = 0.65`. The CLR transformation is applied after replacement.
+
+```{r helper_functions}
+get_sample_by_taxa <- function(phylo) {
+  mat <- as(otu_table(phylo), "matrix")
+  
+  if (taxa_are_rows(phylo)) {
+    mat <- t(mat)
+  }
+  
+  mat <- as.matrix(mat)
+  storage.mode(mat) <- "numeric"
+  
+  mat
+}
+
+counts_to_rel_abund <- function(count_mat) {
+  lib_size <- rowSums(count_mat)
+  
+  if (any(lib_size == 0)) {
+    stop("At least one sample has library size zero.")
+  }
+  
+  sweep(count_mat, 1, lib_size, "/")
+}
+
+compute_multrepl_clr <- function(rel_abund_mat, frac = 0.65) {
+  positive_values <- rel_abund_mat[rel_abund_mat > 0]
+  
+  if (length(positive_values) == 0) {
+    stop("No positive relative abundances found.")
+  }
+  
+  detection_limit <- min(positive_values, na.rm = TRUE)
+  detection_limit_mat <- matrix(
+    detection_limit,
+    nrow = nrow(rel_abund_mat),
+    ncol = ncol(rel_abund_mat),
+    dimnames = dimnames(rel_abund_mat)
+  )
+  
+  rel_abund_repl <- zCompositions::multRepl(
+    rel_abund_mat,
+    label = 0,
+    dl = detection_limit_mat,
+    frac = frac,
+    z.warning = 0.9,
+    z.delete = FALSE
+  )
+  
+  rel_abund_repl <- as.matrix(rel_abund_repl)
+  rownames(rel_abund_repl) <- rownames(rel_abund_mat)
+  colnames(rel_abund_repl) <- colnames(rel_abund_mat)
+  
+  log_repl <- log(rel_abund_repl)
+  z <- sweep(log_repl, 1, rowMeans(log_repl), "-")
+  
+  list(
+    z = z,
+    rel_abund_repl = rel_abund_repl,
+    detection_limit = detection_limit,
+    replacement_value = frac * detection_limit,
+    frac = frac
+  )
+}
+
+safe_reformulate <- function(vars) {
+  if (length(vars) == 0) {
+    return(stats::as.formula("~ 1"))
+  }
+  
+  reformulate(sprintf("`%s`", vars))
+}
+
+make_regression_metadata <- function(sampdata) {
+  sampdata %>%
+    mutate(
+      Country        = factor(Country),
+      Sex            = factor(Sex),
+      `C-section`    = factor(`C-section`),
+      `BF duration`  = factor(
+        as.character(`BF duration`),
+        levels = c("0", "1", ">=2"),
+        labels = c("0 months", "1 month", "\u22652 months")
+      ),
+      `EBF duration` = factor(
+        as.character(`EBF duration`),
+        levels = c("0", "1", ">=2"),
+        labels = c("0 months", "1 month", "\u22652 months")
+      ),
+      Smoking        = factor(Smoking),
+      Siblings       = factor(Siblings)
+    )
+}
+
+multivariate_rss <- function(y, design_mat) {
+  fit <- lm.fit(x = design_mat, y = y)
+  sum(fit$residuals^2)
+}
+
+regression_stat <- function(y, metadata, full_formula, reduced_formula) {
+  full_design <- model.matrix(full_formula, data = metadata)
+  red_design  <- model.matrix(reduced_formula, data = metadata)
+  
+  rss_red  <- multivariate_rss(y = y, design_mat = red_design)
+  rss_full <- multivariate_rss(y = y, design_mat = full_design)
+  
+  rss_red - rss_full
+}
+
+empirical_pvalue <- function(obs_stat, perm_stats) {
+  (1 + sum(perm_stats >= obs_stat, na.rm = TRUE)) / (1 + length(perm_stats))
+}
+
+run_regression_permutation_test <- function(
+    y,
+    metadata,
+    covariate,
+    all_covariates,
+    n_perm = 999
+) {
+  full_formula <- safe_reformulate(all_covariates)
+  reduced_covariates <- setdiff(all_covariates, covariate)
+  reduced_formula <- safe_reformulate(reduced_covariates)
+  
+  obs_stat <- regression_stat(
+    y = y,
+    metadata = metadata,
+    full_formula = full_formula,
+    reduced_formula = reduced_formula
+  )
+  
+  perm_stats <- replicate(
+    n_perm,
+    {
+      metadata_perm <- metadata
+      metadata_perm[[covariate]] <- sample(
+        metadata_perm[[covariate]],
+        size = nrow(metadata_perm),
+        replace = FALSE
+      )
+      
+      regression_stat(
+        y = y,
+        metadata = metadata_perm,
+        full_formula = full_formula,
+        reduced_formula = reduced_formula
+      )
+    }
+  )
+  
+  tibble(
+    variable = covariate,
+    statistic_obs = obs_stat,
+    p_empirical = empirical_pvalue(obs_stat, perm_stats),
+    n_perm = n_perm,
+    n_exceed = sum(perm_stats >= obs_stat, na.rm = TRUE),
+    perm_stats = list(as.numeric(perm_stats))
+  )
+}
+
+sig_stars <- function(p) {
+  dplyr::case_when(
+    p < 0.001 ~ "***",
+    p < 0.01  ~ "**",
+    p < 0.05  ~ "*",
+    p < 0.1   ~ ".",
+    TRUE      ~ ""
+  )
+}
+
+fmt_p_latex <- function(p_num) {
+  p_str <- formatC(p_num, format = "e", digits = 2)
+  stars <- sig_stars(p_num)
+  
+  ifelse(stars != "", paste0(p_str, "$^{", stars, "}$"), p_str)
+}
+
+fmt_p_table <- function(p_num) {
+  formatC(p_num, format = "e", digits = 2)
+}
+```
+
+## Prepare CLR response matrix
+
+```{r prepare_clr_response}
+counts_raw <- get_sample_by_taxa(phylo_genus)
+
+sampdata_reg <- sampdata %>%
+  filter(SampleID %in% rownames(counts_raw)) %>%
+  arrange(match(SampleID, rownames(counts_raw))) %>%
+  make_regression_metadata()
+
+counts_raw <- counts_raw[sampdata_reg$SampleID, , drop = FALSE]
+
+stopifnot(identical(rownames(counts_raw), sampdata_reg$SampleID))
+
+counts_rel <- counts_to_rel_abund(counts_raw)
+
+clr_object <- compute_multrepl_clr(
+  rel_abund_mat = counts_rel,
+  frac = zero_replacement_fraction
+)
+
+counts_clr <- clr_object$z
+
+regression_preprocessing_summary <- tibble(
+  n_samples = nrow(counts_raw),
+  n_taxa = ncol(counts_raw),
+  min_library_size = min(rowSums(counts_raw)),
+  median_library_size = median(rowSums(counts_raw)),
+  max_library_size = max(rowSums(counts_raw)),
+  zero_fraction = mean(counts_raw == 0),
+  detection_limit = clr_object$detection_limit,
+  replacement_value = clr_object$replacement_value,
+  replacement_fraction = clr_object$frac
+)
+
+regression_preprocessing_summary
+```
+
+```{r save_clr_objects}
+saveRDS(
+  clr_object,
+  file = path_target("regression_multrepl_clr_object.rds")
+)
+
+write_csv(
+  regression_preprocessing_summary,
+  file = path_target("regression_preprocessing_summary.csv")
+)
+```
+
+## Regression analysis setup
+
+Samples with `EBF duration == "1 month"` are removed before fitting the
+regression models, because this sparse group contains only three samples and may
+confound the regression-based global tests.
+
+All covariates are tested on the same complete-case analysis set. That is, after
+removing the sparse EBF group, samples with missing values in any of the model
+covariates are excluded once, and the resulting sample set is used for all
+full-versus-reduced model comparisons. This ensures that differences in the test
+statistics reflect the covariate being omitted rather than changes in the sample
+composition. The number of taxa is fixed by the filtered genus-level phyloseq
+object used to construct the CLR response matrix.
+
+```{r regression_setup}
+model_data <- sampdata_reg %>%
+  filter(`EBF duration` != "1 month" | is.na(`EBF duration`)) %>%
+  select(SampleID, all_of(covariates_regression)) %>%
+  filter(if_all(all_of(covariates_regression), ~ !is.na(.x))) %>%
+  droplevels()
+
+model_sample_ids <- model_data$SampleID
+response_clr <- counts_clr[model_sample_ids, , drop = FALSE]
+
+stopifnot(identical(rownames(response_clr), model_data$SampleID))
+
+covariates_regression <- covariates_regression[
+  vapply(
+    covariates_regression,
+    function(var) length(unique(model_data[[var]])) >= 2,
+    logical(1)
+  )
+]
+
+model_data <- model_data %>%
+  select(SampleID, all_of(covariates_regression)) %>%
+  droplevels()
+
+regression_model_summary <- tibble(
+  n_samples = nrow(model_data),
+  n_taxa = ncol(response_clr),
+  excluded_ebf_one_month = sum(sampdata_reg$`EBF duration` == "1 month", na.rm = TRUE),
+  n_covariates = length(covariates_regression)
+)
+
+covariate_level_summary <- tibble(
+  variable = covariates_regression,
+  n_levels = vapply(
+    covariates_regression,
+    function(var) nlevels(model_data[[var]]),
+    integer(1)
+  ),
+  levels = vapply(
+    covariates_regression,
+    function(var) paste(levels(model_data[[var]]), collapse = "; "),
+    character(1)
+  )
+)
+
+regression_model_summary
+covariate_level_summary
+```
+
+Thus, the multivariate regression model is fitted to
+`r regression_model_summary$n_samples` samples and
+`r regression_model_summary$n_taxa` genus-level taxa for every covariate test.
+The same sample and taxon counts therefore appear in each row of the result
+tables.
+
+```{r save_regression_setup}
+write_csv(
+  regression_model_summary,
+  file = path_target("regression_model_summary.csv")
+)
+
+write_csv(
+  covariate_level_summary,
+  file = path_target("regression_covariate_level_summary.csv")
+)
+```
+
+## CLR-based multivariate regression
+
+The fitted model uses the CLR-transformed microbial profile as multivariate
+response and compares the full model with reduced models in which one covariate
+is omitted. For each covariate, the test statistic is the reduction in
+multivariate residual sum of squares.
+
+```{r full_model_coefficients}
+full_formula <- safe_reformulate(covariates_regression)
+full_design <- model.matrix(full_formula, data = model_data)
+full_fit <- lm.fit(x = full_design, y = response_clr)
+
+coefficient_matrix <- as_tibble(
+  full_fit$coefficients,
+  rownames = "coefficient"
+)
+
+saveRDS(
+  list(
+    formula = full_formula,
+    design = full_design,
+    coefficients = full_fit$coefficients,
+    taxa = colnames(response_clr),
+    sample_ids = model_data$SampleID
+  ),
+  file = path_target("regression_full_model_fit.rds")
+)
+
+coefficient_matrix[seq_len(min(10, nrow(coefficient_matrix))), seq_len(min(6, ncol(coefficient_matrix)))]
+```
+
+## Permutation-based global covariate tests
+
+```{r parallel_setup}
+future::plan(
+  future::multisession,
+  workers = cores
+)
+
+progressr::handlers("txtprogressbar")
+options(progressr.enable = TRUE)
+```
+
+```{r regression_permutation_tests}
+set.seed(permutation_seed)
+path_regression <- path_target("regression_results_multrepl_clr.rds")
+
+if (!file.exists(path_regression)) {
+  regression_results <- progressr::with_progress({
+    p <- progressr::progressor(steps = length(covariates_regression))
+    
+    furrr::future_map_dfr(
+      covariates_regression,
+      function(covariate) {
+        out <- run_regression_permutation_test(
+          y = response_clr,
+          metadata = model_data,
+          covariate = covariate,
+          all_covariates = covariates_regression,
+          n_perm = n_perm
+        )
+        
+        p(message = sprintf("Regression test: %s", covariate))
+        
+        out
+      },
+      .options = furrr::furrr_options(seed = permutation_seed)
+    )
+  })
+  
+  saveRDS(regression_results, file = path_regression)
+} else {
+  regression_results <- readRDS(path_regression)
+}
+
+regression_results <- regression_results %>%
+  mutate(
+    variable = factor(variable, levels = covariates_regression),
+    n_samples = nrow(model_data),
+    n_taxa = ncol(response_clr),
+    .after = variable
+  )
+
+regression_results %>%
+  select(variable, n_samples, n_taxa, statistic_obs, p_empirical, n_exceed, n_perm) %>%
+  mutate(
+    p_empirical = fmt_p_table(p_empirical)
+  )
+```
+
+```{r regression_results_csv}
+regression_results %>%
+  select(variable, n_samples, n_taxa, statistic_obs, p_empirical, n_exceed, n_perm) %>%
+  write_csv(path_target("regression_results_multrepl_clr.csv"))
+```
+
+### Permutation distributions
+
+The following plot shows a subset of the empirical null distributions obtained
+from the permutation statistics. Six covariate-specific distributions are shown
+to provide a compact visual check of the permutation results.
+
+```{r regression_perm_dist, fig.width=8, fig.height=4}
+plot_variables <- regression_results %>%
+  arrange(variable) %>%
+  slice_head(n = 6) %>%
+  pull(variable)
+
+perm_dist_df <- regression_results %>%
+  #filter(variable %in% plot_variables) %>%
+  select(variable, perm_stats) %>%
+  mutate(
+    perm_id = purrr::map(perm_stats, seq_along)
+  ) %>%
+  tidyr::unnest(c(perm_stats, perm_id)) %>%
+  rename(statistic_perm = perm_stats)
+
+obs_df <- regression_results %>%
+  #filter(variable %in% plot_variables) %>%
+  select(variable, statistic_obs, p_empirical)
+
+ggplot(perm_dist_df, aes(x = statistic_perm)) +
+  geom_histogram(bins = 35, fill = "grey80", color = "white") +
+  geom_vline(
+    data = obs_df,
+    aes(xintercept = statistic_obs),
+    color = "#B2182B",
+    linewidth = 0.8
+  ) +
+  facet_wrap(~ variable, scales = "free", ncol = 3) +
+  labs(
+    x = expression(t[j]^"*"),
+    y = "Number of permutations"
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    strip.text = element_text(face = "bold")
+  )
+```
+
+### p-value refinement with permApprox
+
+```{r regression_permapprox}
+path_regression_permapprox <- path_target("regression_permapprox_results_multrepl_clr.rds")
+
+regression_obs_stats <- regression_results$statistic_obs
+regression_perm_stats <- do.call(cbind, regression_results$perm_stats)
+
+gpd_ctrl <- permApprox::make_gpd_ctrl(
+  constraint = "support_at_obs",
+  sample_size = min(regression_results$n_samples)
+)
+
+if (!file.exists(path_regression_permapprox)) {
+  regression_permapprox <- permApprox::perm_approx(
+    obs_stats = regression_obs_stats,
+    perm_stats = regression_perm_stats,
+    method = "gpd",
+    alternative = "greater",
+    null_center = "median",
+    approx_thresh = 0.1,
+    adjust_method = "none",
+    gpd_ctrl = gpd_ctrl,
+    cores = cores,
+    verbose = TRUE
+  )
+  
+  saveRDS(regression_permapprox, file = path_regression_permapprox)
+} else {
+  regression_permapprox <- readRDS(path_regression_permapprox)
+}
+
+regression_permapprox
+```
+
+```{r regression_permapprox_table}
+regression_results_all <- regression_results %>%
+  select(variable, n_samples, n_taxa, statistic_obs, n_exceed, n_perm, p_empirical) %>%
+  mutate(
+    p_permapprox = regression_permapprox$p_unadjusted,
+    method_used = regression_permapprox$method_used
+  )
+
+regression_results_all %>%
+  arrange(p_permapprox) %>%
+  mutate(
+    p_empirical = fmt_p_table(p_empirical),
+    p_permapprox = fmt_p_table(p_permapprox)
+  )
+```
+
+```{r regression_latex}
+regression_tex_df <- regression_results_all %>%
+  arrange(variable) %>%
+  transmute(
+    Variable = as.character(variable),
+    RSS = round(statistic_obs, 2),
+    n_exceed = n_exceed,
+    p_emp = fmt_p_latex(p_empirical),
+    p_papp = fmt_p_latex(p_permapprox)
+  )
+
+tex_regression <- kbl(
+  regression_tex_df,
+  format = "latex",
+  booktabs = TRUE,
+  escape = FALSE,
+  col.names = c("Variable", "$t_j$", "\\# exceed",
+                "$p$ (emp.)", "$p$ (GPD-refined)"),
+  align = "lrrrr",
+  caption = paste(
+    "CLR-based multivariate regression results for cohort variables.",
+    "$t_j$ is the reduction in multivariate residual sum of squares when the",
+    "covariate is added to the model.",
+    "\\# exceed: number of permuted statistics $\\geq$ observed.",
+    "$p$ (emp.): empirical permutation $p$-value ($999$ permutations);",
+    "$p$ (GPD-refined): $p$-value refined with \\texttt{permApprox}."
+  ),
+  label = "application:regression"
+) %>%
+  kable_styling(latex_options = c("hold_position")) %>%
+  footnote(
+    general = "$^{***}\\:p<0.001$; $^{**}\\:p<0.01$; $^{*}\\:p<0.05$; $^{.}\\:p<0.1$.",
+    general_title = "",
+    escape = FALSE,
+    threeparttable = TRUE
+  )
+
+tex_regression
+save_kable(tex_regression, file = path_target("regression_table.tex"))
+```
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
