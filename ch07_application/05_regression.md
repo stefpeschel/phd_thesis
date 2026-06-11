@@ -1,6 +1,6 @@
-05_regression
+Regression models for compositional responses
 ================
-Compiled at 2026-06-11 08:36:31 UTC
+Compiled at 2026-06-11 11:11:51 UTC
 
 ## Set global parameters
 
@@ -24,15 +24,25 @@ is applied after replacement.
 ## Prepare CLR response matrix
 
     ## # A tibble: 1 × 9
-    ##   n_samples n_taxa min_library_size median_library_size max_library_size zero_fraction detection_limit replacement_value replacement_fraction
-    ##       <int>  <int>            <dbl>               <dbl>            <dbl>         <dbl>           <dbl>             <dbl>                <dbl>
-    ## 1       592    117             1456              21898.            69556         0.796       0.0000288         0.0000187                 0.65
+    ##   n_samples n_taxa min_library_size median_library_size max_library_size zero_fraction detection_limit
+    ##       <int>  <int>            <dbl>               <dbl>            <dbl>         <dbl>           <dbl>
+    ## 1       592    117             1456              21898.            69556         0.796       0.0000288
+    ## # ℹ 2 more variables: replacement_value <dbl>, replacement_fraction <dbl>
 
 ## Regression analysis setup
 
 Samples with `EBF duration == "1 month"` are removed before fitting the
 regression models, because this sparse group contains only three samples
 and may confound the regression-based global tests.
+
+All covariates are tested on the same complete-case analysis set. That
+is, after removing the sparse EBF group, samples with missing values in
+any of the model covariates are excluded once, and the resulting sample
+set is used for all full-versus-reduced model comparisons. This ensures
+that differences in the test statistics reflect the covariate being
+omitted rather than changes in the sample composition. The number of
+taxa is fixed by the filtered genus-level phyloseq object used to
+construct the CLR response matrix.
 
     ## # A tibble: 1 × 4
     ##   n_samples n_taxa excluded_ebf_one_month n_covariates
@@ -49,6 +59,9 @@ and may confound the regression-based global tests.
     ## 5 EBF duration        2 0 months; ≥2 months          
     ## 6 Smoking             2 No; Yes                      
     ## 7 Siblings            3 0; 1; >1
+
+Thus, the multivariate regression model is fitted to 484 samples and 117
+genus-level taxa for every covariate test.
 
 ## CLR-based multivariate regression
 
@@ -71,18 +84,34 @@ is the reduction in multivariate residual sum of squares.
     ##  9 SmokingYes                            -0.172       0.0408         0.192     0.169      -0.122 
     ## 10 Siblings1                              0.0560     -0.699         -0.152    -0.108       0.200
 
+### Coefficient heatmap
+
+The full multivariate regression yields one coefficient for each model
+term and CLR coordinate. The heatmap below visualizes these coefficients
+as a compact overview of the fitted multivariate effect pattern. Rows
+correspond to the model matrix terms; for categorical variables, these
+are contrasts relative to the reference level. Columns correspond to
+genus-level taxa. Red values indicate a positive coefficient on the CLR
+scale, whereas blue values indicate a negative coefficient. The heatmap
+is descriptive and is not used for taxon-level inference in this
+community-level analysis.
+
+![](figures/05_regression/regression_coefficient_heatmap-1.png)<!-- -->
+
+![](figures/05_regression/regression_coefficient_heatmap_top20-1.png)<!-- -->
+
 ## Permutation-based global covariate tests
 
     ## # A tibble: 7 × 7
     ##   variable     n_samples n_taxa statistic_obs p_empirical n_exceed n_perm
-    ##   <fct>            <int>  <int>         <dbl>       <dbl>    <int>  <dbl>
-    ## 1 Country            484    117          699.       0.001        0    999
-    ## 2 Sex                484    117          226.       0.108      107    999
-    ## 3 C-section          484    117          218.       0.148      147    999
-    ## 4 BF duration        484    117          641.       0.001        0    999
-    ## 5 EBF duration       484    117          451.       0.001        0    999
-    ## 6 Smoking            484    117          275.       0.03        29    999
-    ## 7 Siblings           484    117          437.       0.078       77    999
+    ##   <fct>            <int>  <int>         <dbl> <chr>          <int>  <dbl>
+    ## 1 Country            484    117          699. 1.00e-03           0    999
+    ## 2 Sex                484    117          226. 1.08e-01         107    999
+    ## 3 C-section          484    117          218. 1.48e-01         147    999
+    ## 4 BF duration        484    117          641. 1.00e-03           0    999
+    ## 5 EBF duration       484    117          451. 1.00e-03           0    999
+    ## 6 Smoking            484    117          275. 3.00e-02          29    999
+    ## 7 Siblings           484    117          437. 7.80e-02          77    999
 
 ### Permutation distributions
 
@@ -116,29 +145,31 @@ permutation results.
 
     ## # A tibble: 7 × 9
     ##   variable     n_samples n_taxa statistic_obs n_exceed n_perm p_empirical p_permapprox method_used
-    ##   <fct>            <int>  <int>         <dbl>    <int>  <dbl>       <dbl>        <dbl> <chr>      
-    ## 1 EBF duration       484    117          451.        0    999       0.001  0.000000878 gpd        
-    ## 2 Country            484    117          699.        0    999       0.001  0.00000351  gpd        
-    ## 3 BF duration        484    117          641.        0    999       0.001  0.0000414   gpd        
-    ## 4 Smoking            484    117          275.       29    999       0.03   0.0241      gpd        
-    ## 5 Siblings           484    117          437.       77    999       0.078  0.0722      gpd        
-    ## 6 Sex                484    117          226.      107    999       0.108  0.108       empirical  
-    ## 7 C-section          484    117          218.      147    999       0.148  0.148       empirical
+    ##   <fct>            <int>  <int>         <dbl>    <int>  <dbl> <chr>       <chr>        <chr>      
+    ## 1 EBF duration       484    117          451.        0    999 1.00e-03    8.78e-07     gpd        
+    ## 2 Country            484    117          699.        0    999 1.00e-03    3.51e-06     gpd        
+    ## 3 BF duration        484    117          641.        0    999 1.00e-03    4.14e-05     gpd        
+    ## 4 Smoking            484    117          275.       29    999 3.00e-02    2.41e-02     gpd        
+    ## 5 Siblings           484    117          437.       77    999 7.80e-02    7.22e-02     gpd        
+    ## 6 Sex                484    117          226.      107    999 1.08e-01    1.08e-01     empirical  
+    ## 7 C-section          484    117          218.      147    999 1.48e-01    1.48e-01     empirical
 
 ## Files written
 
 These files have been written to the target directory,
 `data/05_regression`:
 
-    ## # A tibble: 9 × 4
-    ##   path                                           type         size modification_time  
-    ##   <fs::path>                                     <fct> <fs::bytes> <dttm>             
-    ## 1 regression_covariate_level_summary.csv         file          224 2026-06-11 08:36:34
-    ## 2 regression_full_model_fit.rds                  file        1.79M 2026-06-11 08:36:34
-    ## 3 regression_model_summary.csv                   file           65 2026-06-11 08:36:34
-    ## 4 regression_multrepl_clr_object.rds             file      262.74K 2026-06-11 08:36:33
-    ## 5 regression_permapprox_results_multrepl_clr.rds file       16.88K 2026-06-11 08:35:33
-    ## 6 regression_preprocessing_summary.csv           file          233 2026-06-11 08:36:33
-    ## 7 regression_results_multrepl_clr.csv            file          405 2026-06-11 08:36:37
-    ## 8 regression_results_multrepl_clr.rds            file       46.84K 2026-06-11 08:15:52
-    ## 9 regression_table.tex                           file        1.24K 2026-06-11 08:36:42
+    ## # A tibble: 11 × 4
+    ##    path                                           type         size modification_time  
+    ##    <fs::path>                                     <fct> <fs::bytes> <dttm>             
+    ##  1 regression_coefficient_heatmap_data.csv        file        60.4K 2026-06-11 11:11:55
+    ##  2 regression_coefficient_heatmap_top20_data.csv  file       10.25K 2026-06-11 11:11:59
+    ##  3 regression_covariate_level_summary.csv         file          224 2026-06-11 11:11:54
+    ##  4 regression_full_model_fit.rds                  file        1.79M 2026-06-11 11:11:54
+    ##  5 regression_model_summary.csv                   file           65 2026-06-11 11:11:54
+    ##  6 regression_multrepl_clr_object.rds             file      262.74K 2026-06-11 11:11:54
+    ##  7 regression_permapprox_results_multrepl_clr.rds file       16.88K 2026-06-11 10:47:49
+    ##  8 regression_preprocessing_summary.csv           file          233 2026-06-11 11:11:54
+    ##  9 regression_results_multrepl_clr.csv            file          405 2026-06-11 11:12:00
+    ## 10 regression_results_multrepl_clr.rds            file       46.84K 2026-06-11 10:47:49
+    ## 11 regression_table.tex                           file        1.14K 2026-06-11 11:12:03

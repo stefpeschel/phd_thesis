@@ -1,0 +1,201 @@
+coefficient,taxon,coefficient_value
+BF duration: ≥2 months,Actinomyces,-1.3934909329743197
+BF duration: ≥2 months,Enterococcus,-0.3136705671243685
+BF duration: ≥2 months,Clostridium_sensu_strict1,-1.188482845548674
+BF duration: ≥2 months,Staphylococcus,0.5814020625179116
+BF duration: ≥2 months,Bacteroides,0.39979723538052175
+BF duration: ≥2 months,Intestinibacter,-0.7974810342733032
+BF duration: ≥2 months,Lactobacillus,1.033098127192261
+BF duration: ≥2 months,[Clostridium]_innocuum_group,-0.12814486643885586
+BF duration: ≥2 months,Collinsella,-0.2548424144436638
+BF duration: ≥2 months,Lactococcus,-0.08644946745759473
+BF duration: ≥2 months,Dorea,0.8490935087109347
+BF duration: ≥2 months,Veillonella,-0.5244150183602762
+BF duration: ≥2 months,[Ruminococcus]_gnavugroup,-0.7647964184911231
+BF duration: ≥2 months,Clostridioides,-0.8315678078329032
+BF duration: ≥2 months,Sellimonas,-0.8143497863593315
+BF duration: ≥2 months,Rothia,-0.2713826588182717
+BF duration: ≥2 months,Eggerthella,0.6737086292788023
+BF duration: ≥2 months,Tyzzerella,-0.7618804442730917
+BF duration: ≥2 months,24_Enterobacteriaceae(F),-0.7466809106646501
+BF duration: ≥2 months,Negativicoccus,0.7463493670837646
+EBF duration: ≥2 months,Actinomyces,0.9623074189278369
+EBF duration: ≥2 months,Enterococcus,-1.3389805147039846
+EBF duration: ≥2 months,Clostridium_sensu_strict1,0.02114906125756019
+EBF duration: ≥2 months,Staphylococcus,0.6499675756550553
+EBF duration: ≥2 months,Bacteroides,0.769412823647487
+EBF duration: ≥2 months,Intestinibacter,-1.0462874313102781
+EBF duration: ≥2 months,Lactobacillus,0.18031346787547128
+EBF duration: ≥2 months,[Clostridium]_innocuum_group,-0.4746669399243409
+EBF duration: ≥2 months,Collinsella,0.09085922832235258
+EBF duration: ≥2 months,Lactococcus,-0.8561908932704542
+EBF duration: ≥2 months,Dorea,-0.6847430926520969
+EBF duration: ≥2 months,Veillonella,-0.17217705510520967
+EBF duration: ≥2 months,[Ruminococcus]_gnavugroup,-0.46698444583611803
+EBF duration: ≥2 months,Clostridioides,0.3336657516891666
+EBF duration: ≥2 months,Sellimonas,0.14910720665247934
+EBF duration: ≥2 months,Rothia,-0.13787437942631547
+EBF duration: ≥2 months,Eggerthella,-0.5810720222785287
+EBF duration: ≥2 months,Tyzzerella,-0.08143218677833026
+EBF duration: ≥2 months,24_Enterobacteriaceae(F),0.3945117915071531
+EBF duration: ≥2 months,Negativicoccus,-0.371455413718005
+Country: Austria,Actinomyces,0.1476107176526289
+Country: Austria,Enterococcus,0.08188035868351698
+Country: Austria,Clostridium_sensu_strict1,-0.41719651849881045
+Country: Austria,Staphylococcus,-0.8397821649144549
+Country: Austria,Bacteroides,0.13103740709498615
+Country: Austria,Intestinibacter,-0.2514163378722396
+Country: Austria,Lactobacillus,0.6913304008115112
+Country: Austria,[Clostridium]_innocuum_group,0.07399793944376577
+Country: Austria,Collinsella,-0.7355378652558175
+Country: Austria,Lactococcus,-0.18545667385776018
+Country: Austria,Dorea,-0.04479544687244791
+Country: Austria,Veillonella,-0.2627976851993125
+Country: Austria,[Ruminococcus]_gnavugroup,-0.016433377984775947
+Country: Austria,Clostridioides,0.2223315020181352
+Country: Austria,Sellimonas,0.05613027898830085
+Country: Austria,Rothia,0.5587954606902582
+Country: Austria,Eggerthella,-0.6574076181845866
+Country: Austria,Tyzzerella,-0.13098457210575623
+Country: Austria,24_Enterobacteriaceae(F),0.03446634140334066
+Country: Austria,Negativicoccus,0.09869292884093427
+C-section: Yes,Actinomyces,0.14511941407206844
+C-section: Yes,Enterococcus,0.320385961677201
+C-section: Yes,Clostridium_sensu_strict1,0.29348382793831596
+C-section: Yes,Staphylococcus,-0.03720532899353314
+C-section: Yes,Bacteroides,-1.082355095728478
+C-section: Yes,Intestinibacter,-0.14560471933136057
+C-section: Yes,Lactobacillus,0.021543637793356572
+C-section: Yes,[Clostridium]_innocuum_group,0.1414007382593113
+C-section: Yes,Collinsella,-0.39160260697173055
+C-section: Yes,Lactococcus,0.003978669796238348
+C-section: Yes,Dorea,0.03666024097693864
+C-section: Yes,Veillonella,-0.21789247894226027
+C-section: Yes,[Ruminococcus]_gnavugroup,0.2272763429847702
+C-section: Yes,Clostridioides,0.09956787545236825
+C-section: Yes,Sellimonas,-0.052949657382727354
+C-section: Yes,Rothia,0.21446387839858208
+C-section: Yes,Eggerthella,0.04886586323442479
+C-section: Yes,Tyzzerella,0.10176546250363738
+C-section: Yes,24_Enterobacteriaceae(F),0.15297951773577048
+C-section: Yes,Negativicoccus,-0.015186084051158346
+Smoking: Yes,Actinomyces,0.4251082255853609
+Smoking: Yes,Enterococcus,-0.2493005508435955
+Smoking: Yes,Clostridium_sensu_strict1,0.13907575809022546
+Smoking: Yes,Staphylococcus,-0.19846575747392653
+Smoking: Yes,Bacteroides,-0.49466761934928305
+Smoking: Yes,Intestinibacter,-0.0735955593326718
+Smoking: Yes,Lactobacillus,-0.3123230649805562
+Smoking: Yes,[Clostridium]_innocuum_group,0.9729678243016904
+Smoking: Yes,Collinsella,-0.7183436610254225
+Smoking: Yes,Lactococcus,0.2920524442504814
+Smoking: Yes,Dorea,0.021959384421006988
+Smoking: Yes,Veillonella,0.040829214880309904
+Smoking: Yes,[Ruminococcus]_gnavugroup,0.42823810548634983
+Smoking: Yes,Clostridioides,0.3663774032920562
+Smoking: Yes,Sellimonas,0.7527861227978743
+Smoking: Yes,Rothia,0.7962907619526779
+Smoking: Yes,Eggerthella,0.7693842533473656
+Smoking: Yes,Tyzzerella,0.611667758118824
+Smoking: Yes,24_Enterobacteriaceae(F),0.6002303717611807
+Smoking: Yes,Negativicoccus,0.1915816131802063
+BF duration: 1 month,Actinomyces,-0.25636299372037796
+BF duration: 1 month,Enterococcus,0.3594015327258355
+BF duration: 1 month,Clostridium_sensu_strict1,-0.4958237851827531
+BF duration: 1 month,Staphylococcus,1.177137248154419
+BF duration: 1 month,Bacteroides,0.3469160341049033
+BF duration: 1 month,Intestinibacter,0.3918986645431109
+BF duration: 1 month,Lactobacillus,-0.7875484294487236
+BF duration: 1 month,[Clostridium]_innocuum_group,0.3725118780497494
+BF duration: 1 month,Collinsella,0.7329720608902383
+BF duration: 1 month,Lactococcus,0.16721418647731612
+BF duration: 1 month,Dorea,0.2539066922909422
+BF duration: 1 month,Veillonella,-0.2162606658629279
+BF duration: 1 month,[Ruminococcus]_gnavugroup,-0.3255148178784435
+BF duration: 1 month,Clostridioides,-0.10893749548453543
+BF duration: 1 month,Sellimonas,-0.6536067419968761
+BF duration: 1 month,Rothia,-0.3369567520065462
+BF duration: 1 month,Eggerthella,0.10639260048265582
+BF duration: 1 month,Tyzzerella,-0.2500630979447308
+BF duration: 1 month,24_Enterobacteriaceae(F),-0.3861389177172686
+BF duration: 1 month,Negativicoccus,0.13790940793397338
+Siblings: 1,Actinomyces,-0.09664696222431884
+Siblings: 1,Enterococcus,0.539518310113413
+Siblings: 1,Clostridium_sensu_strict1,-0.2417092707958111
+Siblings: 1,Staphylococcus,-0.28646682415184427
+Siblings: 1,Bacteroides,0.3448952071518015
+Siblings: 1,Intestinibacter,0.3380861475322022
+Siblings: 1,Lactobacillus,0.16301515531802133
+Siblings: 1,[Clostridium]_innocuum_group,0.47095432353423394
+Siblings: 1,Collinsella,0.5016712042978692
+Siblings: 1,Lactococcus,-0.011262585509612243
+Siblings: 1,Dorea,0.13609811355187418
+Siblings: 1,Veillonella,-0.6986235695217903
+Siblings: 1,[Ruminococcus]_gnavugroup,0.3895071129261665
+Siblings: 1,Clostridioides,-0.03743888539949768
+Siblings: 1,Sellimonas,0.4041967746687456
+Siblings: 1,Rothia,0.38596066657222733
+Siblings: 1,Eggerthella,0.16178204908996976
+Siblings: 1,Tyzzerella,0.5237322498371632
+Siblings: 1,24_Enterobacteriaceae(F),-0.27405812641722066
+Siblings: 1,Negativicoccus,-0.1520252578560741
+Siblings: >1,Actinomyces,-0.19831471407828477
+Siblings: >1,Enterococcus,0.11670309891719388
+Siblings: >1,Clostridium_sensu_strict1,-0.5031009056111784
+Siblings: >1,Staphylococcus,-0.36280808618870725
+Siblings: >1,Bacteroides,-0.17799634385309657
+Siblings: >1,Intestinibacter,0.2972082500557609
+Siblings: >1,Lactobacillus,0.2607110196098294
+Siblings: >1,[Clostridium]_innocuum_group,0.6181417018038428
+Siblings: >1,Collinsella,0.9722533730930436
+Siblings: >1,Lactococcus,-0.12078094701792624
+Siblings: >1,Dorea,0.3829734618969999
+Siblings: >1,Veillonella,-0.8146540938779953
+Siblings: >1,[Ruminococcus]_gnavugroup,0.8394799549061173
+Siblings: >1,Clostridioides,0.12659665427298433
+Siblings: >1,Sellimonas,0.3891203067409349
+Siblings: >1,Rothia,-0.21428377625931114
+Siblings: >1,Eggerthella,0.07201347355239084
+Siblings: >1,Tyzzerella,0.5272705436130813
+Siblings: >1,24_Enterobacteriaceae(F),-0.3325259027769
+Siblings: >1,Negativicoccus,-0.11341716713604288
+Country: Switzerland,Actinomyces,-0.4132890743035925
+Country: Switzerland,Enterococcus,0.12261863966590912
+Country: Switzerland,Clostridium_sensu_strict1,-0.27643113125633917
+Country: Switzerland,Staphylococcus,-0.11111810962795726
+Country: Switzerland,Bacteroides,-0.2737450086004882
+Country: Switzerland,Intestinibacter,-0.28471642413769227
+Country: Switzerland,Lactobacillus,0.2870316590210834
+Country: Switzerland,[Clostridium]_innocuum_group,-0.11205120088925462
+Country: Switzerland,Collinsella,-0.0821426465319601
+Country: Switzerland,Lactococcus,0.41072477859483125
+Country: Switzerland,Dorea,0.005410140680433773
+Country: Switzerland,Veillonella,-0.8481650551858011
+Country: Switzerland,[Ruminococcus]_gnavugroup,0.16855044633411356
+Country: Switzerland,Clostridioides,0.2662281110140778
+Country: Switzerland,Sellimonas,0.09673162950231008
+Country: Switzerland,Rothia,-0.23989862938762962
+Country: Switzerland,Eggerthella,-0.38380607179487997
+Country: Switzerland,Tyzzerella,0.06198976839015026
+Country: Switzerland,24_Enterobacteriaceae(F),-0.46473328521992313
+Country: Switzerland,Negativicoccus,-0.021145601047307963
+Sex: male,Actinomyces,0.0375937658145834
+Sex: male,Enterococcus,0.006751017759068447
+Sex: male,Clostridium_sensu_strict1,-0.24276978889413825
+Sex: male,Staphylococcus,-0.16127598217831993
+Sex: male,Bacteroides,0.2370469690311176
+Sex: male,Intestinibacter,-0.42269184655223246
+Sex: male,Lactobacillus,0.14452041631037002
+Sex: male,[Clostridium]_innocuum_group,-0.2055116856781271
+Sex: male,Collinsella,0.3361214977159283
+Sex: male,Lactococcus,-0.15175191167455174
+Sex: male,Dorea,-0.049698700842773696
+Sex: male,Veillonella,-0.40814630451889183
+Sex: male,[Ruminococcus]_gnavugroup,0.1494691071610228
+Sex: male,Clostridioides,-0.04836194447543016
+Sex: male,Sellimonas,0.033996930452737925
+Sex: male,Rothia,-0.2976194862278575
+Sex: male,Eggerthella,0.08810943526398879
+Sex: male,Tyzzerella,0.20738251958153361
+Sex: male,24_Enterobacteriaceae(F),-0.5142338650501125
+Sex: male,Negativicoccus,-0.08298045394245641

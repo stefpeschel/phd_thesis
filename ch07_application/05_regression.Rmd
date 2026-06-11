@@ -1,5 +1,5 @@
 ---
-title: "05_regression"
+title: "Regression models for compositional responses"
 date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
 output: 
   github_document: default
@@ -267,6 +267,42 @@ fmt_p_latex <- function(p_num) {
 fmt_p_table <- function(p_num) {
   formatC(p_num, format = "e", digits = 2)
 }
+
+format_coefficient_label <- function(term) {
+  term <- stringr::str_remove_all(term, "`")
+  
+  dplyr::case_when(
+    stringr::str_starts(term, "Country") ~ paste0(
+      "Country: ",
+      stringr::str_remove(term, "^Country")
+    ),
+    stringr::str_starts(term, "Sex") ~ paste0(
+      "Sex: ",
+      stringr::str_to_lower(stringr::str_remove(term, "^Sex"))
+    ),
+    stringr::str_starts(term, "C-section") ~ paste0(
+      "C-section: ",
+      stringr::str_remove(term, "^C-section")
+    ),
+    stringr::str_starts(term, "BF duration") ~ paste0(
+      "BF duration: ",
+      stringr::str_remove(term, "^BF duration")
+    ),
+    stringr::str_starts(term, "EBF duration") ~ paste0(
+      "EBF duration: ",
+      stringr::str_remove(term, "^EBF duration")
+    ),
+    stringr::str_starts(term, "Smoking") ~ paste0(
+      "Smoking: ",
+      stringr::str_remove(term, "^Smoking")
+    ),
+    stringr::str_starts(term, "Siblings") ~ paste0(
+      "Siblings: ",
+      stringr::str_remove(term, "^Siblings")
+    ),
+    TRUE ~ term
+  )
+}
 ```
 
 ## Prepare CLR response matrix
@@ -385,8 +421,6 @@ covariate_level_summary
 Thus, the multivariate regression model is fitted to
 `r regression_model_summary$n_samples` samples and
 `r regression_model_summary$n_taxa` genus-level taxa for every covariate test.
-The same sample and taxon counts therefore appear in each row of the result
-tables.
 
 ```{r save_regression_setup}
 write_csv(
@@ -429,6 +463,199 @@ saveRDS(
 )
 
 coefficient_matrix[seq_len(min(10, nrow(coefficient_matrix))), seq_len(min(6, ncol(coefficient_matrix)))]
+```
+
+### Coefficient heatmap
+
+The full multivariate regression yields one coefficient for each model term and
+CLR coordinate. The heatmap below visualizes these coefficients as a compact
+overview of the fitted multivariate effect pattern. Rows correspond to the model
+matrix terms; for categorical variables, these are contrasts relative to the
+reference level. Columns correspond to genus-level taxa. Red values indicate a
+positive coefficient on the CLR scale, whereas blue values indicate a negative
+coefficient. The heatmap is descriptive and is not used for taxon-level
+inference in this community-level analysis.
+
+```{r coefficient_heatmap, fig.width=14, fig.height=6}
+coef_mat <- full_fit$coefficients
+coef_mat <- coef_mat[rownames(coef_mat) != "(Intercept)", , drop = FALSE]
+
+tax_labels <- colnames(coef_mat)
+tax_tab <- tryCatch(
+  as(tax_table(phylo_genus), "matrix"),
+  error = function(e) NULL
+)
+
+if (!is.null(tax_tab) && "Genus" %in% colnames(tax_tab)) {
+  common_taxa <- intersect(colnames(coef_mat), rownames(tax_tab))
+  genus_labels <- as.character(tax_tab[common_taxa, "Genus"])
+  genus_labels <- stringr::str_remove(genus_labels, "^g__")
+  
+  missing_label <- is.na(genus_labels) |
+    genus_labels == "" |
+    genus_labels == "NA"
+  
+  genus_labels[missing_label] <- common_taxa[missing_label]
+  tax_labels[match(common_taxa, colnames(coef_mat))] <- genus_labels
+}
+
+tax_labels <- make.unique(tax_labels)
+
+coef_plot_mat <- coef_mat
+colnames(coef_plot_mat) <- tax_labels
+rownames(coef_plot_mat) <- format_coefficient_label(rownames(coef_plot_mat))
+
+row_order <- if (nrow(coef_plot_mat) > 1) {
+  hclust(dist(coef_plot_mat))$order
+} else {
+  seq_len(nrow(coef_plot_mat))
+}
+
+col_order <- if (ncol(coef_plot_mat) > 1) {
+  hclust(dist(t(coef_plot_mat)))$order
+} else {
+  seq_len(ncol(coef_plot_mat))
+}
+
+coef_heatmap_df <- as_tibble(
+  coef_plot_mat[row_order, col_order, drop = FALSE],
+  rownames = "coefficient"
+) %>%
+  pivot_longer(
+    cols = -coefficient,
+    names_to = "taxon",
+    values_to = "coefficient_value"
+  ) %>%
+  mutate(
+    coefficient = factor(
+      coefficient,
+      levels = rev(rownames(coef_plot_mat)[row_order])
+    ),
+    taxon = factor(
+      taxon,
+      levels = colnames(coef_plot_mat)[col_order]
+    )
+  )
+
+coef_limit <- max(abs(coef_heatmap_df$coefficient_value), na.rm = TRUE)
+
+ggplot(coef_heatmap_df, aes(x = taxon, y = coefficient, fill = coefficient_value)) +
+  geom_tile() +
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-coef_limit, coef_limit),
+    name = "Coefficient"
+  ) +
+  labs(
+    x = "",
+    y = NULL
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, 
+                               hjust = 1, size = 10),
+    axis.text.y = element_text(size = 14),
+    #axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 14),
+    legend.position = "right"
+  )
+
+coef_heatmap_df %>%
+  mutate(
+    coefficient = as.character(coefficient),
+    taxon = as.character(taxon)
+  ) %>%
+  write_csv(path_target("regression_coefficient_heatmap_data.csv"))
+```
+
+```{r coefficient_heatmap_top20, fig.width=10, fig.height=6}
+top_taxa_df <- coef_heatmap_df %>%
+  group_by(taxon) %>%
+  summarise(
+    max_abs_coefficient = max(abs(coefficient_value), na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  slice_max(
+    order_by = max_abs_coefficient,
+    n = 20,
+    with_ties = FALSE
+  )
+
+top_taxa <- top_taxa_df %>%
+  pull(taxon)
+
+top20_coef_mat <- coef_plot_mat[, as.character(top_taxa), drop = FALSE]
+
+top20_row_order <- if (nrow(top20_coef_mat) > 1) {
+  hclust(dist(top20_coef_mat))$order
+} else {
+  seq_len(nrow(top20_coef_mat))
+}
+
+# Keep taxa ordered by decreasing maximum absolute coefficient.
+top20_col_order <- seq_along(top_taxa)
+
+coef_heatmap_top20_df <- as_tibble(
+  top20_coef_mat[top20_row_order, top20_col_order, drop = FALSE],
+  rownames = "coefficient"
+) %>%
+  pivot_longer(
+    cols = -coefficient,
+    names_to = "taxon",
+    values_to = "coefficient_value"
+  ) %>%
+  mutate(
+    coefficient = factor(
+      coefficient,
+      levels = rev(rownames(top20_coef_mat)[top20_row_order])
+    ),
+    taxon = factor(
+      taxon,
+      levels = colnames(top20_coef_mat)[top20_col_order]
+    )
+  )
+
+top20_coef_limit <- max(abs(coef_heatmap_top20_df$coefficient_value), na.rm = TRUE)
+
+ggplot(coef_heatmap_top20_df, aes(x = taxon, y = coefficient, fill = coefficient_value)) +
+  geom_tile() +
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-top20_coef_limit, top20_coef_limit),
+    name = "Coefficient"
+  ) +
+  labs(
+    x = "",
+    y = NULL
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, 
+                               hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    #axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 14),
+    legend.position = "right"
+  )
+
+coef_heatmap_top20_df %>%
+  mutate(
+    coefficient = as.character(coefficient),
+    taxon = as.character(taxon)
+  ) %>%
+  write_csv(path_target("regression_coefficient_heatmap_top20_data.csv"))
 ```
 
 ## Permutation-based global covariate tests
