@@ -40,6 +40,7 @@ library(pheatmap)
 library(permApprox)
 library(kableExtra)
 library(zCompositions)
+library(viridisLite)
 
 # Parallel computing
 library(future)
@@ -423,7 +424,7 @@ pcoa_bray_df <- pcoa_bray$coords %>%
   mutate(distance = "Bray--Curtis")
 
 pcoa_clr_df <- pcoa_clr_object$coords %>%
-  mutate(distance = "multRepl + CLR Euclidean")
+  mutate(distance = "Aitchison")
 
 bind_rows(pcoa_bray_df, pcoa_clr_df) %>%
   write_csv(path_target("beta_pcoa_coordinates.csv"))
@@ -524,7 +525,7 @@ if (length(variables_to_plot) > 0) {
       metadata = sampdata_plot,
       color_var = var,
       title = paste0("Bray-Curtis dissimilarity: ", var),
-      palette = cols
+      palette = c("gold2", viridis(3)[1:2])
     )
     
     p_clr_var <- plot_pcoa(
@@ -532,7 +533,7 @@ if (length(variables_to_plot) > 0) {
       metadata = sampdata_plot,
       color_var = var,
       title = paste0("Aitchison distance: ", var),
-      palette = cols
+      palette = c("gold2", viridis(3)[1:2])
     )
     
     print((p_bray_var | p_clr_var) +
@@ -571,7 +572,7 @@ p_heat_clr <- plot_distance_heatmap(
   dist_obj = dist_clr_object,
   metadata = sampdata_plot,
   ann_vars = variables_to_plot,
-  title    = "multRepl + CLR Euclidean distance matrix"
+  title    = "Aitchison distance matrix"
 )
 
 ComplexHeatmap::draw(p_heat_clr)
@@ -583,9 +584,16 @@ The CLR heatmap is considerably more homogeneous: distances are more uniformly d
 
 The following analyses are performed for both beta-diversity representations: Bray-Curtis dissimilarity on relative abundance profiles and Euclidean distance after multiplicative replacement and CLR transformation. PERMANOVA is used to test for differences in group centroids, while PERMDISP assesses differences in within-group dispersion.
 
+We remove samples with EBF duration == "1 month" from all permutation tests, as these three samples form a singleton-like group that can distort results.
+
 ```{r beta_test_setup}
 # Use the same variables as for the PCoA plots.
 variables_to_test <- variables_to_plot
+
+# Remove samples with EBF duration == "1 month" from all permutation tests,
+# as these three samples form a singleton-like group that can distort results.
+sampdata_test <- sampdata_plot %>%
+  dplyr::filter(`EBF duration` != "1 month" | is.na(`EBF duration`))
 
 distance_list <- list(
   bray = list(
@@ -593,7 +601,7 @@ distance_list <- list(
     dist = dist_bray
   ),
   clr = list(
-    label = "multRepl + CLR Euclidean",
+    label = "Aitchison",
     dist = dist_clr_object
   )
 )
@@ -737,6 +745,7 @@ run_official_betadisper <- function(dist_obj, group, n_perm = 999) {
 ### PERMANOVA
 
 ```{r permanova}
+set.seed(42)
 path_permanova <- path_target("permanova_results_multrepl_clr.rds")
 
 if (!file.exists(path_permanova)) {
@@ -752,7 +761,7 @@ if (!file.exists(path_permanova)) {
         
         obj <- subset_dist_and_group(
           dist_obj  = dist_info$dist,
-          metadata  = sampdata_plot,
+          metadata  = sampdata_test,
           group_var = var
         )
         
@@ -790,7 +799,7 @@ if (!file.exists(path_permanova)) {
   permanova_results <- readRDS(path_permanova)
 }
 
-permanova_results <- permanova_results |>
+permanova_results <- permanova_results %>%
   mutate(variable = factor(variable, levels = var_order_beta))
 ```
 
@@ -805,20 +814,26 @@ permanova_results %>%
 ```
 
 ```{r permanova_perm_dist, fig.width=12, fig.height=5}
+dist_order <- c("Bray-Curtis", "Aitchison")
+
 perm_dist_df <- permanova_results %>%
   select(distance, variable, statistic_obs, p_empirical, perm_stats) %>%
-  tidyr::unnest(perm_stats)
+  tidyr::unnest(perm_stats) %>%
+  mutate(distance = factor(distance, levels = dist_order))
 
 obs_df <- permanova_results %>%
   select(distance, variable, statistic_obs, p_empirical) %>%
-  mutate(label = paste0("p = ", p_empirical))
+  mutate(
+    distance = factor(distance, levels = dist_order),
+    label    = paste0("p = ", p_empirical)
+  )
 
 ggplot(perm_dist_df, aes(x = perm_stats)) +
   geom_histogram(bins = 40, fill = "grey75", color = "white") +
   geom_vline(data = obs_df, aes(xintercept = statistic_obs),
              color = "tomato", linewidth = 0.9) +
-  geom_text(data = obs_df, aes(x = Inf, y = Inf, label = label),
-            hjust = 1.1, vjust = 1.5, size = 2.5, inherit.aes = FALSE) +
+  geom_text(data = obs_df, aes(x = -Inf, y = Inf, label = label),
+            hjust = -0.05, vjust = 1.5, size = 2.5, inherit.aes = FALSE) +
   facet_grid(distance ~ variable, scales = "free_x") +
   labs(
     x     = "Permuted F statistic",
@@ -877,17 +892,39 @@ summary(permanova_permapprox)
 ```
 
 ```{r permanova_permapprox_table}
-permanova_results %>%
+permanova_results_all <- permanova_results %>%
   select(distance, variable, n_samples, statistic_obs, n_exceed, n_perm, p_empirical) %>%
   mutate(
     p_permapprox = permanova_permapprox$p_unadjusted,
     method_used  = permanova_permapprox$method_used
+  ) %>%
+  mutate(
+    variable     = factor(variable, levels = var_order_beta),
+    distance     = factor(distance, levels = dist_order)
   )
+permanova_results_all
 ```
 
-```{r permanova_latex}
-dist_order <- c("Bray-Curtis", "multRepl + CLR Euclidean")
+**Bray-Curtis sorted**
 
+```{r}
+permanova_results_all %>%
+  filter(distance == "Bray-Curtis") %>%
+  arrange(p_permapprox) %>%
+  select(variable, statistic_obs, p_empirical, p_permapprox)
+```
+
+**Aitchison sorted**
+
+```{r}
+permanova_results_all %>%
+  filter(distance == "Aitchison") %>%
+  arrange(p_permapprox) %>%
+  select(variable, statistic_obs, p_empirical, p_permapprox)
+```
+
+
+```{r permanova_latex}
 sig_stars_beta <- function(p) {
   dplyr::case_when(
     p < 0.001 ~ "***",
@@ -913,6 +950,7 @@ permanova_tex_df <- permanova_results %>%
   arrange(variable, distance) %>%
   transmute(
     Measure  = as.character(distance),
+    N        = n_samples,
     F        = round(statistic_obs, 2),
     n_exceed = n_exceed,
     p_emp    = fmt_p_latex(p_empirical),
@@ -934,9 +972,9 @@ tex_permanova <- kbl(
   format    = "latex",
   booktabs  = TRUE,
   escape    = FALSE,
-  col.names = c("Measure", "$F$", "\\# exceed",
+  col.names = c("Measure", "$n$", "$F$", "\\# exceed",
                 "$p$ (emp.)", "$p$ (GPD-refined)"),
-  align     = "lrrrr",
+  align     = "lrrrrr",
   caption   = paste(
     "PERMANOVA results for beta diversity across cohort variables.",
     "$F$ is the observed pseudo-$F$ statistic (adonis2).",
@@ -959,7 +997,7 @@ tex_permanova <- kbl(
     escape         = FALSE,
     threeparttable = TRUE
   ) %>%
-  fix_col_spec("{lrrrr}", "{l@{\\hspace*{1.5em}}rrrr}")
+  fix_col_spec("{lrrrrr}", "{l@{\\hspace*{1.5em}}rrrrr}")
 
 tex_permanova
 save_kable(tex_permanova, file = path_target("permanova_table.tex"))
@@ -969,6 +1007,7 @@ save_kable(tex_permanova, file = path_target("permanova_table.tex"))
 obs_df_pa <- permanova_results %>%
   select(distance, variable, statistic_obs, p_empirical) %>%
   mutate(
+    distance     = factor(distance, levels = dist_order),
     p_permapprox = permanova_permapprox$p_unadjusted,
     label = paste0(
       "p_emp = ", formatC(p_empirical,  format = "e", digits = 2),
@@ -982,8 +1021,8 @@ ggplot(perm_dist_df, aes(x = perm_stats)) +
   geom_histogram(bins = 40, fill = "grey75", color = "white") +
   geom_vline(data = obs_df_pa, aes(xintercept = statistic_obs),
              color = "tomato", linewidth = 0.9) +
-  geom_text(data = obs_df_pa, aes(x = Inf, y = Inf, label = label),
-            hjust = 1.05, vjust = 1.3, size = 3,
+  geom_text(data = obs_df_pa, aes(x = -Inf, y = Inf, label = label),
+            hjust = -0.05, vjust = 1.3, size = 3,
             #family = "mono", 
             inherit.aes = FALSE) +
   facet_grid(distance ~ variable, scales = "free_x") +
@@ -995,10 +1034,38 @@ ggplot(perm_dist_df, aes(x = perm_stats)) +
   theme_bw(base_size = 12)
 ```
 
+**Selected variables**
+
+```{r permanova_permapprox_perm_dist_sel, fig.width=8, fig.height=4}
+perm_dist_df %>%
+  filter(variable %in% c("C-section", "BF duration", "EBF duration")) %>%
+  ggplot(aes(x = perm_stats)) +
+  geom_histogram(bins = 40, fill = "grey75", color = "white") +
+  geom_vline(data = obs_df_pa %>% 
+               filter(variable %in% c("C-section", "BF duration", "EBF duration")),
+             aes(xintercept = statistic_obs),
+             color = "tomato", linewidth = 0.9) +
+  geom_text(data = obs_df_pa %>% 
+              filter(variable %in% c("C-section", "BF duration", "EBF duration")),
+            aes(x = -Inf, y = Inf, label = label),
+            hjust = -0.05, vjust = 1.3, size = 3.5,
+            inherit.aes = FALSE) +
+  facet_grid(distance ~ variable, scales = "free_x") +
+  labs(
+    x     = "Permuted F statistic",
+    y     = "Count",
+    #title = "PERMANOVA permutation distributions with permApprox-refined p-values"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    strip.text = element_text(size = 12)
+  )
+```
 
 ### PERMDISP
 
 ```{r}
+set.seed(42)
 path_permdisp <- path_target("permdisp_results_multrepl_clr.rds")
 
 if (!file.exists(path_permdisp)) {
@@ -1014,7 +1081,7 @@ if (!file.exists(path_permdisp)) {
         
         obj <- subset_dist_and_group(
           dist_obj  = dist_info$dist,
-          metadata  = sampdata_plot,
+          metadata  = sampdata_test,
           group_var = var
         )
         
@@ -1052,7 +1119,7 @@ if (!file.exists(path_permdisp)) {
   permdisp_results <- readRDS(path_permdisp)
 }
 
-permdisp_results <- permdisp_results |>
+permdisp_results <- permdisp_results %>%
   mutate(variable = factor(variable, levels = var_order_beta))
 
 permdisp_results %>%
@@ -1101,6 +1168,7 @@ permdisp_results %>%
   )
 ```
 
+
 ```{r permdisp_latex}
 permdisp_tex_df <- permdisp_results %>%
   mutate(
@@ -1111,6 +1179,7 @@ permdisp_tex_df <- permdisp_results %>%
   arrange(variable, distance) %>%
   transmute(
     Measure  = as.character(distance),
+    N        = n_samples,
     F        = round(statistic_obs, 2),
     n_exceed = n_exceed,
     p_emp    = fmt_p_latex(p_empirical),
@@ -1122,9 +1191,9 @@ tex_permdisp <- kbl(
   format    = "latex",
   booktabs  = TRUE,
   escape    = FALSE,
-  col.names = c("Measure", "$F$", "\\# exceed",
+  col.names = c("Measure", "$n$", "$F$", "\\# exceed",
                 "$p$ (emp.)", "$p$ (GPD-refined)"),
-  align     = "lrrrr",
+  align     = "lrrrrr",
   caption   = paste(
     "PERMDISP results for beta diversity dispersion across cohort variables.",
     "$F$ is the observed $F$-statistic from the ANOVA on betadisper distances to group centroids.",
@@ -1147,7 +1216,7 @@ tex_permdisp <- kbl(
     escape         = FALSE,
     threeparttable = TRUE
   ) %>%
-  fix_col_spec("{lrrrr}", "{l@{\\hspace*{1.5em}}rrrr}")
+  fix_col_spec("{lrrrrr}", "{l@{\\hspace*{1.5em}}rrrrr}")
 
 tex_permdisp
 save_kable(tex_permdisp, file = path_target("permdisp_table.tex"))
@@ -1156,11 +1225,13 @@ save_kable(tex_permdisp, file = path_target("permdisp_table.tex"))
 ```{r permdisp_permapprox_perm_dist, fig.width=12, fig.height=5}
 perm_dist_df_disp <- permdisp_results %>%
   select(distance, variable, statistic_obs, p_empirical, perm_stats) %>%
-  tidyr::unnest(perm_stats)
+  tidyr::unnest(perm_stats) %>%
+  mutate(distance = factor(distance, levels = dist_order))
 
 obs_df_disp_pa <- permdisp_results %>%
   select(distance, variable, statistic_obs, p_empirical) %>%
   mutate(
+    distance     = factor(distance, levels = dist_order),
     p_permapprox = permdisp_permapprox$p_unadjusted,
     label = paste0(
       "p_emp = ", formatC(p_empirical,  format = "e", digits = 2),
@@ -1174,8 +1245,8 @@ ggplot(perm_dist_df_disp, aes(x = perm_stats)) +
   geom_histogram(bins = 40, fill = "grey75", color = "white") +
   geom_vline(data = obs_df_disp_pa, aes(xintercept = statistic_obs),
              color = "tomato", linewidth = 0.9) +
-  geom_text(data = obs_df_disp_pa, aes(x = Inf, y = Inf, label = label),
-            hjust = 1.05, vjust = 1.3, size = 3,
+  geom_text(data = obs_df_disp_pa, aes(x = -Inf, y = Inf, label = label),
+            hjust = -0.05, vjust = 1.3, size = 3,
             inherit.aes = FALSE) +
   facet_grid(distance ~ variable, scales = "free_x") +
   labs(
@@ -1201,7 +1272,7 @@ centroid_df <- purrr::map_dfr(
     var       <- test_combos$variable[[i]]
     dist_info <- distance_list[[dist_name]]
 
-    obj <- subset_dist_and_group(dist_info$dist, sampdata_plot, var)
+    obj <- subset_dist_and_group(dist_info$dist, sampdata_test, var)
     bd  <- vegan::betadisper(obj$dist, group = obj$group, type = "centroid")
 
     tibble(
@@ -1211,18 +1282,21 @@ centroid_df <- purrr::map_dfr(
       dist_to_centroid = bd$distances
     )
   }
-) |>
-  mutate(variable = factor(variable, levels = var_order_beta))
+) %>%
+  mutate(
+    variable = factor(variable, levels = var_order_beta),
+    distance = factor(distance, levels = dist_order)
+  )
 
-annot_df <- permanova_results |>
-  select(distance, variable) |>
-  mutate(p_perm = permanova_permapprox$p_unadjusted) |>
+annot_df <- permanova_results %>%
+  select(distance, variable) %>%
+  mutate(p_perm = permanova_permapprox$p_unadjusted) %>%
   left_join(
-    permdisp_results |>
-      select(distance, variable) |>
+    permdisp_results %>%
+      select(distance, variable) %>%
       mutate(p_disp = permdisp_permapprox$p_unadjusted),
     by = c("distance", "variable")
-  ) |>
+  ) %>%
   mutate(label = paste0(
     "ANOVA: ", formatC(p_perm, format = "e", digits = 2),
     ifelse(p_perm < alpha_perm_approx, "*", ""), "\n",
@@ -1230,12 +1304,30 @@ annot_df <- permanova_results |>
     ifelse(p_disp < alpha_perm_approx, "*", "")
   ))
 
-ggplot(centroid_df, aes(x = group, y = dist_to_centroid, fill = "lightgray")) +
+group_order <- c(
+  "Austria", "Germany", "Switzerland",
+  "Female", "Male",
+  "Cesarean", "Vaginal",
+  "0 months", "1 month", "\u22652 months",
+  "No", "Yes",
+  "0", "1", ">1"
+)
+
+centroid_df_all <- centroid_df %>%
+  mutate(
+    distance = factor(distance, levels = dist_order),
+    group    = factor(group, levels = group_order)
+  )
+
+annot_df_all <- annot_df %>%
+  mutate(distance = factor(distance, levels = dist_order))
+
+ggplot(centroid_df_all, aes(x = group, y = dist_to_centroid, fill = "lightgray")) +
   geom_jitter(aes(color = "darkgray"), width = 0.2, size = 0.8, alpha = 0.35,
               show.legend = FALSE) +
   geom_boxplot(outlier.shape = NA, alpha = 0, linewidth = 0.5) +
-  geom_text(data = annot_df, aes(x = Inf, y = Inf, label = label),
-            hjust = 1.05, vjust = 1.3, size = 3,
+  geom_text(data = annot_df_all, aes(x = -Inf, y = Inf, label = label),
+            hjust = -0.05, vjust = 1.3, size = 3.5,
             inherit.aes = FALSE) +
   scale_fill_grey(start = 0.8, end = 0.8) +
   scale_color_grey(start = 0.5, end = 0.5) +
@@ -1247,14 +1339,56 @@ ggplot(centroid_df, aes(x = group, y = dist_to_centroid, fill = "lightgray")) +
     fill  = NULL,
     #title = "Within-group dispersion: distance to group centroid"
   ) +
-  theme_bw(base_size = 12) +
+  theme_bw(base_size = 13) +
   theme(
-    axis.text.x     = element_text(angle = 40, hjust = 1),
-    legend.position = "none"
-    #strip.text.x    = element_text(size = 7)
+    axis.text.x     = element_text(angle = 40, hjust = 1, size = 12),
+    legend.position = "none",
+    strip.text      = element_text(size = 12)
   )
 ```
 
+```{r beta_centroid_dist_sel, fig.width=8, fig.height=5}
+plot_vars <- c("C-section", "BF duration", "EBF duration")
+
+centroid_df_plot <- centroid_df %>%
+  filter(variable %in% plot_vars) %>%
+  mutate(
+    variable = factor(variable, levels = plot_vars),
+    distance = factor(distance, levels = dist_order),
+    group    = factor(group, levels = group_order)
+  )
+
+annot_df_plot <- annot_df %>%
+  filter(variable %in% plot_vars) %>%
+  mutate(
+    variable = factor(variable, levels = plot_vars),
+    distance = factor(distance, levels = dist_order)
+  )
+
+ggplot(centroid_df_plot, aes(x = group, y = dist_to_centroid, fill = "lightgray")) +
+  geom_jitter(aes(color = "darkgray"), width = 0.2, size = 0.8, alpha = 0.35,
+              show.legend = FALSE) +
+  geom_boxplot(outlier.shape = NA, alpha = 0, linewidth = 0.5) +
+  geom_text(data = annot_df_plot, aes(x = -Inf, y = Inf, label = label),
+            hjust = -0.05, vjust = 1.3, size = 4,
+            inherit.aes = FALSE) +
+  scale_fill_grey(start = 0.8, end = 0.8) +
+  scale_color_grey(start = 0.5, end = 0.5) +
+  facet_grid(distance ~ variable, scales = "free", space = "free_x",
+             labeller = labeller(variable = label_wrap_gen(10))) +
+  labs(
+    x     = NULL,
+    y     = "Distance to group centroid",
+    fill  = NULL,
+    #title = "Within-group dispersion: distance to group centroid"
+  ) +
+  theme_bw(base_size = 13) +
+  theme(
+    axis.text.x     = element_text(angle = 40, hjust = 1, size = 12),
+    legend.position = "none",
+    strip.text      = element_text(size = 12)
+  )
+```
 
 ## Files written
 
