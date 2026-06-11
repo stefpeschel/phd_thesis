@@ -966,6 +966,7 @@ var_labels <- c(
   Siblings       = "Number of siblings"
 )
 measure_labels <- c(
+  richness       = "Richness (breakaway)",
   richness_genus = "Richness (breakaway)",
   shannon        = "Shannon (DivNet)",
   gini           = "Gini-Simpson (DivNet)"
@@ -974,7 +975,7 @@ measure_labels <- c(
 fmt_p <- function(p) formatC(p, format = "e", digits = 2)
 
 perm_table <- purrr::imap_dfr(perm_results, function(res, key) {
-  measure_part <- stringr::str_extract(key, "richness_genus|shannon|gini")
+  measure_part <- stringr::str_extract(key, "richness_genus|richness|shannon|gini")
   var_part     <- sub(paste0("_", measure_part, "$"), "", key)
   tibble::tibble(
     Variable  = var_labels[var_part],
@@ -1075,6 +1076,164 @@ tex_table <- tex_table %>%
   )
 
 save_kable(tex_table, file = path_target("perm_table.tex"))
+```
+
+### Example permutation distributions
+
+The following plots show selected permutation distributions for the Kruskal--Wallis
+test statistic. For each diversity measure, the six tests with the smallest
+empirical permutation p-values are shown. The observed test statistic is marked
+by a red vertical line. If the cached result does not contain the full
+permutation distribution, a smaller distribution with 9999 fresh permutations is
+generated for the plot.
+
+```{r perm_distribution_plot_functions}
+parse_perm_key <- function(key) {
+  measure <- stringr::str_extract(key, "richness_genus|richness|shannon|gini")
+  variable <- sub(paste0("_", measure, "$"), "", key)
+  tibble(
+    key = key,
+    variable = variable,
+    measure = measure,
+    Variable = unname(var_labels[variable]),
+    Measure = unname(measure_labels[measure])
+  )
+}
+
+make_perm_histogram_data <- function(x, bins = 50) {
+  h <- hist(x, breaks = bins, plot = FALSE)
+  tibble(
+    xmin = h$breaks[-length(h$breaks)],
+    xmax = h$breaks[-1],
+    xmid = h$mids,
+    count = h$counts
+  )
+}
+
+compute_perm_distribution_for_plot <- function(variable, measure, n_perm = 9999,
+                                               seed = 123456) {
+  measure <- ifelse(measure == "richness_genus", "richness", measure)
+  meta <- prep_meta(vars_def[[variable]]$col, vars_def[[variable]]$filter)
+  
+  x <- meta[[measure]]
+  g <- droplevels(as.factor(meta$feature))
+  keep <- complete.cases(x, g)
+  x <- x[keep]
+  g <- droplevels(g[keep])
+  
+  r <- rank(x)
+  n <- length(x)
+  gi <- as.integer(g)
+  K <- nlevels(g)
+  nj <- tabulate(gi, nbins = K)
+  coef <- 12 / (n * (n + 1L))
+  adj <- 3 * (n + 1L)
+  
+  obs_H <- coef * sum(c(rowsum(r, gi))^2 / nj) - adj
+  
+  set.seed(seed)
+  perm_H <- replicate(n_perm, {
+    Rj <- c(rowsum(r, sample(gi)))
+    coef * sum(Rj^2 / nj) - adj
+  })
+  
+  list(H = obs_H, H_perm = perm_H)
+}
+
+get_perm_distribution_for_plot <- function(key, variable, measure, H, has_perm) {
+  if (has_perm) {
+    list(H = H, H_perm = perm_results[[key]]$H_perm)
+  } else {
+    compute_perm_distribution_for_plot(variable, measure)
+  }
+}
+
+make_perm_distribution_plot <- function(measure_key, n_plot = 6, bins = 50) {
+  measure_keys <- if (measure_key == "richness") {
+    c("richness", "richness_genus")
+  } else {
+    measure_key
+  }
+  
+  selected <- purrr::imap_dfr(perm_results, function(res, key) {
+    parse_perm_key(key) %>%
+      mutate(
+        p_perm = res$p_perm,
+        H = res$H,
+        has_perm = "H_perm" %in% names(res) && length(res$H_perm) > 0
+      )
+  }) %>%
+    filter(measure %in% measure_keys) %>%
+    arrange(p_perm) %>%
+    slice_head(n = n_plot)
+  
+  if (nrow(selected) == 0) {
+    stop("No permutation test results found for measure: ", measure_key,
+         call. = FALSE)
+  }
+  
+  hist_data <- purrr::pmap_dfr(
+    selected,
+    function(key, variable, measure, Variable, Measure, p_perm, H, has_perm) {
+      dist <- get_perm_distribution_for_plot(key, variable, measure, H, has_perm)
+      
+      make_perm_histogram_data(dist$H_perm, bins = bins) %>%
+        mutate(
+          key = key,
+          Variable = Variable,
+          Measure = Measure,
+          H = dist$H,
+          p_perm = p_perm,
+          panel = paste0(Variable, "\n", "p = ", fmt_p(p_perm))
+        )
+    }
+  )
+  
+  vline_data <- selected %>%
+    mutate(
+      H = purrr::pmap_dbl(
+        list(key, variable, measure, H, has_perm),
+        ~ get_perm_distribution_for_plot(..1, ..2, ..3, ..4, ..5)$H
+      ),
+      panel = paste0(Variable, "\n", "p = ", fmt_p(p_perm))
+    )
+  
+  ggplot(hist_data) +
+    geom_rect(
+      aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = count),
+      fill = "grey75",
+      color = "grey40"
+    ) +
+    geom_vline(
+      data = vline_data,
+      aes(xintercept = H),
+      color = "red",
+      linewidth = 0.8
+    ) +
+    facet_wrap(~panel, scales = "free", ncol = 3) +
+    labs(
+      x = "Permuted Kruskal-Wallis H statistic",
+      y = "Frequency",
+      title = unique(hist_data$Measure)
+    ) +
+    theme_bw(base_size = 12) +
+    theme(
+      strip.text = element_text(face = "bold"),
+      plot.title = element_text(face = "bold")
+    )
+}
+```
+
+```{r perm_distributions_richness, fig.width=12, fig.height=7}
+make_perm_distribution_plot("richness")
+```
+
+```{r perm_distributions_shannon, fig.width=12, fig.height=7}
+make_perm_distribution_plot("shannon")
+```
+
+```{r perm_distributions_gini, fig.width=12, fig.height=7}
+make_perm_distribution_plot("gini")
 ```
 
 ## Plots 

@@ -1,6 +1,6 @@
 Alpha diversity analysis
 ================
-Compiled at 2026-06-08 15:26:57 UTC
+Compiled at 2026-06-11 07:37:42 UTC
 
 ## Load packages
 
@@ -464,27 +464,42 @@ functions below and summarised in the comparison table.
 
 | Variable | Measure | H statistic | p (KW asymptotic) | p (permutation) | p (GPD-refined) |
 |:---|:---|---:|---:|---:|---:|
-| NA | NA | 31.57 | 1.40e-07 | 1.00e-06 | 1.99e-07 |
+| Country | Richness (breakaway) | 31.57 | 1.40e-07 | 1.00e-06 | 1.99e-07 |
 | Country | Shannon (DivNet) | 40.06 | 2.00e-09 | 1.00e-06 | 3.01e-09 |
 | Country | Gini-Simpson (DivNet) | 39.88 | 2.19e-09 | 1.00e-06 | 4.89e-09 |
-| NA | NA | 1.79 | 1.80e-01 | 1.80e-01 | 1.80e-01 |
+| Sex | Richness (breakaway) | 1.79 | 1.80e-01 | 1.80e-01 | 1.80e-01 |
 | Sex | Shannon (DivNet) | 1.85 | 1.73e-01 | 1.74e-01 | 1.74e-01 |
 | Sex | Gini-Simpson (DivNet) | 2.10 | 1.47e-01 | 1.47e-01 | 1.47e-01 |
-| NA | NA | 0.33 | 5.64e-01 | 5.65e-01 | 5.65e-01 |
+| C-section | Richness (breakaway) | 0.33 | 5.64e-01 | 5.65e-01 | 5.65e-01 |
 | C-section | Shannon (DivNet) | 4.86 | 2.74e-02 | 2.71e-02 | 2.71e-02 |
 | C-section | Gini-Simpson (DivNet) | 5.73 | 1.67e-02 | 1.67e-02 | 1.67e-02 |
-| NA | NA | 7.69 | 2.14e-02 | 2.12e-02 | 2.12e-02 |
+| Breastfeeding duration | Richness (breakaway) | 7.69 | 2.14e-02 | 2.12e-02 | 2.12e-02 |
 | Breastfeeding duration | Shannon (DivNet) | 83.47 | 7.51e-19 | 1.00e-06 | 1.44e-17 |
 | Breastfeeding duration | Gini-Simpson (DivNet) | 73.49 | 1.10e-16 | 1.00e-06 | 4.69e-15 |
-| NA | NA | 2.73 | 9.84e-02 | 9.84e-02 | 9.84e-02 |
+| Exclusive breastfeeding | Richness (breakaway) | 2.73 | 9.84e-02 | 9.84e-02 | 9.84e-02 |
 | Exclusive breastfeeding | Shannon (DivNet) | 65.13 | 7.02e-16 | 1.00e-06 | 5.18e-14 |
 | Exclusive breastfeeding | Gini-Simpson (DivNet) | 56.47 | 5.71e-14 | 1.00e-06 | 5.04e-14 |
-| NA | NA | 3.95 | 4.70e-02 | 4.69e-02 | 4.69e-02 |
+| Prenatal smoking | Richness (breakaway) | 3.95 | 4.70e-02 | 4.69e-02 | 4.69e-02 |
 | Prenatal smoking | Shannon (DivNet) | 18.81 | 1.45e-05 | 1.30e-05 | 1.01e-05 |
 | Prenatal smoking | Gini-Simpson (DivNet) | 18.08 | 2.12e-05 | 1.60e-05 | 1.47e-05 |
-| NA | NA | 1.41 | 4.94e-01 | 4.94e-01 | 4.94e-01 |
+| Number of siblings | Richness (breakaway) | 1.41 | 4.94e-01 | 4.94e-01 | 4.94e-01 |
 | Number of siblings | Shannon (DivNet) | 2.66 | 2.64e-01 | 2.65e-01 | 2.65e-01 |
 | Number of siblings | Gini-Simpson (DivNet) | 3.04 | 2.18e-01 | 2.19e-01 | 2.19e-01 |
+
+### Example permutation distributions
+
+The following plots show selected permutation distributions for the
+Kruskal–Wallis test statistic. For each diversity measure, the six tests
+with the smallest empirical permutation p-values are shown. The observed
+test statistic is marked by a red vertical line. If the cached result
+does not contain the full permutation distribution, a smaller
+distribution with 9999 fresh permutations is generated for the plot.
+
+![](figures/03_alpha_diversity/alpha_perm_distributions_richness-1.png)<!-- -->
+
+![](figures/03_alpha_diversity/alpha_perm_distributions_shannon-1.png)<!-- -->
+
+![](figures/03_alpha_diversity/alpha_perm_distributions_gini-1.png)<!-- -->
 
 ## Plots
 
@@ -740,17 +755,17 @@ These files have been written to the target directory,
     ## # A tibble: 14 × 4
     ##    path                            type         size modification_time  
     ##    <fs::path>                      <fct> <fs::bytes> <dttm>             
-    ##  1 breakaway_rich_full.rds         file       30.51K 2026-05-05 19:59:06
-    ##  2 divnet_family_cov.rds           file        1.83M 2026-04-30 18:00:56
-    ##  3 divnet_genus.rds                file       10.63M 2026-04-30 15:40:51
-    ##  4 divnet_genus_cov.rds            file        1.98M 2026-06-08 13:59:54
-    ##  5 divnet_genus_cov_runtime.rds    file          167 2026-06-08 13:59:54
-    ##  6 divnet_genus_runtime.rds        file          159 2026-05-03 08:28:03
-    ##  7 perm_results_Breastfeeding.rds  file       19.81M 2026-05-06 13:47:43
-    ##  8 perm_results_Cesarean.rds       file       10.47M 2026-05-06 13:43:38
-    ##  9 perm_results_Country.rds        file       19.81M 2026-05-06 13:39:58
-    ## 10 perm_results_Exclusive_BF.rds   file       11.39M 2026-05-06 13:49:33
-    ## 11 perm_results_Prenatal_smoke.rds file       10.08M 2026-05-06 13:51:16
-    ## 12 perm_results_Sex.rds            file       11.26M 2026-05-06 13:41:51
-    ## 13 perm_results_Siblings.rds       file       19.81M 2026-05-06 13:53:12
-    ## 14 perm_table.tex                  file         2.9K 2026-06-08 15:27:29
+    ##  1 breakaway_rich_full.rds         file       30.51K 2026-06-09 10:59:27
+    ##  2 divnet_family_cov.rds           file        1.83M 2026-06-09 10:59:27
+    ##  3 divnet_genus.rds                file       10.63M 2026-06-09 10:59:27
+    ##  4 divnet_genus_cov.rds            file        1.98M 2026-06-09 10:59:27
+    ##  5 divnet_genus_cov_runtime.rds    file          167 2026-06-09 10:59:27
+    ##  6 divnet_genus_runtime.rds        file          159 2026-06-09 10:59:27
+    ##  7 perm_results_Breastfeeding.rds  file       19.81M 2026-06-09 10:59:27
+    ##  8 perm_results_Cesarean.rds       file       10.47M 2026-06-09 10:59:27
+    ##  9 perm_results_Country.rds        file       19.81M 2026-06-09 10:59:27
+    ## 10 perm_results_Exclusive_BF.rds   file       11.39M 2026-06-09 10:59:27
+    ## 11 perm_results_Prenatal_smoke.rds file       10.08M 2026-06-09 10:59:28
+    ## 12 perm_results_Sex.rds            file       11.26M 2026-06-09 10:59:28
+    ## 13 perm_results_Siblings.rds       file       19.81M 2026-06-09 10:59:28
+    ## 14 perm_table.tex                  file        2.94K 2026-06-11 07:38:11
