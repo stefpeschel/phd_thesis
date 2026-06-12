@@ -1,0 +1,2 @@
+n_samples,n_taxa,min_library_size,median_library_size,max_library_size,zero_fraction,detection_limit,replacement_value,replacement_fraction
+592,117,1456,21897.5,69556,0.7963732963732963,2.8753809879809074e-5,1.86899764218759e-5,0.65
