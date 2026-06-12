@@ -336,13 +336,13 @@ taxon_summary %>%
   ggrepel::geom_text_repel(
     data = taxa_to_label,
     aes(label = stringr::str_trunc(taxon, width = 30)),
-    size = 3.5,
+    size = 4,
     nudge_x = 0.04,
     min.segment.length = 0,
     segment.color = "grey45",
     segment.size = 0.3,
     segment.alpha = 0.9,
-    box.padding = 0.6,
+    box.padding = 0.8,
     point.padding = 0.2,
     max.overlaps = Inf,
     seed = 42
@@ -353,7 +353,8 @@ taxon_summary %>%
   ) +
   scale_y_log10(
     labels = function(x) {
-      paste0(format(signif(x * 100, 3), trim = TRUE, scientific = FALSE), "%")
+      paste0(format(signif(x * 100, 3), trim = TRUE, scientific = FALSE, 
+                    drop0trailing = TRUE), "%")
     }
   ) +
   coord_cartesian(clip = "off", xlim = c(0, 1.35)) +
@@ -367,7 +368,7 @@ taxon_summary %>%
     axis.title.x = element_text(size = 14),
     axis.title.y = element_text(size = 14),
     axis.text = element_text(size = 12),
-    plot.margin = margin(5.5, 70, 5.5, 5.5),
+    plot.margin = margin(5.5, 5.5, 5.5, 5.5),
     panel.grid.minor = element_blank()
   )
 ```
@@ -614,19 +615,23 @@ ggplot(selected_clr_df, aes(x = clr_abundance, fill = EBF_group)) +
   )
 ```
 
-```{r selected_taxon_prevalence_by_group, fig.width=8, fig.height=4.2, dpi=250}
+```{r selected_taxon_prevalence_by_group, fig.width=8, fig.height=4, dpi=250}
 ggplot(selected_zero_df, aes(x = prevalence, y = taxon, color = EBF_group)) +
   geom_point(size = 2.4, position = position_dodge(width = 0.45)) +
   scale_color_manual(values = ebf_palette) +
   scale_x_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
   labs(
-    title = "Prevalence of selected dominant genera by EBF group",
+    #title = "Prevalence of selected dominant genera by EBF group",
     x = "Prevalence",
     y = NULL,
     color = NULL
   ) +
   theme_minimal() +
   theme(
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text = element_text(size = 13),
+    legend.text = element_text(size = 13),
     legend.position = "bottom",
     panel.grid.minor = element_blank()
   )
