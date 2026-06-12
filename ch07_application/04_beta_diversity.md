@@ -1,6 +1,6 @@
 Between-sample dissimilarity
 ================
-Compiled at 2026-06-11 19:15:36 UTC
+Compiled at 2026-06-12 08:19:33 UTC
 
 ## Load packages
 
@@ -35,7 +35,8 @@ Counts are first transformed to relative abundances. Zeros are then
 replaced using multiplicative replacement from
 `zCompositions::multRepl()`, with the global minimum non-zero relative
 abundance used as the detection limit and `frac = 0.65`. The CLR
-transformation is applied after replacement.
+transformation is applied after replacement. The shared preprocessing
+helpers are defined in `functions.R`.
 
 ## Prepare genus-level data
 
@@ -340,11 +341,6 @@ remain available for tests of the other variables.
 
 ### PERMDISP p-value refinement with permApprox
 
-    ## Run threshold detection ...
-    ## Done.
-    ## Run GPD fit ...
-    ## Done.
-
     ## permApprox result
     ## -----------------
     ## Number of tests             : 14
@@ -407,13 +403,13 @@ These files have been written to the target directory,
     ## # A tibble: 10 × 4
     ##    path                                          type         size modification_time  
     ##    <fs::path>                                    <fct> <fs::bytes> <dttm>             
-    ##  1 beta_clr_summary.csv                          file          232 2026-06-11 19:15:44
-    ##  2 beta_data_summary.csv                         file          131 2026-06-11 19:15:44
-    ##  3 beta_diversity_objects.rds                    file        3.06M 2026-06-11 19:15:42
-    ##  4 beta_pcoa_coordinates.csv                     file      137.82K 2026-06-11 19:15:49
+    ##  1 beta_clr_summary.csv                          file          232 2026-06-12 08:19:38
+    ##  2 beta_data_summary.csv                         file          131 2026-06-12 08:19:38
+    ##  3 beta_diversity_objects.rds                    file        3.06M 2026-06-12 08:19:37
+    ##  4 beta_pcoa_coordinates.csv                     file      137.82K 2026-06-12 08:19:39
     ##  5 permanova_permapprox_results_multrepl_clr.rds file       76.12K 2026-06-11 14:47:17
     ##  6 permanova_results_multrepl_clr.rds            file      103.83K 2026-06-11 14:46:06
-    ##  7 permanova_table.tex                           file        2.23K 2026-06-11 19:17:01
+    ##  7 permanova_table.tex                           file        2.23K 2026-06-12 08:20:37
     ##  8 permdisp_permapprox_results_multrepl_clr.rds  file       74.98K 2026-06-11 19:17:16
     ##  9 permdisp_results_multrepl_clr.rds             file      105.39K 2026-06-11 15:31:32
-    ## 10 permdisp_table.tex                            file        2.26K 2026-06-11 19:17:17
+    ## 10 permdisp_table.tex                            file        2.26K 2026-06-12 08:20:42

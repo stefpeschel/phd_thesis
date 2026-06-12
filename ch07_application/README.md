@@ -9,6 +9,7 @@ The workflow is written as a sequence of R Markdown files. Each file can be rend
 ```text
 .
 ├── README.md                     → Chapter overview (this file)
+├── functions.R                   → Shared helper functions used by multiple analyses
 ├── 00_build_dataset.Rmd          → Build and prepare the analysis dataset
 ├── 01_overview.Rmd               → Descriptive cohort and microbiome overview
 ├── 02_filtering.Rmd              → Taxonomic aggregation and prevalence filtering
@@ -49,6 +50,8 @@ The main analysis files are intended to be run in this order:
 7. `06_comp_equivalence.Rmd`
 
 The first file builds the reduced analysis dataset. The following files use outputs stored in `data/` and write their own intermediate results, tables, and figures to matching chapter-specific subfolders.
+
+The shared helper script `functions.R` contains functions used across multiple analysis files, including compositional preprocessing helpers such as `compute_multrepl_clr()`.
 
 ## Rendering
 

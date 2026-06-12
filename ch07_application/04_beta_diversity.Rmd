@@ -53,6 +53,10 @@ conflicts_prefer(dplyr::select)
 conflicts_prefer(dplyr::rename)
 conflicts_prefer(dplyr::mutate)
 conflicts_prefer(dplyr::arrange)
+
+# Load global functions
+application_path <- rprojroot::find_root(rprojroot::has_file("README.md"))
+source(file.path(application_path, "functions.R"))
 ```
 
 ```{r directories}
@@ -102,75 +106,9 @@ phylo_genus
 
 **Note on the CLR transformation:**
 
-Counts are first transformed to relative abundances. Zeros are then replaced using multiplicative replacement from `zCompositions::multRepl()`, with the global minimum non-zero relative abundance used as the detection limit and `frac = 0.65`. The CLR transformation is applied after replacement.
+Counts are first transformed to relative abundances. Zeros are then replaced using multiplicative replacement from `zCompositions::multRepl()`, with the global minimum non-zero relative abundance used as the detection limit and `frac = 0.65`. The CLR transformation is applied after replacement. The shared preprocessing helpers are defined in `functions.R`.
 
 ```{r}
-# Extract taxonomic table with samples in rows and taxa in columns
-get_sample_by_taxa <- function(phylo) {
-  mat <- as(otu_table(phylo), "matrix")
-  
-  if (taxa_are_rows(phylo)) {
-    mat <- t(mat)
-  }
-  
-  mat <- as.matrix(mat)
-  storage.mode(mat) <- "numeric"
-  
-  mat
-}
-
-# Convert count matrix to relative abundances
-counts_to_rel_abund <- function(count_mat) {
-  lib_size <- rowSums(count_mat)
-  
-  if (any(lib_size == 0)) {
-    stop("At least one sample has library size zero.")
-  }
-  
-  sweep(count_mat, 1, lib_size, "/")
-}
-
-# Multiplicative replacement followed by CLR transformation.
-compute_multrepl_clr <- function(rel_abund_mat, frac = 0.65) {
-  positive_values <- rel_abund_mat[rel_abund_mat > 0]
-  
-  if (length(positive_values) == 0) {
-    stop("No positive relative abundances found.")
-  }
-  
-  detection_limit <- min(positive_values, na.rm = TRUE)
-  detection_limit_mat <- matrix(
-    detection_limit,
-    nrow = nrow(rel_abund_mat),
-    ncol = ncol(rel_abund_mat),
-    dimnames = dimnames(rel_abund_mat)
-  )
-  
-  rel_abund_repl <- zCompositions::multRepl(
-    rel_abund_mat,
-    label = 0,
-    dl = detection_limit_mat,
-    frac = frac,
-    z.warning = 0.9,
-    z.delete = FALSE
-  )
-  
-  rel_abund_repl <- as.matrix(rel_abund_repl)
-  rownames(rel_abund_repl) <- rownames(rel_abund_mat)
-  colnames(rel_abund_repl) <- colnames(rel_abund_mat)
-  
-  log_repl <- log(rel_abund_repl)
-  z <- sweep(log_repl, 1, rowMeans(log_repl), "-")
-  
-  list(
-    z = z,
-    rel_abund_repl = rel_abund_repl,
-    detection_limit = detection_limit,
-    replacement_value = frac * detection_limit,
-    frac = frac
-  )
-}
-
 # Principal coordinates analysis using classical MDS.
 # For non-Euclidean dissimilarities, negative eigenvalues may occur; the
 # percentage shown here is based on the sum of positive eigenvalues.
@@ -692,10 +630,6 @@ permdisp_stat <- function(dist_obj, group) {
   fit <- stats::anova(bd)
   
   as.numeric(fit$`F value`[1])
-}
-
-empirical_pvalue <- function(obs_stat, perm_stats) {
-  (1 + sum(perm_stats >= obs_stat, na.rm = TRUE)) / (1 + length(perm_stats))
 }
 
 run_beta_permutation_test <- function(dist_obj, group, statistic_fun, n_perm = 999) {

@@ -10,7 +10,7 @@ library(rprojroot)
 #proj_use_workflow("workflow")
 
 # Create new Rmd file
-#proj_workflow_use_rmd("01_overview", path_proj = "workflow")
+#proj_workflow_use_rmd("file_name", path_proj = "ch07_application")
 
 # ------------------------------------------------------------------------------
 # Helper for rendering single Rmd files
@@ -136,4 +136,4 @@ render_rmd("ch07_application/03_alpha_diversity.Rmd")
 render_rmd("ch07_application/04_beta_diversity.Rmd")
 render_rmd("ch07_application/05_regression.Rmd")
 render_rmd("ch07_application/06_comp_equivalence.Rmd")
-
+render_rmd("ch07_application/07_diff_abundance.Rmd")
