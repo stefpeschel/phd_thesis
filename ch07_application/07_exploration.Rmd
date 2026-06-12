@@ -1,0 +1,648 @@
+---
+title: "Exploratory taxon-level analysis"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output:
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 4
+    toc_float: true
+params:
+  name: "07_exploration" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "0fb365aa-5986-41d1-9910-df766aa9b502")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8,
+  fig.height = 5,
+  dpi = 250,
+  fig.path = paste0('figures/', params$name, "/expl_"),
+  echo = FALSE)
+```
+
+```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
+library(phyloseq)
+library(tidyverse)
+library(zCompositions)
+library(pheatmap)
+library(ggrepel)
+library(kableExtra)
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::rename)
+conflicts_prefer(dplyr::mutate)
+conflicts_prefer(dplyr::arrange)
+conflicts_prefer(dplyr::count)
+
+application_path <- rprojroot::find_root(rprojroot::has_file("README.md"))
+source(file.path(application_path, "functions.R"))
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data:
+projthis::proj_create_dir_target(params$name, clean = FALSE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Set global parameters
+
+```{r}
+zero_replacement_fraction <- 0.65
+n_top_taxa <- 20
+n_selected_taxa <- 6
+n_prevalence_taxa <- 10
+
+ebf_palette <- c("non-EBF" = "#1F78B4", "EBF" = "#E66101")
+```
+
+## Load data
+
+```{r load_data}
+phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev01.rds"))
+sampdata <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
+```
+
+### Phyloseq object on genus level
+
+```{r}
+phylo_genus
+```
+
+## Helper functions
+
+The exploratory analyses use the filtered genus-level object that is also used
+for differential abundance and differential distribution analyses. Relative
+abundances are used for compositional summaries, while multiplicative zero
+replacement followed by CLR transformation is used for transformed-abundance
+visualizations.
+
+```{r helper_functions}
+make_exploration_metadata <- function(sampdata) {
+  sampdata %>%
+    mutate(
+      Country = factor(Country),
+      Sex = factor(Sex),
+      `C-section` = factor(
+        as.character(`C-section`),
+        levels = c("Yes", "No"),
+        labels = c("Cesarean", "Vaginal")
+      ),
+      `BF duration` = factor(
+        as.character(`BF duration`),
+        levels = c("0", "1", ">=2"),
+        labels = c("0 months", "1 month", ">=2 months")
+      ),
+      `EBF duration` = factor(
+        as.character(`EBF duration`),
+        levels = c("0", "1", ">=2"),
+        labels = c("0 months", "1 month", ">=2 months")
+      ),
+      EBF_group = case_when(
+        `EBF duration` == "0 months" ~ "non-EBF",
+        `EBF duration` == ">=2 months" ~ "EBF",
+        TRUE ~ NA_character_
+      ),
+      EBF_group = factor(EBF_group, levels = c("non-EBF", "EBF")),
+      Smoking = factor(Smoking),
+      Siblings = factor(
+        dplyr::case_when(
+          is.na(Siblings) ~ NA_character_,
+          as.character(Siblings) == "0" ~ "0",
+          TRUE ~ ">=1"
+        ),
+        levels = c("0", ">=1")
+      )
+    )
+}
+
+taxon_labels_from_phyloseq <- function(phylo) {
+  tax_tab <- tax_table(phylo) %>%
+    as("matrix") %>%
+    as_tibble(rownames = "taxon_id")
+
+  label_col <- dplyr::case_when(
+    "Genus" %in% colnames(tax_tab) ~ "Genus",
+    "genus" %in% colnames(tax_tab) ~ "genus",
+    TRUE ~ NA_character_
+  )
+
+  if (is.na(label_col)) {
+    labels <- tax_tab$taxon_id
+  } else {
+    labels <- tax_tab[[label_col]]
+    labels <- ifelse(is.na(labels) | labels == "", tax_tab$taxon_id, labels)
+  }
+
+  setNames(make.unique(labels), tax_tab$taxon_id)
+}
+
+tax_table_tibble <- function(phylo) {
+  tax_table(phylo) %>%
+    as("matrix") %>%
+    as_tibble(rownames = "taxon_id")
+}
+
+mean_or_na <- function(x) {
+  if (all(is.na(x))) {
+    NA_real_
+  } else {
+    mean(x, na.rm = TRUE)
+  }
+}
+```
+
+## Prepare matrices
+
+```{r prepare_matrices}
+counts_raw <- get_sample_by_taxa(phylo_genus)
+
+sampdata_expl <- sampdata %>%
+  filter(SampleID %in% rownames(counts_raw)) %>%
+  arrange(match(SampleID, rownames(counts_raw))) %>%
+  make_exploration_metadata()
+
+counts_raw <- counts_raw[sampdata_expl$SampleID, , drop = FALSE]
+
+stopifnot(identical(rownames(counts_raw), sampdata_expl$SampleID))
+
+counts_rel <- counts_to_rel_abund(counts_raw)
+
+clr_object <- compute_multrepl_clr(
+  rel_abund_mat = counts_rel,
+  frac = zero_replacement_fraction
+)
+
+counts_clr <- clr_object$z
+taxon_labels <- taxon_labels_from_phyloseq(phylo_genus)
+taxon_table <- tax_table_tibble(phylo_genus)
+
+exploration_summary <- tibble(
+  n_samples = nrow(counts_raw),
+  n_taxa = ncol(counts_raw),
+  min_library_size = min(rowSums(counts_raw)),
+  median_library_size = median(rowSums(counts_raw)),
+  max_library_size = max(rowSums(counts_raw)),
+  zero_fraction = mean(counts_raw == 0),
+  detection_limit = clr_object$detection_limit,
+  replacement_value = clr_object$replacement_value,
+  replacement_fraction = clr_object$frac,
+  n_non_ebf = sum(sampdata_expl$EBF_group == "non-EBF", na.rm = TRUE),
+  n_ebf = sum(sampdata_expl$EBF_group == "EBF", na.rm = TRUE),
+  n_excluded_from_ebf_comparison = sum(is.na(sampdata_expl$EBF_group))
+)
+
+exploration_summary
+```
+
+```{r save_preprocessed_objects}
+saveRDS(
+  list(
+    sample_data = sampdata_expl,
+    counts_raw = counts_raw,
+    counts_rel = counts_rel,
+    counts_clr = counts_clr,
+    clr_object = clr_object
+  ),
+  file = path_target("exploration_preprocessed_objects.rds")
+)
+
+write_csv(
+  exploration_summary,
+  file = path_target("exploration_summary.csv")
+)
+```
+
+## Taxon summaries
+
+```{r taxon_summary}
+taxon_summary <- tibble(
+  taxon_id = colnames(counts_raw),
+  taxon = base::unname(taxon_labels[colnames(counts_raw)]),
+  total_count = colSums(counts_raw),
+  prevalence = colMeans(counts_raw > 0),
+  mean_relative_abundance = colMeans(counts_rel),
+  median_relative_abundance = apply(counts_rel, 2, median),
+  max_relative_abundance = apply(counts_rel, 2, max),
+  mean_clr = colMeans(counts_clr),
+  median_clr = apply(counts_clr, 2, median)
+) %>%
+  left_join(taxon_table, by = "taxon_id") %>%
+  arrange(desc(mean_relative_abundance), desc(prevalence))
+
+top_taxa_ids <- taxon_summary %>%
+  slice_head(n = min(n_top_taxa, nrow(taxon_summary))) %>%
+  pull(taxon_id)
+
+selected_taxa_ids <- taxon_summary %>%
+  slice_head(n = min(n_selected_taxa, nrow(taxon_summary))) %>%
+  pull(taxon_id)
+
+prevalence_taxa_ids <- taxon_summary %>%
+  slice_head(n = min(n_prevalence_taxa, nrow(taxon_summary))) %>%
+  pull(taxon_id)
+
+taxon_summary
+```
+
+```{r save_taxon_summary}
+write_csv(
+  taxon_summary,
+  file = path_target("taxon_level_summary.csv")
+)
+
+top_taxa_table <- taxon_summary %>%
+  slice_head(n = n_top_taxa) %>%
+  transmute(
+    Taxon = taxon,
+    Prevalence = scales::percent(prevalence, accuracy = 0.1),
+    `Mean relative abundance` = scales::percent(mean_relative_abundance, 
+                                                accuracy = 0.01),
+    `Median relative abundance` = scales::percent(median_relative_abundance, 
+                                                  accuracy = 0.01),
+    `Maximum relative abundance` = scales::percent(max_relative_abundance, 
+                                                   accuracy = 0.01)
+  )
+
+top_taxa_kable <- kbl(
+  top_taxa_table,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Most abundant genera in the filtered genus-level PASTURE data.",
+  label = "application:exploration-top-taxa"
+) %>%
+  kable_styling(latex_options = c("hold_position"), font_size = 8)
+
+top_taxa_kable
+
+save_kable(
+  top_taxa_kable,
+  path_target("exploration_top_taxa_table.tex")
+)
+```
+
+## Prevalence and abundance
+
+```{r prevalence_histogram, fig.width=7, fig.height=4.2, dpi=250}
+taxon_summary %>%
+  ggplot(aes(x = prevalence)) +
+  geom_histogram(binwidth = 0.05, fill = "#1F78B4", color = "white", alpha = 0.85) +
+  scale_x_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  labs(
+    title = "Taxon prevalence",
+    x = "Proportion of samples with positive count",
+    y = "Number of genera"
+  ) +
+  theme_minimal()
+```
+
+```{r abundance_histogram, fig.width=7, fig.height=4.2, dpi=250}
+taxon_summary %>%
+  ggplot(aes(x = mean_relative_abundance)) +
+  geom_histogram(bins = 40, fill = "#1F78B4", color = "white", alpha = 0.85) +
+  scale_x_log10(labels = scales::percent_format()) +
+  labs(
+    title = "Mean relative abundance",
+    x = "Mean relative abundance (log scale)",
+    y = "Number of genera"
+  ) +
+  theme_minimal()
+```
+
+```{r prevalence_abundance, fig.width=8, fig.height=4, dpi=200}
+taxa_to_label <- taxon_summary %>%
+  slice_head(n = 10)
+
+taxon_summary %>%
+  ggplot(aes(x = prevalence, y = mean_relative_abundance)) +
+  geom_point(alpha = 0.65, color = "grey35") +
+  geom_point(
+    data = taxa_to_label,
+    color = "#E66101",
+    size = 2
+  ) +
+  ggrepel::geom_text_repel(
+    data = taxa_to_label,
+    aes(label = stringr::str_trunc(taxon, width = 30)),
+    size = 3.5,
+    nudge_x = 0.04,
+    min.segment.length = 0,
+    segment.color = "grey45",
+    segment.size = 0.3,
+    segment.alpha = 0.9,
+    box.padding = 0.6,
+    point.padding = 0.2,
+    max.overlaps = Inf,
+    seed = 42
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 1, by = 0.25),
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  scale_y_log10(
+    labels = function(x) {
+      paste0(format(signif(x * 100, 3), trim = TRUE, scientific = FALSE), "%")
+    }
+  ) +
+  coord_cartesian(clip = "off", xlim = c(0, 1.35)) +
+  labs(
+    #title = "Prevalence-abundance relationship",
+    x = "Prevalence",
+    y = "Mean relative abundance"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.margin = margin(5.5, 70, 5.5, 5.5),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Dominant taxonomic composition
+
+```{r stacked_barplot_data}
+top_bar_taxa <- taxon_summary %>%
+  slice_head(n = 8) %>%
+  pull(taxon_id)
+
+composition_taxon_levels <- c(base::unname(taxon_labels[top_bar_taxa]), "Other")
+
+composition_colors <- c("#009E73", "#56B4E9", "#E69F00", "#D55E00", 
+                        "#F0E442", "#CC79A7", "#91D1C2", "#0072B2", 
+                        "Other" = "gray")
+
+names(composition_colors) <- composition_taxon_levels
+
+composition_df <- as_tibble(counts_rel[, top_bar_taxa, drop = FALSE], rownames = "SampleID") %>%
+  mutate(Other = 1 - rowSums(across(all_of(top_bar_taxa)))) %>%
+  pivot_longer(
+    cols = -SampleID,
+    names_to = "taxon_id",
+    values_to = "relative_abundance"
+  ) %>%
+  mutate(
+    taxon = case_when(
+      taxon_id == "Other" ~ "Other",
+      TRUE ~ base::unname(taxon_labels[taxon_id])
+    ),
+    taxon = factor(taxon, levels = composition_taxon_levels)
+  ) %>%
+  left_join(
+    sampdata_expl %>%
+      select(SampleID, EBF_group) %>%
+      mutate(EBF_group = forcats::fct_na_value_to_level(EBF_group, level = "not compared")),
+    by = "SampleID"
+  )
+
+composition_group_df <- composition_df %>%
+  group_by(EBF_group, taxon) %>%
+  summarise(
+    mean_relative_abundance = mean(relative_abundance),
+    .groups = "drop"
+  )
+
+composition_group_df
+```
+
+```{r relative_abundance_barplot, fig.width=9, fig.height=4, dpi=200}
+ggplot(
+  composition_group_df,
+  aes(x = EBF_group, y = mean_relative_abundance, fill = taxon)
+) +
+  geom_col(width = 0.68, color = "white", linewidth = 0.25) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = composition_colors) +
+  labs(
+    #title = "Mean genus-level composition by EBF group",
+    x = NULL,
+    y = "Mean relative abundance",
+    fill = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "right"
+  )
+```
+
+## CLR-transformed abundances
+
+```{r clr_heatmap_data}
+heatmap_taxa <- taxon_summary %>%
+  slice_head(n = min(n_top_taxa, nrow(taxon_summary))) %>%
+  pull(taxon_id)
+
+heatmap_taxa_labels <- taxon_labels[heatmap_taxa]
+heatmap_taxa_labels[is.na(heatmap_taxa_labels) | heatmap_taxa_labels == ""] <-
+  heatmap_taxa[is.na(heatmap_taxa_labels) | heatmap_taxa_labels == ""]
+heatmap_taxa_labels <- make.unique(base::unname(heatmap_taxa_labels))
+names(heatmap_taxa_labels) <- heatmap_taxa
+
+heatmap_mat <- counts_clr[, heatmap_taxa, drop = FALSE]
+colnames(heatmap_mat) <- heatmap_taxa_labels
+
+heatmap_sample_data <- sampdata_expl %>%
+  filter(!is.na(EBF_group))
+
+heatmap_mat_ebf <- heatmap_mat[heatmap_sample_data$SampleID, , drop = FALSE]
+
+annotation_col <- data.frame(EBF_group = heatmap_sample_data$EBF_group)
+rownames(annotation_col) <- rownames(heatmap_mat_ebf)
+annotation_colors <- list(EBF_group = ebf_palette)
+```
+
+```{r clr_heatmap_top20_unclustered, fig.width=10, fig.height=5, dpi=250}
+pheatmap(
+  t(heatmap_mat_ebf),
+  annotation_col = annotation_col,
+  annotation_colors = annotation_colors,
+  show_rownames = TRUE,
+  show_colnames = FALSE,
+  cluster_rows = FALSE,
+  cluster_cols = FALSE,
+  main = "CLR-transformed abundances (top 20 genera)"
+)
+```
+
+```{r clr_heatmap_top20_clustered, fig.width=10, fig.height=5, dpi=250}
+pheatmap(
+  t(heatmap_mat_ebf),
+  annotation_col = annotation_col,
+  annotation_colors = annotation_colors,
+  show_rownames = TRUE,
+  show_colnames = FALSE,
+  cluster_rows = FALSE,
+  cluster_cols = TRUE,
+  main = "CLR-transformed abundances (top 20 genera)"
+)
+```
+
+## Selected taxon distributions
+
+```{r selected_taxon_data}
+selected_taxon_labels <- setNames(
+  stringr::str_trunc(taxon_labels[selected_taxa_ids], width = 30),
+  selected_taxa_ids
+)
+
+selected_clr_df <- as_tibble(
+  counts_clr[heatmap_sample_data$SampleID, selected_taxa_ids, drop = FALSE],
+  rownames = "SampleID"
+) %>%
+  left_join(
+    heatmap_sample_data %>% select(SampleID, EBF_group),
+    by = "SampleID"
+  ) %>%
+  pivot_longer(
+    cols = all_of(selected_taxa_ids),
+    names_to = "taxon_id",
+    values_to = "clr_abundance"
+  ) %>%
+  mutate(
+    taxon = factor(
+      selected_taxon_labels[taxon_id],
+      levels = selected_taxon_labels[selected_taxa_ids]
+    )
+  )
+
+selected_zero_df <- as_tibble(
+  counts_raw[heatmap_sample_data$SampleID, prevalence_taxa_ids, drop = FALSE] > 0,
+  rownames = "SampleID"
+) %>%
+  left_join(
+    heatmap_sample_data %>% select(SampleID, EBF_group),
+    by = "SampleID"
+  ) %>%
+  pivot_longer(
+    cols = all_of(prevalence_taxa_ids),
+    names_to = "taxon_id",
+    values_to = "observed"
+  ) %>%
+  group_by(EBF_group, taxon_id) %>%
+  summarise(prevalence = mean(observed), .groups = "drop") %>%
+  mutate(
+    taxon = factor(
+      stringr::str_trunc(taxon_labels[taxon_id], width = 30),
+      levels = rev(stringr::str_trunc(taxon_labels[prevalence_taxa_ids], width = 30))
+    )
+  )
+
+selected_clr_df
+```
+
+```{r selected_taxon_violin, fig.width=10, fig.height=5, dpi=250}
+ggplot(selected_clr_df, aes(x = EBF_group, y = clr_abundance, fill = EBF_group)) +
+  geom_violin(alpha = 0.55, trim = FALSE, color = NA) +
+  geom_boxplot(width = 0.16, outlier.shape = NA, alpha = 0.8) +
+  scale_fill_manual(values = ebf_palette, guide = "none") +
+  facet_wrap(~ taxon, scales = "free_y") +
+  labs(
+    #title = "CLR-transformed abundances of selected dominant genera",
+    x = NULL,
+    y = "CLR-transformed abundance"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 18),
+    axis.text = element_text(size = 16),
+    legend.text = element_text(size = 16),
+    strip.text = element_text(size = 16),
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r selected_taxon_violin_jitter, fig.width=10, fig.height=5, dpi=250}
+ggplot(selected_clr_df, aes(x = EBF_group, y = clr_abundance, fill = EBF_group)) +
+  geom_violin(alpha = 0.55, trim = FALSE, color = NA) +
+  geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.8) +
+  geom_jitter(width = 0.05, alpha = 0.3, size = 0.4) +
+  scale_fill_manual(values = ebf_palette, guide = "none") +
+  facet_wrap(~ taxon, scales = "free_y") +
+  labs(
+    #title = "CLR-transformed abundances of selected dominant genera",
+    x = NULL,
+    y = "CLR-transformed abundance"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 18),
+    axis.text = element_text(size = 16),
+    legend.text = element_text(size = 16),
+    strip.text = element_text(size = 16),
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r selected_taxon_density, fig.width=12, fig.height=4, dpi=200}
+ggplot(selected_clr_df, aes(x = clr_abundance, fill = EBF_group)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = ebf_palette) +
+  facet_wrap(~ taxon, scales = "free") +
+  labs(
+    #title = "CLR-transformed abundance densities",
+    x = "CLR-transformed abundance",
+    y = "Density",
+    fill = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 18),
+    axis.title.x = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    strip.text = element_text(size = 16),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r selected_taxon_prevalence_by_group, fig.width=8, fig.height=4.2, dpi=250}
+ggplot(selected_zero_df, aes(x = prevalence, y = taxon, color = EBF_group)) +
+  geom_point(size = 2.4, position = position_dodge(width = 0.45)) +
+  scale_color_manual(values = ebf_palette) +
+  scale_x_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  labs(
+    title = "Prevalence of selected dominant genera by EBF group",
+    x = "Prevalence",
+    y = NULL,
+    color = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r save_selected_taxon_data}
+write_csv(
+  selected_zero_df,
+  file = path_target("selected_taxa_prevalence_by_group.csv")
+)
+```
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
