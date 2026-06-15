@@ -1,6 +1,6 @@
 Exploratory taxon-level analysis
 ================
-Compiled at 2026-06-12 21:42:15 UTC
+Compiled at 2026-06-15 13:00:33 UTC
 
 ## Set global parameters
 
@@ -24,30 +24,31 @@ used for transformed-abundance visualizations.
 ## Prepare matrices
 
     ## # A tibble: 1 × 12
-    ##   n_samples n_taxa min_library_size median_library_size max_library_size zero_fraction detection_limit replacement_value
-    ##       <int>  <int>            <dbl>               <dbl>            <dbl>         <dbl>           <dbl>             <dbl>
-    ## 1       592    117             1456              21898.            69556         0.796       0.0000288         0.0000187
-    ## # ℹ 4 more variables: replacement_fraction <dbl>, n_non_ebf <int>, n_ebf <int>, n_excluded_from_ebf_comparison <int>
+    ##   n_samples n_taxa min_library_size median_library_size max_library_size zero_fraction detection_limit
+    ##       <int>  <int>            <dbl>               <dbl>            <dbl>         <dbl>           <dbl>
+    ## 1       592    117             1456              21898.            69556         0.796       0.0000288
+    ## # ℹ 5 more variables: replacement_value <dbl>, replacement_fraction <dbl>, n_non_ebf <int>, n_ebf <int>,
+    ## #   n_excluded_from_ebf_comparison <int>
 
 ## Taxon summaries
 
-    ## # A tibble: 117 × 16
-    ##    taxon_id           taxon total_count prevalence mean_relative_abunda…¹ median_relative_abun…² max_relative_abundance mean_clr
-    ##    <chr>              <chr>       <dbl>      <dbl>                  <dbl>                  <dbl>                  <dbl>    <dbl>
-    ##  1 Bifidobacterium    Bifi…     8417119      1                     0.639                0.721                     0.988     9.18
-    ##  2 Escherichia-Shige… Esch…      790539      0.973                 0.0594               0.0104                    0.844     5.52
-    ##  3 Streptococcus      Stre…      597247      0.993                 0.0495               0.0175                    0.807     5.89
-    ##  4 Bacteroides        Bact…      640951      0.905                 0.0456               0.00191                   0.868     4.15
-    ##  5 24_Enterobacteria… 24_E…      395293      0.738                 0.0294               0.000954                  0.816     2.98
-    ##  6 Enterococcus       Ente…      350643      0.902                 0.0280               0.00292                   0.697     4.25
-    ##  7 [Ruminococcus]_gn… [Rum…      318542      0.976                 0.0231               0.00272                   0.691     4.47
-    ##  8 Blautia            Blau…      250905      0.992                 0.0205               0.00476                   0.621     4.82
-    ##  9 Collinsella        Coll…      178149      0.850                 0.0134               0.000750                  0.367     2.99
-    ## 10 Lactobacillus      Lact…      167883      0.542                 0.0129               0.000266                  0.370     2.00
+    ## # A tibble: 117 × 17
+    ##    taxon_id                  taxon      total_count prevalence mean_relative_abunda…¹ median_relative_abun…²
+    ##    <chr>                     <chr>            <dbl>      <dbl>                  <dbl>                  <dbl>
+    ##  1 Bifidobacterium           Bifidobac…     8417119      1                     0.639                0.721   
+    ##  2 Escherichia-Shigella      Escherich…      790539      0.973                 0.0594               0.0104  
+    ##  3 Streptococcus             Streptoco…      597247      0.993                 0.0495               0.0175  
+    ##  4 Bacteroides               Bacteroid…      640951      0.905                 0.0456               0.00191 
+    ##  5 24_Enterobacteriaceae(F)  24_Entero…      395293      0.738                 0.0294               0.000954
+    ##  6 Enterococcus              Enterococ…      350643      0.902                 0.0280               0.00292 
+    ##  7 [Ruminococcus]_gnavugroup [Ruminoco…      318542      0.976                 0.0231               0.00272 
+    ##  8 Blautia                   Blautia         250905      0.992                 0.0205               0.00476 
+    ##  9 Collinsella               Collinsel…      178149      0.850                 0.0134               0.000750
+    ## 10 Lactobacillus             Lactobaci…      167883      0.542                 0.0129               0.000266
     ## # ℹ 107 more rows
     ## # ℹ abbreviated names: ¹​mean_relative_abundance, ²​median_relative_abundance
-    ## # ℹ 8 more variables: median_clr <dbl>, Kingdom <chr>, Phylum <chr>, Class <chr>, Order <chr>, Family <chr>, Genus <chr>,
-    ## #   Species <chr>
+    ## # ℹ 11 more variables: max_relative_abundance <dbl>, mean_clr <dbl>, median_clr <dbl>, clr_variance <dbl>,
+    ## #   Kingdom <chr>, Phylum <chr>, Class <chr>, Order <chr>, Family <chr>, Genus <chr>, Species <chr>
 
 ## Prevalence and abundance
 
@@ -56,6 +57,12 @@ used for transformed-abundance visualizations.
 ![](figures/07_exploration/expl_abundance_histogram-1.png)<!-- -->
 
 ![](figures/07_exploration/expl_prevalence_abundance-1.png)<!-- -->
+
+![](figures/07_exploration/expl_rank_abundance_curve-1.png)<!-- -->
+
+**Most variable genera after CLR transformation**
+
+![](figures/07_exploration/expl_clr_variance_by_taxon-1.png)<!-- -->
 
 ## Dominant taxonomic composition
 
@@ -76,7 +83,7 @@ used for transformed-abundance visualizations.
 
 ![](figures/07_exploration/expl_relative_abundance_barplot-1.png)<!-- -->
 
-## CLR-transformed abundances
+## CLR coordinatess
 
 ![](figures/07_exploration/expl_clr_heatmap_top20_unclustered-1.png)<!-- -->
 
@@ -99,6 +106,15 @@ used for transformed-abundance visualizations.
     ## 10 s023779  non-EBF   Bacteroides                       4.34 Bacteroides             
     ## # ℹ 3,314 more rows
 
+**Distributional change from relative to CLR coordinates**
+
+![](figures/07_exploration/expl_rel_to_clr_histogram_comparison-1.png)<!-- -->
+
+    ## Scale for x is already present.
+    ## Adding another scale for x, which will replace the existing scale.
+
+![](figures/07_exploration/expl_rel_to_clr_scatter-1.png)<!-- -->
+
 ![](figures/07_exploration/expl_selected_taxon_violin-1.png)<!-- -->
 
 ![](figures/07_exploration/expl_selected_taxon_violin_jitter-1.png)<!-- -->
@@ -115,8 +131,8 @@ These files have been written to the target directory,
     ## # A tibble: 5 × 4
     ##   path                                  type         size modification_time  
     ##   <fs::path>                            <fct> <fs::bytes> <dttm>             
-    ## 1 exploration_preprocessed_objects.rds  file       557.8K 2026-06-12 21:42:17
-    ## 2 exploration_summary.csv               file          291 2026-06-12 21:42:17
-    ## 3 exploration_top_taxa_table.tex        file        1.54K 2026-06-12 21:42:17
-    ## 4 selected_taxa_prevalence_by_group.csv file        1.06K 2026-06-12 21:42:46
-    ## 5 taxon_level_summary.csv               file       26.46K 2026-06-12 21:42:17
+    ## 1 exploration_preprocessed_objects.rds  file       557.8K 2026-06-15 13:00:35
+    ## 2 exploration_summary.csv               file          291 2026-06-15 13:00:35
+    ## 3 exploration_top_taxa_table.tex        file        1.54K 2026-06-15 13:00:36
+    ## 4 selected_taxa_prevalence_by_group.csv file        1.06K 2026-06-15 13:00:59
+    ## 5 taxon_level_summary.csv               file       28.64K 2026-06-15 13:00:36

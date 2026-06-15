@@ -64,6 +64,8 @@ zero_replacement_fraction <- 0.65
 n_top_taxa <- 20
 n_selected_taxa <- 6
 n_prevalence_taxa <- 10
+n_clr_variance_taxa <- 10
+n_rank_label_taxa <- 5
 
 ebf_palette <- c("non-EBF" = "#1F78B4", "EBF" = "#E66101")
 ```
@@ -237,7 +239,8 @@ taxon_summary <- tibble(
   median_relative_abundance = apply(counts_rel, 2, median),
   max_relative_abundance = apply(counts_rel, 2, max),
   mean_clr = colMeans(counts_clr),
-  median_clr = apply(counts_clr, 2, median)
+  median_clr = apply(counts_clr, 2, median),
+  clr_variance = apply(counts_clr, 2, var)
 ) %>%
   left_join(taxon_table, by = "taxon_id") %>%
   arrange(desc(mean_relative_abundance), desc(prevalence))
@@ -295,11 +298,13 @@ save_kable(
 
 ## Prevalence and abundance
 
+
 ```{r prevalence_histogram, fig.width=7, fig.height=4.2, dpi=250}
 taxon_summary %>%
   ggplot(aes(x = prevalence)) +
   geom_histogram(binwidth = 0.05, fill = "#1F78B4", color = "white", alpha = 0.85) +
-  scale_x_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  scale_x_continuous(labels = scales::percent_format(), breaks = seq(0, 1, by = 0.25)) +
+  coord_cartesian(xlim = c(0, 1)) +
   labs(
     title = "Taxon prevalence",
     x = "Proportion of samples with positive count",
@@ -321,7 +326,8 @@ taxon_summary %>%
   theme_minimal()
 ```
 
-```{r prevalence_abundance, fig.width=8, fig.height=4, dpi=200}
+```{r prevalence_abundance, fig.width=8, fig.height=4.1, dpi=200}
+set.seed(42)
 taxa_to_label <- taxon_summary %>%
   slice_head(n = 10)
 
@@ -369,6 +375,84 @@ taxon_summary %>%
     axis.title.y = element_text(size = 14),
     axis.text = element_text(size = 12),
     plot.margin = margin(5.5, 5.5, 5.5, 5.5),
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r rank_abundance_curve, fig.width=7, fig.height=4.2, dpi=250}
+rank_abundance_df <- taxon_summary %>%
+  arrange(desc(mean_relative_abundance)) %>%
+  mutate(
+    abundance_rank = row_number(),
+    highlight_taxon = abundance_rank <= 10,
+    label_taxon = abundance_rank <= n_rank_label_taxa
+  )
+
+ggplot(
+  rank_abundance_df,
+  aes(x = abundance_rank, y = mean_relative_abundance)
+) +
+  geom_line(color = "grey55", linewidth = 0.5) +
+  geom_point(color = "grey35", alpha = 0.75, size = 1.8) +
+  geom_point(
+    data = filter(rank_abundance_df, highlight_taxon),
+    color = "#E66101",
+    size = 2.2
+  ) +
+  ggrepel::geom_text_repel(
+    data = filter(rank_abundance_df, label_taxon),
+    aes(label = stringr::str_trunc(taxon, width = 28)),
+    size = 3.2,
+    min.segment.length = 0,
+    segment.color = "grey45",
+    segment.size = 0.3,
+    box.padding = 0.5,
+    point.padding = 0.2,
+    max.overlaps = Inf,
+    seed = 42
+  ) +
+  scale_y_log10(
+    labels = function(x) {
+      paste0(format(signif(x * 100, 3), trim = TRUE, scientific = FALSE,
+                    drop0trailing = TRUE), "%")
+    }
+  ) +
+  scale_x_continuous(breaks = scales::breaks_pretty(n = 8)) +
+  labs(
+    title = "Rank-abundance curve",
+    x = "Genus rank by mean relative abundance",
+    y = "Mean relative abundance"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank()
+  )
+```
+
+**Most variable genera after CLR transformation**
+
+```{r clr_variance_by_taxon, fig.width=7, fig.height=3.5, dpi=200}
+taxon_summary %>%
+  arrange(desc(clr_variance)) %>%
+  slice_head(n = min(n_clr_variance_taxa, nrow(taxon_summary))) %>%
+  mutate(
+    taxon = factor(taxon, levels = rev(taxon))
+  ) %>%
+  ggplot(aes(x = clr_variance, y = taxon)) +
+  geom_segment(aes(x = 0, xend = clr_variance, yend = taxon),
+               color = "grey70", linewidth = 0.5) +
+  geom_point(color = "#1F78B4", size = 2.2) +
+  labs(
+    #title = "Most variable genera after CLR transformation",
+    x = "Variance of CLR coordinates",
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_text(size = 14),
+    panel.grid.major.y = element_blank(),
     panel.grid.minor = element_blank()
   )
 ```
@@ -444,7 +528,7 @@ ggplot(
   )
 ```
 
-## CLR-transformed abundances
+## CLR coordinatess
 
 ```{r clr_heatmap_data}
 heatmap_taxa <- taxon_summary %>%
@@ -479,7 +563,7 @@ pheatmap(
   show_colnames = FALSE,
   cluster_rows = FALSE,
   cluster_cols = FALSE,
-  main = "CLR-transformed abundances (top 20 genera)"
+  main = "CLR coordinates (top 20 genera)"
 )
 ```
 
@@ -492,7 +576,7 @@ pheatmap(
   show_colnames = FALSE,
   cluster_rows = FALSE,
   cluster_cols = TRUE,
-  main = "CLR-transformed abundances (top 20 genera)"
+  main = "CLR coordinates (top 20 genera)"
 )
 ```
 
@@ -524,8 +608,55 @@ selected_clr_df <- as_tibble(
     )
   )
 
+selected_transform_df <- as_tibble(
+  counts_rel[heatmap_sample_data$SampleID, selected_taxa_ids, drop = FALSE],
+  rownames = "SampleID"
+) %>%
+  pivot_longer(
+    cols = all_of(selected_taxa_ids),
+    names_to = "taxon_id",
+    values_to = "relative_abundance"
+  ) %>%
+  left_join(
+    selected_clr_df %>% select(SampleID, taxon_id, clr_abundance, taxon),
+    by = c("SampleID", "taxon_id")
+  ) %>%
+  mutate(
+    originally_zero = relative_abundance == 0,
+    zero_status = factor(
+      if_else(originally_zero, "Originally zero", "Observed"),
+      levels = c("Observed", "Originally zero")
+    )
+  )
+
+selected_transform_density_df <- selected_transform_df %>%
+  transmute(
+    SampleID,
+    taxon,
+    zero_status,
+    scale = "Relative abundance",
+    value = relative_abundance
+  ) %>%
+  bind_rows(
+    selected_transform_df %>%
+      transmute(
+        SampleID,
+        taxon,
+        zero_status,
+        scale = "CLR coordinates",
+        value = clr_abundance
+      )
+  ) %>%
+  mutate(
+    scale = factor(
+      scale,
+      levels = c("Relative abundance", "CLR coordinates")
+    )
+  )
+
 selected_zero_df <- as_tibble(
-  counts_raw[heatmap_sample_data$SampleID, prevalence_taxa_ids, drop = FALSE] > 0,
+  counts_raw[heatmap_sample_data$SampleID, prevalence_taxa_ids, 
+             drop = FALSE] > 0,
   rownames = "SampleID"
 ) %>%
   left_join(
@@ -542,11 +673,86 @@ selected_zero_df <- as_tibble(
   mutate(
     taxon = factor(
       stringr::str_trunc(taxon_labels[taxon_id], width = 30),
-      levels = rev(stringr::str_trunc(taxon_labels[prevalence_taxa_ids], width = 30))
+      levels = rev(stringr::str_trunc(taxon_labels[prevalence_taxa_ids], 
+                                      width = 30))
     )
   )
 
 selected_clr_df
+```
+
+**Distributional change from relative to CLR coordinates**
+
+```{r rel_to_clr_histogram_comparison, fig.width=9, fig.height=6, dpi=250}
+ggplot(selected_transform_density_df, aes(x = value)) +
+  geom_histogram(
+    data = filter(selected_transform_density_df, zero_status == "Observed"),
+    bins = 40,
+    fill = "grey75",
+    color = "grey35",
+    alpha = 0.8,
+    linewidth = 0.2
+  ) +
+  geom_histogram(
+    data = filter(selected_transform_density_df, 
+                  zero_status == "Originally zero"),
+    bins = 40,
+    fill = "#E66101",
+    color = NA,
+    alpha = 0.85,
+    linewidth = 0
+  ) +
+  facet_grid(taxon ~ scale, scales = "free", switch = "y") +
+  labs(
+    #title = "Distributional change from relative to CLR coordinates",
+    x = "Abundance value",
+    y = "Number of samples"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 13),
+    strip.text.y = element_text(size = 14),
+    strip.text.x = element_text(size = 16, face = "bold"),
+    strip.text.y.left = element_text(angle = 0, hjust = 1),
+    strip.placement = "outside",
+    strip.background = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
+```
+
+```{r rel_to_clr_scatter, fig.width=10, fig.height=6, dpi=250}
+ggplot(
+  selected_transform_df,
+  aes(x = relative_abundance, y = clr_abundance, color = zero_status)
+) +
+  geom_point(alpha = 0.65, size = 0.9) +
+  scale_x_continuous(
+    labels = function(x) {
+      paste0(format(signif(x * 100, 3), trim = TRUE, scientific = FALSE,
+                    drop0trailing = TRUE), "%")
+    }
+  ) +
+  scale_color_manual(
+    values = c("Observed" = "grey35", "Originally zero" = "#E66101")
+  ) +
+  scale_x_log10() +
+  facet_wrap(~ taxon, scales = "free_y") +
+  labs(
+    title = "Relative abundance and CLR coordinates",
+    x = "Relative abundance",
+    y = "CLR coordinates",
+    color = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 12),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
 ```
 
 ```{r selected_taxon_violin, fig.width=10, fig.height=5, dpi=250}
@@ -556,9 +762,9 @@ ggplot(selected_clr_df, aes(x = EBF_group, y = clr_abundance, fill = EBF_group))
   scale_fill_manual(values = ebf_palette, guide = "none") +
   facet_wrap(~ taxon, scales = "free_y") +
   labs(
-    #title = "CLR-transformed abundances of selected dominant genera",
+    #title = "CLR coordinatess of selected dominant genera",
     x = NULL,
-    y = "CLR-transformed abundance"
+    y = "CLR coordinates"
   ) +
   theme_minimal() +
   theme(
@@ -578,9 +784,9 @@ ggplot(selected_clr_df, aes(x = EBF_group, y = clr_abundance, fill = EBF_group))
   scale_fill_manual(values = ebf_palette, guide = "none") +
   facet_wrap(~ taxon, scales = "free_y") +
   labs(
-    #title = "CLR-transformed abundances of selected dominant genera",
+    #title = "CLR coordinatess of selected dominant genera",
     x = NULL,
-    y = "CLR-transformed abundance"
+    y = "CLR coordinates"
   ) +
   theme_minimal() +
   theme(
@@ -598,8 +804,8 @@ ggplot(selected_clr_df, aes(x = clr_abundance, fill = EBF_group)) +
   scale_fill_manual(values = ebf_palette) +
   facet_wrap(~ taxon, scales = "free") +
   labs(
-    #title = "CLR-transformed abundance densities",
-    x = "CLR-transformed abundance",
+    #title = "CLR coordinates densities",
+    x = "CLR coordinates",
     y = "Density",
     fill = NULL
   ) +
