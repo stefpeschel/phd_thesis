@@ -122,14 +122,14 @@ lib_size <- rowSums(counts)
 rel_abund <- sweep(counts, 1, lib_size, "/")
 
 # Show the corresponding relative abundances
-round(rel_abund, 2)
+round(rel_abund, 3)
 ```
 
 **Genera shown in the thesis:**
 
 ```{r}
 # Or only first 3 relative abundances
-round(rel_abund[, 1:3], 2)
+round(rel_abund[, 1:3], 3)
 ```
 
 ## Multiplicative replacement
@@ -161,13 +161,16 @@ rel_abund_repl <- as.matrix(rel_abund_repl)
 rownames(rel_abund_repl) <- rownames(rel_abund)
 colnames(rel_abund_repl) <- colnames(rel_abund)
 
-round(rel_abund_repl, 4)
+print("Row sums: ")
+rowSums(rel_abund_repl)
+
+round(rel_abund_repl, 3)
 ```
 
 **Genera shown in the thesis:**
 
 ```{r}
-round(rel_abund_repl[, 1:3], 4)
+round(rel_abund_repl[, 1:3], 3)
 ```
 
 ## CLR transformation
@@ -176,13 +179,13 @@ round(rel_abund_repl[, 1:3], 4)
 # Centered log-ratio transformation after multiplicative replacement
 counts_clr <- clr_transform(rel_abund_repl)
 
-round(counts_clr, 2)
+round(counts_clr, 3)
 ```
 
 **Genera shown in the thesis:**
 
 ```{r}
-round(counts_clr[, 1:3], 2)
+round(counts_clr[, 1:3], 3)
 ```
 
 
