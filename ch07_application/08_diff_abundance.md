@@ -1,6 +1,6 @@
 Differential abundance analysis
 ================
-Compiled at 2026-06-16 15:48:01 UTC
+Compiled at 2026-06-16 16:41:54 UTC
 
 ## Set global parameters
 
@@ -279,50 +279,50 @@ multiple-testing corrected view of the same taxa.
 
 ### Unadjusted p-values
 
-| taxon | log2_fc | dacomp (1e+03) | dacomp (1e+06) | dacomp (1e+07) | dacomp + permApprox(C) (1e+03) |
+| taxon | statistic | dacomp (1e+03) | dacomp (1e+06) | dacomp (1e+07) | dacomp + permApprox(C) (1e+03) |
 |:---|---:|:---|:---|:---|:---|
-| Streptococcus | -1.28 | 9.99e-04\* | 5.00e-06\* | 1.15e-05\* | 4.59e-11\* |
-| Lactococcus | -7.18 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 1.91e-26\* |
-| Enterococcus | -1.86 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 2.28e-96\* |
-| Terrisporobacter | -3.20 | 9.99e-04\* | 1.79e-02 | 2.94e-04\* | 1.71e-04\* |
-| Intestinibacter | -2.52 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 9.02e-16\* |
-| \[Clostridium\]\_innocuum_group | -3.23 | 9.99e-04\* | 5.00e-06\* | 1.46e-05\* | 1.92e-08\* |
-| Bifidobacterium | 0.29 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 1.70e-06\* |
-| \[Ruminococcus\]\_gnavugroup | -1.59 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 2.90e-08\* |
-| Blautia | -1.70 | 9.99e-04\* | 8.20e-05\* | 2.02e-04\* | 7.12e-06\* |
-| uncultured18 | -2.12 | 2.00e-03\* | 5.70e-04\* | 6.34e-04\* | 4.91e-03\* |
-| \[Ruminococcus\]\_torquegroup | -4.84 | 3.00e-03\* | 5.70e-03\* | 6.20e-04\* | 1.50e-02 |
-| Roseburia | -2.62 | 4.00e-03\* | 1.01e-01 | 3.97e-02 | 1.02e-02 |
-| Coprobacillus | -9.94 | 5.99e-03\* | 3.32e-03\* | 3.34e-02 | 5.99e-03\* |
-| Clostridium_sensu_strict1 | -0.68 | 6.99e-03\* | 9.98e-03\* | 8.31e-04\* | 6.39e-03\* |
-| Collinsella | -1.41 | 8.99e-03\* | 2.26e-02 | 5.94e-04\* | 8.95e-03\* |
-| Erysipelatoclostridium | -0.10 | 3.30e-02 | 7.84e-03\* | 1.55e-02 | 2.71e-02 |
-| Tyzzerella | -5.38 | 3.30e-02 | 3.24e-04\* | 9.96e-05\* | 4.08e-02 |
-| Sellimonas | -2.08 | 4.80e-02 | 3.93e-03\* | 1.78e-03\* | 3.63e-02 |
-| Akkermansia | -4.08 | 5.59e-02 | 5.28e-03\* | 1.06e-01 | 5.93e-02 |
+| Streptococcus | 16.66 | 9.99e-04\* | 5.00e-06\* | 1.15e-05\* | 4.59e-11\* |
+| Lactococcus | 28.84 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 1.91e-26\* |
+| Enterococcus | 75.64 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 2.28e-96\* |
+| Terrisporobacter | 20.92 | 9.99e-04\* | 1.79e-02 | 2.94e-04\* | 1.71e-04\* |
+| Intestinibacter | 48.86 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 9.02e-16\* |
+| \[Clostridium\]\_innocuum_group | 32.17 | 9.99e-04\* | 5.00e-06\* | 1.46e-05\* | 1.92e-08\* |
+| Bifidobacterium | 36.76 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 1.70e-06\* |
+| \[Ruminococcus\]\_gnavugroup | 32.23 | 9.99e-04\* | 1.00e-06\* | 1.00e-07\* | 2.90e-08\* |
+| Blautia | 20.75 | 9.99e-04\* | 8.20e-05\* | 2.02e-04\* | 7.12e-06\* |
+| uncultured18 | 13.31 | 2.00e-03\* | 5.70e-04\* | 6.34e-04\* | 4.91e-03\* |
+| \[Ruminococcus\]\_torquegroup | 8.52 | 3.00e-03\* | 5.70e-03\* | 6.20e-04\* | 1.50e-02 |
+| Roseburia | 11.31 | 4.00e-03\* | 1.01e-01 | 3.97e-02 | 1.02e-02 |
+| Coprobacillus | 8.43 | 5.99e-03\* | 3.32e-03\* | 3.34e-02 | 5.99e-03\* |
+| Clostridium_sensu_strict1 | 8.04 | 6.99e-03\* | 9.98e-03\* | 8.31e-04\* | 6.39e-03\* |
+| Collinsella | 6.42 | 8.99e-03\* | 2.26e-02 | 5.94e-04\* | 8.95e-03\* |
+| Erysipelatoclostridium | 4.78 | 3.30e-02 | 7.84e-03\* | 1.55e-02 | 2.71e-02 |
+| Tyzzerella | 4.47 | 3.30e-02 | 3.24e-04\* | 9.96e-05\* | 4.08e-02 |
+| Sellimonas | 3.58 | 4.80e-02 | 3.93e-03\* | 1.78e-03\* | 3.63e-02 |
+| Akkermansia | 3.44 | 5.59e-02 | 5.28e-03\* | 1.06e-01 | 5.93e-02 |
 
 Unadjusted p-values for taxa significant in at least one selected
 differential abundance analysis. Asterisks mark p \< 0.01.
 
 ### Adjusted p-values
 
-| taxon | log2_fc | dacomp (1e+03) | dacomp (1e+06) | dacomp (1e+07) | dacomp + permApprox(C) (1e+03) |
+| taxon | statistic | dacomp (1e+03) | dacomp (1e+06) | dacomp (1e+07) | dacomp + permApprox(C) (1e+03) |
 |:---|---:|:---|:---|:---|:---|
-| Streptococcus | -1.28 | 6.77e-03\* | 3.30e-05\* | 1.02e-04\* | 1.18e-09\* |
-| Lactococcus | -7.18 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 9.85e-25\* |
-| Enterococcus | -1.86 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 2.34e-94\* |
-| Terrisporobacter | -3.20 | 6.77e-03\* | 6.32e-02 | 1.68e-03\* | 1.96e-03\* |
-| Intestinibacter | -2.52 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 3.10e-14\* |
-| \[Clostridium\]\_innocuum_group | -3.23 | 6.77e-03\* | 3.30e-05\* | 1.09e-04\* | 3.95e-07\* |
-| Bifidobacterium | 0.29 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 2.50e-05\* |
-| \[Ruminococcus\]\_gnavugroup | -1.59 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 4.97e-07\* |
-| Blautia | -1.70 | 6.77e-03\* | 5.23e-04\* | 1.29e-03\* | 9.17e-05\* |
-| uncultured18 | -2.12 | 1.28e-02 | 3.19e-03\* | 2.97e-03\* | 5.06e-02 |
-| \[Ruminococcus\]\_torquegroup | -4.84 | 1.82e-02 | 2.72e-02 | 2.97e-03\* | 9.64e-02 |
-| Clostridium_sensu_strict1 | -0.68 | 3.40e-02 | 3.83e-02 | 3.53e-03\* | 5.48e-02 |
-| Collinsella | -1.41 | 4.14e-02 | 7.26e-02 | 2.97e-03\* | 7.09e-02 |
-| Tyzzerella | -5.38 | 1.25e-01 | 1.88e-03\* | 6.80e-04\* | 1.75e-01 |
-| Sellimonas | -2.08 | 1.53e-01 | 2.11e-02 | 7.76e-03\* | 1.62e-01 |
+| Streptococcus | 16.66 | 6.77e-03\* | 3.30e-05\* | 1.02e-04\* | 1.18e-09\* |
+| Lactococcus | 28.84 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 9.85e-25\* |
+| Enterococcus | 75.64 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 2.34e-94\* |
+| Terrisporobacter | 20.92 | 6.77e-03\* | 6.32e-02 | 1.68e-03\* | 1.96e-03\* |
+| Intestinibacter | 48.86 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 3.10e-14\* |
+| \[Clostridium\]\_innocuum_group | 32.17 | 6.77e-03\* | 3.30e-05\* | 1.09e-04\* | 3.95e-07\* |
+| Bifidobacterium | 36.76 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 2.50e-05\* |
+| \[Ruminococcus\]\_gnavugroup | 32.23 | 6.77e-03\* | 8.80e-06\* | 9.80e-07\* | 4.97e-07\* |
+| Blautia | 20.75 | 6.77e-03\* | 5.23e-04\* | 1.29e-03\* | 9.17e-05\* |
+| uncultured18 | 13.31 | 1.28e-02 | 3.19e-03\* | 2.97e-03\* | 5.06e-02 |
+| \[Ruminococcus\]\_torquegroup | 8.52 | 1.82e-02 | 2.72e-02 | 2.97e-03\* | 9.64e-02 |
+| Clostridium_sensu_strict1 | 8.04 | 3.40e-02 | 3.83e-02 | 3.53e-03\* | 5.48e-02 |
+| Collinsella | 6.42 | 4.14e-02 | 7.26e-02 | 2.97e-03\* | 7.09e-02 |
+| Tyzzerella | 4.47 | 1.25e-01 | 1.88e-03\* | 6.80e-04\* | 1.75e-01 |
+| Sellimonas | 3.58 | 1.53e-01 | 2.11e-02 | 7.76e-03\* | 1.62e-01 |
 
 Adjusted p-values for taxa significant in at least one selected
 differential abundance analysis. Asterisks mark adjusted p \< 0.01.
@@ -523,14 +523,14 @@ These files have been written to the target directory,
     ## # A tibble: 38 × 4
     ##    path                                   type         size modification_time  
     ##    <fs::path>                             <fct> <fs::bytes> <dttm>             
-    ##  1 dacomp_reference_score_data.csv        file         7.2K 2026-06-16 15:48:04
+    ##  1 dacomp_reference_score_data.csv        file         7.2K 2026-06-16 16:41:57
     ##  2 dacomp_reference_selection.rds         file       87.06K 2026-06-12 18:51:01
-    ##  3 dacomp_reference_summary.csv           file           60 2026-06-16 15:48:03
+    ##  3 dacomp_reference_summary.csv           file           60 2026-06-16 16:41:57
     ##  4 dacomp_res_nperm=1e+03_seed=42.rds     file      277.51K 2026-06-12 18:51:05
     ##  5 dacomp_res_nperm=1e+04_seed=42.rds     file        1.69M 2026-06-12 18:51:07
     ##  6 dacomp_res_nperm=1e+05_seed=42.rds     file       15.16M 2026-06-12 18:51:10
     ##  7 dacomp_res_nperm=1e+06_seed=42.rds     file      145.45M 2026-06-12 18:51:22
     ##  8 dacomp_res_nperm=1e+07_seed=42.rds     file        1.43G 2026-06-12 18:56:48
-    ##  9 dacomp_runtime.csv                     file          345 2026-06-16 15:48:05
+    ##  9 dacomp_runtime.csv                     file          345 2026-06-16 16:41:58
     ## 10 dacomp_runtime_nperm=1e+03_seed=42.rds file          224 2026-06-12 18:58:06
     ## # ℹ 28 more rows

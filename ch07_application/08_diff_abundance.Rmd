@@ -1135,7 +1135,7 @@ pvalue_table_methods <- c(
 
 pvalue_table_col_names <- c(
   "Taxon",
-  "$\\log_2$ FC",
+  "dacomp statistic",
   "dacomp ($10^3$)",
   "dacomp ($10^6$)",
   "dacomp ($10^7$)",
@@ -1161,16 +1161,21 @@ fmt_p_star <- function(p_num, alpha = alpha_diff_abundance, digits = 2) {
 }
 
 make_significant_pvalue_table <- function(results_long, p_col, alpha) {
+  statistic_tbl <- results_long %>%
+    filter(method == "dacomp", n_perm == permapprox_n_perm) %>%
+    select(taxon_id, statistic)
+  
   p_wide <- results_long %>%
     filter(method_label %in% pvalue_table_methods) %>%
-    select(taxon_id, taxon, log2_fc, method_label, p_value = all_of(p_col)) %>%
+    select(taxon_id, taxon, method_label, p_value = all_of(p_col)) %>%
     pivot_wider(names_from = method_label, values_from = p_value) %>%
-    select(taxon_id, taxon, log2_fc, all_of(pvalue_table_methods))
+    left_join(statistic_tbl, by = "taxon_id") %>%
+    select(taxon_id, taxon, statistic, all_of(pvalue_table_methods))
   
   p_wide %>%
     filter(if_any(all_of(pvalue_table_methods), ~ !is.na(.x) & .x < alpha)) %>%
     arrange(.data[[pvalue_table_methods[[1]]]]) %>%
-    mutate(log2_fc = round(log2_fc, 2))
+    mutate(statistic = round(statistic, 2))
 }
 ```
 
@@ -1212,9 +1217,9 @@ write_csv(
 
 ```{r significant_raw_pvalues_latex}
 latex_raw_pvalues <- significant_raw_pvalues %>%
-  select(taxon, log2_fc, all_of(pvalue_table_methods)) %>%
+  select(taxon, statistic, all_of(pvalue_table_methods)) %>%
   mutate(
-    log2_fc = round(log2_fc, 2),
+    statistic = round(statistic, 2),
     across(
       all_of(pvalue_table_methods),
       ~ fmt_p_star(.x, alpha = alpha_diff_abundance)
@@ -1291,9 +1296,9 @@ write_csv(
 
 ```{r significant_adjusted_pvalues_latex}
 latex_adjusted_pvalues <- significant_adjusted_pvalues %>%
-  select(taxon, log2_fc, all_of(pvalue_table_methods)) %>%
+  select(taxon, statistic, all_of(pvalue_table_methods)) %>%
   mutate(
-    log2_fc = round(log2_fc, 2),
+    statistic = round(statistic, 2),
     across(
       all_of(pvalue_table_methods),
       ~ fmt_p_star(.x, alpha = alpha_diff_abundance)
