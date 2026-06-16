@@ -60,6 +60,14 @@ sampdata    <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
 otutab_asv  <- as(otu_table(phylo_asv), "matrix")
 ```
 
+
+**Summary of overall sample counts:**
+
+```{r}
+summary(colSums(otutab_asv))
+```
+
+
 ## Helper functions
 
 ```{r}

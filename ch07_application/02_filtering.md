@@ -1,14 +1,15 @@
 Taxonomic aggregation and filtering
 ================
-Compiled at 2026-06-10 12:15:54 UTC
-
-``` r
-here::i_am(paste0(params$name, ".Rmd"), uuid = "7426994c-47c1-4984-bc1e-aeb070dbe32b")
-```
+Compiled at 2026-06-15 20:11:47 UTC
 
 ## Load packages
 
 ## Load data
+
+**Summary of overall sample counts:**
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    ##    1456   15322   21914   22249   29545   69556
 
 ## Helper functions
 
@@ -104,12 +105,12 @@ These files have been written to the target directory,
     ## # A tibble: 9 × 4
     ##   path                               type         size modification_time  
     ##   <fs::path>                         <fct> <fs::bytes> <dttm>             
-    ## 1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-06-10 12:16:49
+    ## 1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-06-15 20:12:19
     ## 2 bact_phylo_2m_genus_prev10.rds     file        56.5K 2026-06-09 10:59:27
-    ## 3 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-10 12:16:49
-    ## 4 prevalence_filtering.csv           file          246 2026-06-10 12:16:49
-    ## 5 prevalence_filtering.tex           file          662 2026-06-10 12:16:49
-    ## 6 taxonomic_overview.csv             file          123 2026-06-10 12:16:34
-    ## 7 taxonomic_overview.tex             file          556 2026-06-10 12:16:34
-    ## 8 top_genera.csv                     file          283 2026-06-10 12:16:48
-    ## 9 top_genera.tex                     file          808 2026-06-10 12:16:48
+    ## 3 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-15 20:12:19
+    ## 4 prevalence_filtering.csv           file          246 2026-06-15 20:12:18
+    ## 5 prevalence_filtering.tex           file          663 2026-06-15 20:12:18
+    ## 6 taxonomic_overview.csv             file          123 2026-06-15 20:12:08
+    ## 7 taxonomic_overview.tex             file          557 2026-06-15 20:12:08
+    ## 8 top_genera.csv                     file          283 2026-06-15 20:12:18
+    ## 9 top_genera.tex                     file          809 2026-06-15 20:12:18
