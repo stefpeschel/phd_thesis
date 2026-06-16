@@ -19,6 +19,7 @@ Some chapter folders mainly store figures used in the thesis, while others also 
 │
 ├── ch02_microbiome_data/         → Microbiome data as statistical objects
 │   ├── clr_mini_example.Rmd        → Compact example on CLR with zero replacement
+│   ├── overview_figure_example.Rmd → Mini dataset for section overview figures
 │   ├── data/                       → Inputs and intermediate files for the examples
 │   └── figures/                    → Generated CLR example figures
 │

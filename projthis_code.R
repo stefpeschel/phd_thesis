@@ -51,6 +51,7 @@ render_rmd <- function(path, output_format = "all", quiet = FALSE) {
 ################################################################################
 
 render_rmd("ch02_microbiome_data/clr_mini_example.Rmd")
+render_rmd("ch02_microbiome_data/overview_figure_example.Rmd")
 
 ################################################################################
 ### Chapter 6: permApprox ######################################################
