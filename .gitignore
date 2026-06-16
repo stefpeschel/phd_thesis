@@ -6,4 +6,7 @@
 .Rprofile
 .positai
 ch07_application/data/PASTURE_data
+ch07_application/data/08_diff_abundance/dacomp_res_nperm=1e+06_seed=42.rds
+ch07_application/data/08_diff_abundance/dacomp_res_nperm=1e+07_seed=42.rds
 **/01_data_gen/
+thesis/

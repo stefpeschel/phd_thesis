@@ -1,0 +1,106 @@
+method,taxon,log2_fc,mean_rel_non_ebf,mean_rel_ebf,p_raw,p_adj
+dacomp + permApprox(U) (1e+03),Lactococcus,-7.18,0.00802,5.43e-5,0.00e+00,0.00e+00
+dacomp + permApprox(U) (1e+03),Enterococcus,-1.86,0.0568,0.0156,0.00e+00,0.00e+00
+dacomp + permApprox(C) (1e+03),Enterococcus,-1.86,0.0568,0.0156,2.28e-96,2.34e-94
+dacomp + permApprox(C) (1e+03),Lactococcus,-7.18,0.00802,5.43e-5,1.91e-26,9.85e-25
+dacomp + permApprox(C) (1e+03),Intestinibacter,-2.52,0.00593,0.00103,9.02e-16,3.10e-14
+dacomp + permApprox(U) (1e+03),Intestinibacter,-2.52,0.00593,0.00103,9.02e-16,3.10e-14
+dacomp + permApprox(C) (1e+03),Streptococcus,-1.28,0.081,0.0334,4.59e-11,1.18e-09
+dacomp + permApprox(U) (1e+03),Streptococcus,-1.28,0.081,0.0334,4.59e-11,1.18e-09
+dacomp + permApprox(U) (1e+03),[Clostridium]_innocuum_group,-3.23,0.00819,8.71e-4,1.92e-08,3.95e-07
+dacomp + permApprox(C) (1e+03),[Clostridium]_innocuum_group,-3.23,0.00819,8.71e-4,1.92e-08,3.95e-07
+dacomp + permApprox(U) (1e+03),[Ruminococcus]_gnavugroup,-1.59,0.0411,0.0136,2.90e-08,4.97e-07
+dacomp + permApprox(C) (1e+03),[Ruminococcus]_gnavugroup,-1.59,0.0411,0.0136,2.90e-08,4.97e-07
+dacomp (1e+07),Lactococcus,-7.18,0.00802,5.43e-5,1.00e-07,9.80e-07
+dacomp (1e+07),Intestinibacter,-2.52,0.00593,0.00103,1.00e-07,9.80e-07
+dacomp (1e+07),Enterococcus,-1.86,0.0568,0.0156,1.00e-07,9.80e-07
+dacomp (1e+07),[Ruminococcus]_gnavugroup,-1.59,0.0411,0.0136,1.00e-07,9.80e-07
+dacomp (1e+07),Bifidobacterium,0.29,0.56,0.687,1.00e-07,9.80e-07
+dacomp (1e+06),Lactococcus,-7.18,0.00802,5.43e-5,1.00e-06,8.80e-06
+dacomp (1e+06),Intestinibacter,-2.52,0.00593,0.00103,1.00e-06,8.80e-06
+dacomp (1e+06),Enterococcus,-1.86,0.0568,0.0156,1.00e-06,8.80e-06
+dacomp (1e+06),[Ruminococcus]_gnavugroup,-1.59,0.0411,0.0136,1.00e-06,8.80e-06
+dacomp (1e+06),Bifidobacterium,0.29,0.56,0.687,1.00e-06,8.80e-06
+dacomp + permApprox(C) (1e+03),Bifidobacterium,0.29,0.56,0.687,1.70e-06,2.50e-05
+dacomp + permApprox(U) (1e+03),Bifidobacterium,0.29,0.56,0.687,1.70e-06,2.50e-05
+dacomp (1e+06),[Clostridium]_innocuum_group,-3.23,0.00819,8.71e-4,5.00e-06,3.30e-05
+dacomp (1e+06),Streptococcus,-1.28,0.081,0.0334,5.00e-06,3.30e-05
+dacomp + permApprox(U) (1e+03),Blautia,-1.7,0.0347,0.0107,7.12e-06,9.17e-05
+dacomp + permApprox(C) (1e+03),Blautia,-1.7,0.0347,0.0107,7.12e-06,9.17e-05
+dacomp (1e+05),Lactococcus,-7.18,0.00802,5.43e-5,1.00e-05,7.00e-05
+dacomp (1e+05),[Clostridium]_innocuum_group,-3.23,0.00819,8.71e-4,1.00e-05,7.00e-05
+dacomp (1e+05),Intestinibacter,-2.52,0.00593,0.00103,1.00e-05,7.00e-05
+dacomp (1e+05),Enterococcus,-1.86,0.0568,0.0156,1.00e-05,7.00e-05
+dacomp (1e+05),Blautia,-1.7,0.0347,0.0107,1.00e-05,7.00e-05
+dacomp (1e+05),[Ruminococcus]_gnavugroup,-1.59,0.0411,0.0136,1.00e-05,7.00e-05
+dacomp (1e+05),Bifidobacterium,0.29,0.56,0.687,1.00e-05,7.00e-05
+dacomp (1e+07),Streptococcus,-1.28,0.081,0.0334,1.15e-05,1.02e-04
+dacomp (1e+07),[Clostridium]_innocuum_group,-3.23,0.00819,8.71e-4,1.46e-05,1.09e-04
+dacomp (1e+05),Terrisporobacter,-3.2,7.32e-4,7.86e-5,3.00e-05,2.00e-04
+dacomp (1e+06),Blautia,-1.7,0.0347,0.0107,8.20e-05,5.23e-04
+dacomp (1e+05),Streptococcus,-1.28,0.081,0.0334,9.00e-05,5.32e-04
+dacomp (1e+07),Tyzzerella,-5.38,0.00346,8.21e-5,9.96e-05,6.80e-04
+dacomp (1e+04),Lactococcus,-7.18,0.00802,5.43e-5,1.00e-04,7.12e-04
+dacomp (1e+04),[Clostridium]_innocuum_group,-3.23,0.00819,8.71e-4,1.00e-04,7.12e-04
+dacomp (1e+04),Intestinibacter,-2.52,0.00593,0.00103,1.00e-04,7.12e-04
+dacomp (1e+04),Enterococcus,-1.86,0.0568,0.0156,1.00e-04,7.12e-04
+dacomp (1e+04),Blautia,-1.7,0.0347,0.0107,1.00e-04,7.12e-04
+dacomp (1e+04),[Ruminococcus]_gnavugroup,-1.59,0.0411,0.0136,1.00e-04,7.12e-04
+dacomp (1e+04),Streptococcus,-1.28,0.081,0.0334,1.00e-04,7.12e-04
+dacomp (1e+04),Bifidobacterium,0.29,0.56,0.687,1.00e-04,7.12e-04
+dacomp (1e+05),[Ruminococcus]_torquegroup,-4.84,0.00397,1.38e-4,1.00e-04,5.38e-04
+dacomp + permApprox(U) (1e+03),Terrisporobacter,-3.2,7.32e-4,7.86e-5,1.71e-04,1.96e-03
+dacomp + permApprox(C) (1e+03),Terrisporobacter,-3.2,7.32e-4,7.86e-5,1.71e-04,1.96e-03
+dacomp (1e+04),Tyzzerella,-5.38,0.00346,8.21e-5,2.00e-04,1.27e-03
+dacomp (1e+07),Blautia,-1.7,0.0347,0.0107,2.02e-04,1.29e-03
+dacomp (1e+07),Terrisporobacter,-3.2,7.32e-4,7.86e-5,2.94e-04,1.68e-03
+dacomp (1e+04),Collinsella,-1.41,0.0224,0.00843,3.00e-04,1.65e-03
+dacomp (1e+06),Tyzzerella,-5.38,0.00346,8.21e-5,3.24e-04,1.88e-03
+dacomp (1e+06),uncultured18,-2.12,0.00156,3.57e-4,5.70e-04,3.19e-03
+dacomp (1e+07),Collinsella,-1.41,0.0224,0.00843,5.94e-04,2.97e-03
+dacomp (1e+07),[Ruminococcus]_torquegroup,-4.84,0.00397,1.38e-4,6.20e-04,2.97e-03
+dacomp (1e+07),uncultured18,-2.12,0.00156,3.57e-4,6.34e-04,2.97e-03
+dacomp (1e+05),uncultured18,-2.12,0.00156,3.57e-4,6.40e-04,3.32e-03
+dacomp (1e+04),[Ruminococcus]_torquegroup,-4.84,0.00397,1.38e-4,7.00e-04,3.76e-03
+dacomp (1e+05),Tyzzerella,-5.38,0.00346,8.21e-5,7.20e-04,3.46e-03
+dacomp (1e+07),Clostridium_sensu_strict1,-0.68,0.013,0.00807,8.31e-04,3.53e-03
+dacomp (1e+03),Lactococcus,-7.18,0.00802,5.43e-5,9.99e-04,6.77e-03
+dacomp (1e+03),[Clostridium]_innocuum_group,-3.23,0.00819,8.71e-4,9.99e-04,6.77e-03
+dacomp (1e+03),Terrisporobacter,-3.2,7.32e-4,7.86e-5,9.99e-04,6.77e-03
+dacomp (1e+03),Intestinibacter,-2.52,0.00593,0.00103,9.99e-04,6.77e-03
+dacomp (1e+03),Enterococcus,-1.86,0.0568,0.0156,9.99e-04,6.77e-03
+dacomp (1e+03),Blautia,-1.7,0.0347,0.0107,9.99e-04,6.77e-03
+dacomp (1e+03),[Ruminococcus]_gnavugroup,-1.59,0.0411,0.0136,9.99e-04,6.77e-03
+dacomp (1e+03),Streptococcus,-1.28,0.081,0.0334,9.99e-04,6.77e-03
+dacomp (1e+03),Bifidobacterium,0.29,0.56,0.687,9.99e-04,6.77e-03
+dacomp (1e+04),uncultured18,-2.12,0.00156,3.57e-4,1.70e-03,8.82e-03
+dacomp (1e+07),Sellimonas,-2.08,9.36e-4,2.2e-4,1.78e-03,7.76e-03
+dacomp (1e+03),uncultured18,-2.12,0.00156,3.57e-4,2.00e-03,1.28e-02
+dacomp (1e+03),[Ruminococcus]_torquegroup,-4.84,0.00397,1.38e-4,3.00e-03,1.82e-02
+dacomp (1e+04),Coprobacillus,-9.94,9.83e-4,0,3.00e-03,1.45e-02
+dacomp (1e+05),Sellimonas,-2.08,9.36e-4,2.2e-4,3.23e-03,1.41e-02
+dacomp (1e+05),Granulicatella,-3.64,2.82e-4,2.17e-5,3.28e-03,1.41e-02
+dacomp (1e+05),Epulopiscium,-5.13,2.74e-4,6.86e-6,3.30e-03,1.41e-02
+dacomp (1e+06),Coprobacillus,-9.94,9.83e-4,0,3.32e-03,1.81e-02
+dacomp (1e+05),Collinsella,-1.41,0.0224,0.00843,3.76e-03,1.59e-02
+dacomp (1e+06),Sellimonas,-2.08,9.36e-4,2.2e-4,3.93e-03,2.11e-02
+dacomp (1e+03),Roseburia,-2.62,2.09e-4,3.32e-5,4.00e-03,2.23e-02
+dacomp + permApprox(U) (1e+03),uncultured18,-2.12,0.00156,3.57e-4,4.91e-03,5.06e-02
+dacomp + permApprox(C) (1e+03),uncultured18,-2.12,0.00156,3.57e-4,4.91e-03,5.06e-02
+dacomp (1e+06),Akkermansia,-4.08,0.00406,2.39e-4,5.28e-03,2.66e-02
+dacomp (1e+06),[Ruminococcus]_torquegroup,-4.84,0.00397,1.38e-4,5.70e-03,2.72e-02
+dacomp (1e+03),Coprobacillus,-9.94,9.83e-4,0,5.99e-03,3.14e-02
+dacomp + permApprox(U) (1e+03),Coprobacillus,-9.94,9.83e-4,0,5.99e-03,5.48e-02
+dacomp + permApprox(C) (1e+03),Coprobacillus,-9.94,9.83e-4,0,5.99e-03,5.48e-02
+dacomp (1e+04),Terrisporobacter,-3.2,7.32e-4,7.86e-5,6.00e-03,2.87e-02
+dacomp + permApprox(U) (1e+03),Clostridium_sensu_strict1,-0.68,0.013,0.00807,6.39e-03,5.48e-02
+dacomp + permApprox(C) (1e+03),Clostridium_sensu_strict1,-0.68,0.013,0.00807,6.39e-03,5.48e-02
+dacomp (1e+03),Clostridium_sensu_strict1,-0.68,0.013,0.00807,6.99e-03,3.40e-02
+dacomp (1e+05),Haemophilus,1,0.00204,0.00409,7.15e-03,2.76e-02
+dacomp (1e+06),Erysipelatoclostridium,-0.1,0.0117,0.011,7.84e-03,3.29e-02
+dacomp (1e+04),Sellimonas,-2.08,9.36e-4,2.2e-4,8.00e-03,3.47e-02
+dacomp (1e+04),Clostridium_sensu_strict1,-0.68,0.013,0.00807,8.40e-03,3.47e-02
+dacomp + permApprox(U) (1e+03),Collinsella,-1.41,0.0224,0.00843,8.95e-03,7.09e-02
+dacomp + permApprox(C) (1e+03),Collinsella,-1.41,0.0224,0.00843,8.95e-03,7.09e-02
+dacomp (1e+03),Collinsella,-1.41,0.0224,0.00843,8.99e-03,4.14e-02
+dacomp (1e+06),Clostridium_sensu_strict1,-0.68,0.013,0.00807,9.98e-03,3.83e-02

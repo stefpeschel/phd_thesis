@@ -1,0 +1,6 @@
+n_perm,elapsed_sec,seed,result_file
+1000,1.693000000000211,42,dacomp_res_nperm=1e+03_seed=42.rds
+10000,16.911000000000058,42,dacomp_res_nperm=1e+04_seed=42.rds
+100000,160.3340000000003,42,dacomp_res_nperm=1e+05_seed=42.rds
+1000000,1675.8629999999994,42,dacomp_res_nperm=1e+06_seed=42.rds
+10000000,20963.686,42,dacomp_res_nperm=1e+07_seed=42.rds

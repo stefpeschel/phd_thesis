@@ -1,0 +1,8 @@
+line,method,setting,n_perm,elapsed_s_total,seed,result_file,elapsed_s,elapsed_min,elapsed_h
+dacomp only,dacomp,dacomp,1000,1.693000000000211,42,dacomp_res_nperm=1e+03_seed=42.rds,1.69,0.03,0
+dacomp only,dacomp,dacomp,10000,16.911000000000058,42,dacomp_res_nperm=1e+04_seed=42.rds,16.91,0.28,0.005
+dacomp only,dacomp,dacomp,100000,160.3340000000003,42,dacomp_res_nperm=1e+05_seed=42.rds,160.33,2.67,0.045
+dacomp only,dacomp,dacomp,1000000,1675.8629999999994,42,dacomp_res_nperm=1e+06_seed=42.rds,1675.86,27.93,0.466
+dacomp only,dacomp,dacomp,10000000,20963.686,42,dacomp_res_nperm=1e+07_seed=42.rds,20963.69,349.39,5.823
+dacomp + permApprox(C),dacomp + permApprox(C),"support_at_obs, exceed0=250",1000,8.893000000000228,42,permapprox_nperm=1e+03_constraint=support_at_obs_exceed0=250_alternative=greater_seed=42.rds,8.89,0.15,0.002
+dacomp + permApprox(U),dacomp + permApprox(U),"unconstrained, exceed0=250",1000,10.833000000000212,42,permapprox_nperm=1e+03_constraint=unconstrained_exceed0=250_alternative=greater_seed=42.rds,10.83,0.18,0.003

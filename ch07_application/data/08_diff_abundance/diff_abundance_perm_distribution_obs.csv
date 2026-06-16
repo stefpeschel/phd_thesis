@@ -1,0 +1,25 @@
+taxon_id,taxon,statistic_obs,p_dacomp_1e7,p_permapprox_constrained,label
+Streptococcus,Streptococcus,16.659320420174875,1.1499998850000115e-5,4.5934130341700565e-11,"T_obs = 16.66
+p_emp = 1.15e-05
+p_pApp = 4.59e-11"
+Lactococcus,Lactococcus,28.83830401569446,9.9999990000001e-8,1.9118246700912431e-26,"T_obs = 28.84
+p_emp = 1.00e-07
+p_pApp = 1.91e-26"
+Enterococcus,Enterococcus,75.63694571500957,9.9999990000001e-8,2.2760238040254297e-96,"T_obs = 75.64
+p_emp = 1.00e-07
+p_pApp = 2.28e-96"
+Intestinibacter,Intestinibacter,48.85502803367705,9.9999990000001e-8,9.02174953718701e-16,"T_obs = 48.86
+p_emp = 1.00e-07
+p_pApp = 9.02e-16"
+[Clostridium]_innocuum_group,[Clostridium]_innocuum_group,32.16775451537082,1.4599998540000147e-5,1.9161742898398875e-8,"T_obs = 32.17
+p_emp = 1.46e-05
+p_pApp = 1.92e-08"
+Bifidobacterium,Bifidobacterium,36.75640983212193,9.9999990000001e-8,1.7000872578473663e-6,"T_obs = 36.76
+p_emp = 1.00e-07
+p_pApp = 1.70e-06"
+[Ruminococcus]_gnavugroup,[Ruminococcus]_gnavugroup,32.228167800509546,9.9999990000001e-8,2.8960025045557744e-8,"T_obs = 32.23
+p_emp = 1.00e-07
+p_pApp = 2.90e-08"
+Blautia,Blautia,20.754749195059205,2.0189997981000203e-4,7.124233962243661e-6,"T_obs = 20.75
+p_emp = 2.02e-04
+p_pApp = 7.12e-06"
