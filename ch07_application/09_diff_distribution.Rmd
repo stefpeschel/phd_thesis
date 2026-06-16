@@ -37,6 +37,8 @@ library(BiocParallel)
 library(SingleCellExperiment)
 library(permApprox)
 library(kableExtra)
+library(ggrepel)
+library(patchwork)
 
 conflicts_prefer(dplyr::filter)
 conflicts_prefer(dplyr::select)
@@ -68,10 +70,12 @@ zero_replacement_fraction <- 0.65
 n_perm <- 999
 permutation_seed <- 42
 cores <- 10
-alpha_diff_distribution <- 0.05
+alpha_diff_distribution <- 0.01
 
 refit_waddr <- FALSE
 refit_permapprox <- FALSE
+refit_waddr_complete_clr <- FALSE
+refit_permapprox_complete_clr <- FALSE
 ```
 
 ## Load data
@@ -79,12 +83,6 @@ refit_permapprox <- FALSE
 ```{r load_data}
 phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev01.rds"))
 sampdata <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
-```
-
-### Phyloseq object on genus level
-
-```{r}
-phylo_genus
 ```
 
 ## Helper functions
@@ -195,7 +193,8 @@ run_adapted_waddr <- function(count_mat, clr_mat, groups, n_perm, seed) {
     taxon_ids,
     function(taxon_id, taxon_idx) {
       if (taxon_idx %% 100 == 0) {
-        message("Running Wasserstein test for taxon ", taxon_idx, " / ", length(taxon_ids))
+        message("Running Wasserstein test for taxon ", taxon_idx, " / ", 
+                length(taxon_ids))
       }
       
       keep_nonzero <- count_mat[, taxon_id] > 0
@@ -248,8 +247,67 @@ run_adapted_waddr <- function(count_mat, clr_mat, groups, n_perm, seed) {
   )
 }
 
+run_complete_clr_waddr <- function(clr_mat, groups, n_perm, seed) {
+  taxon_ids <- colnames(clr_mat)
+  group_levels <- levels(groups)
+  
+  if (length(group_levels) != 2) {
+    stop("The complete-CLR waddR analysis requires exactly two groups.")
+  }
+  
+  wass_res_list <- purrr::imap(
+    taxon_ids,
+    function(taxon_id, taxon_idx) {
+      if (taxon_idx %% 100 == 0) {
+        message("Running complete-CLR Wasserstein test for taxon ", taxon_idx,
+                " / ", length(taxon_ids))
+      }
+      
+      x1 <- clr_mat[groups == group_levels[1], taxon_id]
+      x2 <- clr_mat[groups == group_levels[2], taxon_id]
+      
+      set.seed(seed + taxon_idx)
+      res <- suppressWarnings(.wassersteinTestSp(x1, x2, permnum = n_perm))
+      normalise_wass_result(res, n_perm = n_perm)
+    }
+  )
+  
+  names(wass_res_list) <- taxon_ids
+  
+  wass_stats <- do.call(
+    rbind,
+    lapply(wass_res_list, function(res) {
+      as.numeric(res[names(res) != "wass.values"])
+    })
+  )
+  
+  colnames(wass_stats) <- names(wass_res_list[[1]])[
+    names(wass_res_list[[1]]) != "wass.values"
+  ]
+  rownames(wass_stats) <- taxon_ids
+  
+  perm_stats <- do.call(
+    cbind,
+    lapply(wass_res_list, function(res) as.numeric(res$wass.values))
+  )
+  colnames(perm_stats) <- taxon_ids
+  
+  results <- as_tibble(wass_stats, rownames = "taxon_id") %>%
+    mutate(
+      p.adj = p.adjust(pval, method = "BH"),
+      n_group1 = sum(groups == group_levels[1]),
+      n_group2 = sum(groups == group_levels[2])
+    )
+  
+  list(
+    results = results,
+    perm_stats = perm_stats,
+    group_levels = group_levels
+  )
+}
+
 make_permapprox_results <- function(obs_stats, perm_stats, sample_size, cores) {
-  valid <- !is.na(obs_stats) & colSums(!is.na(perm_stats)) > 0
+  valid <- is.finite(obs_stats) & colSums(is.finite(perm_stats)) > 0
   
   if (!any(valid)) {
     stop("No valid Wasserstein statistics available for permApprox.")
@@ -343,6 +401,187 @@ extract_gpd_column <- function(x, column) {
   }
   
   rep(NA_real_, length(x$p_unadjusted))
+}
+
+make_distribution_diagnostic_data <- function(
+    results,
+    perm_stats,
+    clr_mat,
+    count_mat,
+    sample_data,
+    selected_taxa,
+    include_original_zeros = TRUE
+) {
+  selected_taxa_ids <- selected_taxa$taxon_id
+  
+  value_df <- as_tibble(
+    clr_mat[, selected_taxa_ids, drop = FALSE],
+    rownames = "SampleID"
+  ) %>%
+    pivot_longer(
+      cols = all_of(selected_taxa_ids),
+      names_to = "taxon_id",
+      values_to = "clr_abundance"
+    ) %>%
+    left_join(sample_data %>% select(SampleID, EBF_group), by = "SampleID")
+  
+  if (!include_original_zeros) {
+    count_df <- as_tibble(
+      count_mat[, selected_taxa_ids, drop = FALSE],
+      rownames = "SampleID"
+    ) %>%
+      pivot_longer(
+        cols = all_of(selected_taxa_ids),
+        names_to = "taxon_id",
+        values_to = "count"
+      )
+    
+    value_df <- value_df %>%
+      left_join(count_df, by = c("SampleID", "taxon_id")) %>%
+      filter(count > 0)
+  }
+  
+  value_df <- value_df %>%
+    mutate(taxon_id = factor(taxon_id, levels = selected_taxa_ids))
+  
+  quantile_df <- value_df %>%
+    filter(!is.na(clr_abundance), !is.na(EBF_group)) %>%
+    group_by(taxon_id, EBF_group) %>%
+    arrange(clr_abundance, .by_group = TRUE) %>%
+    mutate(cum_prob = (row_number() - 0.5) / n()) %>%
+    ungroup()
+  
+  if (is.null(colnames(perm_stats))) {
+    colnames(perm_stats) <- results$taxon_id
+  }
+  
+  perm_df <- perm_stats[, selected_taxa_ids, drop = FALSE] %>%
+    as_tibble() %>%
+    mutate(perm_id = row_number(), .before = 1) %>%
+    pivot_longer(
+      cols = all_of(selected_taxa_ids),
+      names_to = "taxon_id",
+      values_to = "perm_value"
+    ) %>%
+    left_join(
+      selected_taxa %>%
+        select(taxon_id, d_wass2 = `d.wass^2`),
+      by = "taxon_id"
+    ) %>%
+    mutate(taxon_id = factor(taxon_id, levels = selected_taxa_ids))
+  
+  list(
+    value_df = value_df,
+    quantile_df = quantile_df,
+    perm_df = perm_df
+  )
+}
+
+plot_distribution_diagnostics <- function(
+    diag_data,
+    panel_labels,
+    group_palette,
+    ncol,
+    axis_title_size = 16,
+    axis_text_size = 14,
+    strip_text_size = 14,
+    legend_text_size = 16,
+    legend_title_size = 16,
+    row_spacing = 18
+) {
+  hist_plot <- ggplot(
+    diag_data$value_df,
+    aes(x = clr_abundance, fill = EBF_group)
+  ) +
+    geom_histogram(position = "identity", alpha = 0.5, bins = 30) +
+    scale_fill_manual(values = group_palette) +
+    facet_wrap(
+      ~ taxon_id,
+      ncol = ncol,
+      scales = "free",
+      labeller = as_labeller(panel_labels)
+    ) +
+    labs(x = "CLR coordinate", y = "Count", fill = NULL) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = axis_title_size),
+      axis.text = element_text(size = axis_text_size),
+      strip.text = element_text(size = strip_text_size),
+      legend.text = element_text(size = legend_text_size),
+      legend.title = element_text(size = legend_title_size),
+      legend.position = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.margin = margin(b = row_spacing)
+    )
+  
+  quantile_plot <- ggplot(
+    diag_data$quantile_df,
+    aes(x = cum_prob, y = clr_abundance, color = EBF_group)
+  ) +
+    geom_line(linewidth = 0.7) +
+    scale_color_manual(values = group_palette) +
+    facet_wrap(
+      ~ taxon_id,
+      ncol = ncol,
+      scales = "free_y",
+      labeller = as_labeller(panel_labels)
+    ) +
+    labs(
+      x = "Cumulative probability",
+      y = "CLR coordinate",
+      color = NULL
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = axis_title_size),
+      axis.text = element_text(size = axis_text_size),
+      legend.text = element_text(size = legend_text_size),
+      legend.title = element_text(size = legend_title_size),
+      legend.position = "bottom",
+      panel.grid.minor = element_blank(),
+      strip.text = element_blank(),
+      plot.margin = margin(b = row_spacing)
+    )
+  
+  obs_stat_df <- diag_data$perm_df %>%
+    distinct(taxon_id, d_wass2)
+  
+  perm_plot <- ggplot(diag_data$perm_df, aes(x = perm_value)) +
+    geom_histogram(bins = 30, fill = "grey70", color = "white") +
+    geom_vline(
+      data = obs_stat_df,
+      aes(xintercept = d_wass2, color = "Observed test statistic"),
+      linewidth = 0.8
+    ) +
+    facet_wrap(
+      ~ taxon_id,
+      ncol = ncol,
+      scales = "free",
+      labeller = as_labeller(panel_labels)
+    ) +
+    scale_color_manual(
+      values = c("Observed test statistic" = "tomato"),
+      breaks = "Observed test statistic",
+      name = NULL
+    ) +
+    labs(x = expression(d[W]^2), y = "Permutation count") +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = axis_title_size),
+      axis.text = element_text(size = axis_text_size),
+      legend.text = element_text(size = legend_text_size),
+      legend.title = element_text(size = legend_title_size),
+      panel.grid.minor = element_blank(),
+      strip.text = element_blank()
+    )
+  
+  hist_plot / quantile_plot / perm_plot +
+    plot_layout(guides = "collect", heights = c(1, 1, 1)) &
+    theme(
+      legend.position = "bottom",
+      legend.text = element_text(size = legend_text_size),
+      legend.title = element_text(size = legend_title_size)
+    )
 }
 ```
 
@@ -500,7 +739,9 @@ saveRDS(
 )
 ```
 
-## Adapted two-stage waddR analysis
+## Adapted two-stage approach
+
+### waddR analysis
 
 The zero stage is computed from the original counts. The non-zero Wasserstein
 stage uses CLR values from samples where the original count of the tested taxon
@@ -569,7 +810,7 @@ write_csv(
 )
 ```
 
-## p-value refinement with permApprox
+### p-value refinement with permApprox
 
 ```{r run_permapprox}
 path_permapprox <- path_target(
@@ -694,7 +935,12 @@ write_csv(
 )
 ```
 
-## P-values from waddR and permApprox
+### P-values from separated-zero waddR and permApprox
+
+This diagnostic follows the zero-p-value plot used in the permApprox single-cell
+application. It separates taxa with non-zero empirical waddR p-values from taxa
+for which waddR returns zero, and then shows whether unconstrained or
+constrained permApprox resolves those zeros.
 
 ```{r pvalue_plot_data}
 plot_methods <- tibble(
@@ -772,8 +1018,8 @@ pvalue_plot_df
 ```
 
 ```{r pvalues_waddr_permapprox, fig.width=10, fig.height=4.5, dpi=250}
-zero_repl <- 1e-318
-log_breaks <- c(1e-3, 1e-25, 1e-50, 1e-75, 1e-100, 1e-200, 1e-300, zero_repl)
+zero_repl <- 1e-60
+log_breaks <- c(1e-3, 1e-25, 1e-50, zero_repl)
 
 pvalue_plot_df %>%
   mutate(
@@ -845,7 +1091,7 @@ pvalue_plot_df %>%
   ) +
   scale_shape_manual(
     values = c(
-      "nonzero_waddR" = 1,
+      "nonzero_waddR" = 16,
       "zero_waddR_only" = 17,
       "zero_both_unconstrained" = 16,
       "na_waddR" = 7
@@ -859,8 +1105,6 @@ pvalue_plot_df %>%
     drop = FALSE
   ) +
   labs(
-    title = "P-values (waddR vs. permApprox)",
-    subtitle = paste0("B = ", n_perm),
     x = expression(d[W]^2),
     y = expression(p),
     color = NULL,
@@ -878,18 +1122,325 @@ pvalue_plot_df %>%
   )
 ```
 
-## Distribution diagnostics for selected taxa
+### Two-stage p-value components
 
-These plots focus on taxa for which the empirical waddR p-value is zero. If no
-such taxa occur, the same diagnostic plots are shown for the taxa with the
-smallest constrained permApprox p-values.
+This panel plot separates the three p-values used in the adapted two-stage
+analysis: the non-zero Wasserstein component, the zero component, and the
+combined p-value. Colours indicate BH significance within each component.
+
+```{r two_stage_pvalue_components_data}
+alpha_diff_distribution_label <- paste0("BH < ", alpha_diff_distribution)
+two_stage_component_label_n <- 6
+volcano_label_width <- 22
+
+two_stage_pvalue_components_df <- bind_rows(
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Non-zero distribution",
+      d_wass2 = `d.wass^2`,
+      pvalue = p_permapprox_constrained,
+      qvalue = p_adj_permapprox_constrained
+    ),
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Zero prevalence",
+      d_wass2 = `d.wass^2`,
+      pvalue = p.zero,
+      qvalue = p.adj.zero
+    ),
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Combined",
+      d_wass2 = `d.wass^2`,
+      pvalue = p_combined_permapprox_constrained,
+      qvalue = p_adj_combined_permapprox_constrained
+    )
+) %>%
+  filter(is.finite(d_wass2), is.finite(pvalue)) %>%
+  mutate(
+    component = factor(
+      component,
+      levels = c("Non-zero distribution", "Zero prevalence", "Combined")
+    ),
+    neglog10_p = -log10(pvalue),
+    significance_class = if_else(
+      qvalue < alpha_diff_distribution,
+      alpha_diff_distribution_label,
+      "Not significant"
+    ),
+    significance_class = factor(
+      significance_class,
+      levels = c(alpha_diff_distribution_label, "Not significant")
+    )
+  )
+
+two_stage_component_labels <- two_stage_pvalue_components_df %>%
+  group_by(component) %>%
+  summarise(
+    n_sig = sum(significance_class == alpha_diff_distribution_label, na.rm = TRUE),
+    n_testable = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = paste0(
+      component,
+      "\n(",
+      alpha_diff_distribution_label,
+      ": ",
+      n_sig,
+      " / ",
+      n_testable,
+      ")"
+    )
+  )
+
+two_stage_component_labeller <- setNames(
+  two_stage_component_labels$label,
+  two_stage_component_labels$component
+)
+
+two_stage_component_label_df <- two_stage_pvalue_components_df %>%
+  filter(significance_class == alpha_diff_distribution_label) %>%
+  group_by(component) %>%
+  arrange(qvalue, desc(neglog10_p), .by_group = TRUE) %>%
+  slice_head(n = two_stage_component_label_n) %>%
+  ungroup() %>%
+  mutate(
+    label_taxon = stringr::str_trunc(
+      if_else(
+        is.na(taxon) | taxon == "",
+        taxon_id,
+        taxon
+      ),
+      width = volcano_label_width
+    )
+  )
+
+two_stage_pvalue_components_df
+```
+
+```{r volcano_two_stage_three_panels, fig.width=10, fig.height=4.5, dpi=250}
+volcano_combined_two_stage <- ggplot(
+  two_stage_pvalue_components_df,
+  aes(x = d_wass2, y = neglog10_p)
+) +
+  geom_point(
+    aes(color = significance_class),
+    size = 2.3,
+    alpha = 0.85
+  ) +
+  geom_text_repel(
+    data = two_stage_component_label_df,
+    aes(label = label_taxon),
+    size = 4,
+    min.segment.length = 0,
+    box.padding = 0.5,
+    max.overlaps = Inf,
+    segment.color = "grey50",
+    segment.alpha = 0.55,
+    seed = permutation_seed
+  ) +
+  geom_hline(
+    yintercept = -log10(alpha_diff_distribution),
+    linetype = "dashed",
+    color = "grey35"
+  ) +
+  facet_wrap(
+    ~ component,
+    nrow = 1,
+    labeller = as_labeller(two_stage_component_labeller)
+  ) +
+  scale_color_manual(
+    values = c(
+      setNames("#D55E00", alpha_diff_distribution_label),
+      "Not significant" = "grey60"
+    ),
+    drop = FALSE
+  ) +
+  labs(
+    x = expression(d[W]^2),
+    y = expression(-log[10](p)),
+    color = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    strip.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    legend.position = "bottom"
+  )
+volcano_combined_two_stage
+```
+
+```{r table_two_stage_significant_taxa, results="asis"}
+two_stage_sig_taxa_tbl <- dd_results_all %>%
+  filter(
+    p_adj_permapprox_constrained < alpha_diff_distribution |
+      p.adj.zero < alpha_diff_distribution |
+      p_adj_combined_permapprox_constrained < alpha_diff_distribution
+  ) %>%
+  arrange(
+    p_adj_combined_permapprox_constrained,
+    p_adj_permapprox_constrained,
+    p.adj.zero
+  ) %>%
+  transmute(
+    Taxon = taxon,
+    `$d_W^2$` = round(`d.wass^2`, 3),
+    `$p_{+}$` = sci(p_permapprox_constrained),
+    `$q_{+}$` = sci(p_adj_permapprox_constrained),
+    `$p_{0}$` = sci(p.zero),
+    `$q_{0}$` = sci(p.adj.zero),
+    `$p_{comb}$` = sci(p_combined_permapprox_constrained),
+    `$q_{comb}$` = sci(p_adj_combined_permapprox_constrained)
+  )
+
+two_stage_sig_taxa_table <- kbl(
+  two_stage_sig_taxa_tbl,
+  format = "latex",
+  booktabs = TRUE,
+  escape = FALSE,
+  caption = paste0(
+    "Genera significant at BH < ",
+    alpha_diff_distribution,
+    " in at least one component of the adapted two-stage differential ",
+    "distribution analysis. The non-zero and combined p-values use the ",
+    "constrained \\texttt{permApprox} refinement."
+  ),
+  label = "application:diff-distribution-two-stage-significant-taxa"
+) %>%
+  kable_styling(latex_options = c("hold_position"), font_size = 8)
+
+two_stage_sig_taxa_table
+
+save_kable(
+  two_stage_sig_taxa_table,
+  path_target("diff_distribution_two_stage_significant_taxa_table.tex")
+)
+```
+
+### Volcano plot
+
+The differential distribution volcano plot uses the observed squared
+Wasserstein distance as the effect statistic and the constrained permApprox
+combined p-value for the zero and non-zero stages as the significance measure.
+
+```{r volcano_plot_data}
+volcano_q_threshold <- alpha_diff_distribution
+volcano_label_n <- 12
+
+dd_volcano_plot_df <- dd_results_all %>%
+  filter(is.finite(`d.wass^2`), is.finite(p_combined_permapprox_constrained)) %>%
+  mutate(
+    neglog10_p_combined = -log10(p_combined_permapprox_constrained),
+    significance_class = case_when(
+      p_adj_combined_permapprox_constrained < volcano_q_threshold ~
+        "combined_bh_significant",
+      TRUE ~ "not_significant"
+    ),
+    significance_class = factor(
+      significance_class,
+      levels = c(
+        "combined_bh_significant",
+        "not_significant"
+      )
+    ),
+    label_taxon = stringr::str_trunc(
+      if_else(
+        is.na(taxon) | taxon == "",
+        taxon_id,
+        taxon
+      ),
+      width = volcano_label_width
+    )
+  )
+
+volcano_label_df <- dd_volcano_plot_df %>%
+  arrange(p_adj_combined_permapprox_constrained, desc(`d.wass^2`)) %>%
+  slice_head(n = volcano_label_n)
+
+dd_volcano_plot_df
+```
+
+```{r save_volcano_plot_data}
+write_csv(
+  dd_volcano_plot_df,
+  file = path_target("diff_distribution_volcano_plot_data.csv")
+)
+```
+
+```{r volcano_plot, fig.width=8, fig.height=5, dpi=250}
+ggplot(
+  dd_volcano_plot_df,
+  aes(x = `d.wass^2`, y = neglog10_p_combined)
+) +
+  geom_point(
+    aes(color = significance_class),
+    size = 2.4,
+    alpha = 0.85
+  ) +
+  geom_hline(
+    yintercept = -log10(alpha_diff_distribution),
+    linetype = "dashed",
+    color = "grey35"
+  ) +
+  geom_text_repel(
+    data = volcano_label_df,
+    aes(label = label_taxon),
+    size = 3,
+    min.segment.length = 0,
+    box.padding = 0.35,
+    max.overlaps = Inf,
+    seed = permutation_seed
+  ) +
+  scale_color_manual(
+    values = c(
+      "combined_bh_significant" = "#D55E00",
+      "not_significant" = "grey60"
+    ),
+    labels = c(
+      "combined_bh_significant" = paste0("Combined ", alpha_diff_distribution_label),
+      "not_significant" = "Not significant"
+    ),
+    drop = FALSE
+  ) +
+  labs(
+    title = "Differential distribution volcano plot",
+    subtitle = "Adapted waddR with constrained permApprox p-value refinement",
+    x = expression(d[W]^2),
+    y = expression(-log[10](p[combined])),
+    color = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
+```
+
+### Distribution diagnostics for selected genera
+
+These plots focus on the non-zero Wasserstein stage. CLR-transformed
+abundances are shown only for samples where the tested genus had a positive
+original count, matching the distributions used in the adapted two-stage
+waddR test.
 
 ```{r selected_taxa_distribution_data}
+n_distribution_taxa <- 4
+
 selected_taxa_df <- dd_results_all %>%
   filter(!is.na(`d.wass^2`), !is.na(p_permapprox_constrained)) %>%
-  mutate(is_zero_waddr = !is.na(pval) & pval == 0) %>%
-  arrange(desc(is_zero_waddr), p_permapprox_constrained, `d.wass^2`) %>%
-  slice_head(n = 6) %>%
+  arrange(p_adj_permapprox_constrained, p_permapprox_constrained) %>%
+  slice_head(n = n_distribution_taxa) %>%
   mutate(
     taxon_label = taxon,
     taxon_label = if_else(
@@ -899,128 +1450,43 @@ selected_taxa_df <- dd_results_all %>%
     ),
     panel_label = paste0(
       stringr::str_trunc(taxon_label, width = 22),
-      "\n(d = ", signif(`d.wass^2`, 3),
-      "; pApp(C) = ", sci(p_permapprox_constrained), ")"
+      "\n(d = ", signif(d.wass, 3),
+      "; p = ", sci(p_permapprox_constrained), ")"
     )
   )
 
 selected_taxa_ids <- selected_taxa_df$taxon_id
 selected_panel_labels <- setNames(selected_taxa_df$panel_label, selected_taxa_ids)
-selected_plot_title_suffix <- if (any(selected_taxa_df$is_zero_waddr)) {
-  "waddR p = 0"
-} else {
-  "smallest constrained permApprox p-values"
-}
 
-selected_clr_df <- as_tibble(X_clr[, selected_taxa_ids, drop = FALSE], rownames = "SampleID") %>%
-  left_join(dd_sample_data %>% select(SampleID, EBF_group), by = "SampleID") %>%
-  pivot_longer(
-    cols = all_of(selected_taxa_ids),
-    names_to = "taxon_id",
-    values_to = "clr_abundance"
-  ) %>%
-  mutate(
-    taxon_id = factor(taxon_id, levels = selected_taxa_ids)
-  )
-
-if (is.null(colnames(waddr_perm_stats))) {
-  colnames(waddr_perm_stats) <- waddr_results$taxon_id
-}
-
-selected_perm_df <- waddr_perm_stats[, selected_taxa_ids, drop = FALSE] %>%
-  as_tibble() %>%
-  mutate(perm_id = row_number(), .before = 1) %>%
-  pivot_longer(
-    cols = all_of(selected_taxa_ids),
-    names_to = "taxon_id",
-    values_to = "perm_value"
-  ) %>%
-  left_join(
-    selected_taxa_df %>%
-      select(taxon_id, d_wass2 = `d.wass^2`),
-    by = "taxon_id"
-  ) %>%
-  mutate(
-    taxon_id = factor(taxon_id, levels = selected_taxa_ids)
-  )
+selected_distribution_data <- make_distribution_diagnostic_data(
+  results = waddr_results,
+  perm_stats = waddr_perm_stats,
+  clr_mat = X_clr,
+  count_mat = X_counts,
+  sample_data = dd_sample_data,
+  selected_taxa = selected_taxa_df,
+  include_original_zeros = FALSE
+)
 
 selected_taxa_df
 ```
 
-### Densities
-
-```{r selected_taxa_density, fig.width=10, fig.height=5, dpi=250}
-ggplot(selected_clr_df, aes(x = clr_abundance, fill = EBF_group)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = dd_group_palette) +
-  facet_wrap(
-    ~ taxon_id,
-    scales = "free",
-    labeller = as_labeller(selected_panel_labels)
-  ) +
-  labs(
-    title = paste("CLR-transformed abundance densities (", selected_plot_title_suffix, ")", sep = ""),
-    x = "CLR-transformed abundance",
-    y = "Density",
-    fill = NULL
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom",
-    panel.grid.minor = element_blank(),
-    panel.spacing = unit(1.5, "lines")
-  )
+```{r selected_taxa_distribution_diagnostics, fig.width=10, fig.height=7, dpi=250}
+plot_distribution_diagnostics(
+  diag_data = selected_distribution_data,
+  panel_labels = selected_panel_labels,
+  group_palette = dd_group_palette,
+  ncol = n_distribution_taxa,
+  axis_title_size = 14,
+  axis_text_size = 14,
+  strip_text_size = 13,
+  legend_text_size = 16,
+  legend_title_size = 16,
+  row_spacing = 20
+)
 ```
 
-### Histograms
-
-```{r selected_taxa_hist, fig.width=10, fig.height=5, dpi=250}
-ggplot(selected_clr_df, aes(x = clr_abundance, fill = EBF_group)) +
-  geom_histogram(position = "identity", alpha = 0.5, bins = 30) +
-  scale_fill_manual(values = dd_group_palette) +
-  facet_wrap(
-    ~ taxon_id,
-    scales = "free",
-    labeller = as_labeller(selected_panel_labels)
-  ) +
-  labs(
-    title = paste("CLR-transformed abundance histograms (", selected_plot_title_suffix, ")", sep = ""),
-    x = "CLR-transformed abundance",
-    y = "Count",
-    fill = NULL
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "bottom",
-    panel.grid.minor = element_blank(),
-    panel.spacing = unit(1.5, "lines")
-  )
-```
-
-### Permutation distributions
-
-```{r selected_taxa_perm_dist, fig.width=10, fig.height=5, dpi=250}
-ggplot(selected_perm_df, aes(x = perm_value)) +
-  geom_histogram(bins = 30, fill = "grey70", color = "white") +
-  geom_vline(aes(xintercept = d_wass2), color = "#D55E00", linewidth = 0.8) +
-  facet_wrap(
-    ~ taxon_id,
-    scales = "free",
-    labeller = as_labeller(selected_panel_labels)
-  ) +
-  labs(
-    title = paste("Permutation distributions (", selected_plot_title_suffix, ")", sep = ""),
-    x = expression(d[W]^2),
-    y = "Count"
-  ) +
-  theme_minimal() +
-  theme(
-    panel.grid.minor = element_blank(),
-    panel.spacing = unit(1.5, "lines")
-  )
-```
-
-## Top taxa
+### Top taxa
 
 ```{r table_top_taxa, results="asis"}
 n_top <- 20
@@ -1058,6 +1524,790 @@ top_taxa_table
 save_kable(
   top_taxa_table,
   path_target("diff_distribution_top_taxa_table.tex")
+)
+```
+
+## One-stage complete CLR approach
+
+### Complete CLR waddR analysis
+
+As a contrast to the separated-zero approach, this analysis runs the
+Wasserstein test on the complete CLR-transformed distributions. Samples with an
+original zero count are therefore included through their multiplicative
+replacement CLR value rather than being handled by a separate zero stage.
+
+```{r run_complete_clr_waddr}
+path_waddr_complete <- path_target(
+  paste0("waddr_complete_clr_nperm=", n_perm, "_seed=", permutation_seed, ".rds")
+)
+
+if (!file.exists(path_waddr_complete) || isTRUE(refit_waddr_complete_clr)) {
+  register(SerialParam())
+  
+  runtime_waddr_complete <- system.time({
+    waddr_complete_clr <- run_complete_clr_waddr(
+      clr_mat = X_clr,
+      groups = y_groups,
+      n_perm = n_perm,
+      seed = permutation_seed
+    )
+  })
+  
+  waddr_complete_clr$runtime <- runtime_waddr_complete
+  saveRDS(waddr_complete_clr, file = path_waddr_complete)
+} else {
+  waddr_complete_clr <- readRDS(path_waddr_complete)
+}
+
+waddr_complete_results <- waddr_complete_clr$results
+waddr_complete_perm_stats <- waddr_complete_clr$perm_stats
+
+waddr_complete_results %>%
+  arrange(pval) %>%
+  head(n = 10)
+```
+
+```{r waddr_complete_summary}
+waddr_complete_summary <- waddr_complete_results %>%
+  summarise(
+    n_taxa = n(),
+    n_testable = sum(!is.na(pval)),
+    n_zero_p_waddr = sum(pval == 0, na.rm = TRUE),
+    n_significant_raw = sum(pval < alpha_diff_distribution, na.rm = TRUE),
+    n_significant_bh = sum(p.adj < alpha_diff_distribution, na.rm = TRUE)
+  )
+
+waddr_complete_summary
+```
+
+```{r save_waddr_complete_results}
+write_csv(
+  waddr_complete_summary,
+  file = path_target("waddr_complete_clr_summary.csv")
+)
+
+write_csv(
+  waddr_complete_results %>% mutate(taxon = base::unname(taxon_labels[taxon_id])),
+  file = path_target("waddr_complete_clr_results.csv")
+)
+```
+
+### p-value refinement with permApprox for complete CLR waddR
+
+```{r run_complete_clr_permapprox}
+path_permapprox_complete <- path_target(
+  paste0(
+    "permapprox_waddr_complete_clr_nperm=",
+    n_perm,
+    "_seed=",
+    permutation_seed,
+    ".rds"
+  )
+)
+
+obs_stats_complete <- waddr_complete_results$`d.wass^2`
+names(obs_stats_complete) <- waddr_complete_results$taxon_id
+
+if (!file.exists(path_permapprox_complete) || isTRUE(refit_permapprox_complete_clr)) {
+  dd_permapprox_complete <- make_permapprox_results(
+    obs_stats = obs_stats_complete,
+    perm_stats = waddr_complete_perm_stats,
+    sample_size = min(dd_group_summary$n_samples),
+    cores = cores
+  )
+  
+  saveRDS(dd_permapprox_complete, file = path_permapprox_complete)
+} else {
+  dd_permapprox_complete <- readRDS(path_permapprox_complete)
+}
+
+summary(dd_permapprox_complete$constrained)
+```
+
+```{r combine_complete_clr_results}
+dd_results_complete_all <- waddr_complete_results %>%
+  mutate(
+    taxon = base::unname(taxon_labels[taxon_id]),
+    p_permapprox_unconstrained = dd_permapprox_complete$unconstrained$p_unadjusted,
+    p_permapprox_constrained = dd_permapprox_complete$constrained$p_unadjusted,
+    p_adj_permapprox_unconstrained = p.adjust(
+      p_permapprox_unconstrained,
+      method = "BH"
+    ),
+    p_adj_permapprox_constrained = p.adjust(
+      p_permapprox_constrained,
+      method = "BH"
+    ),
+    method_used_unconstrained = dd_permapprox_complete$unconstrained$method_used,
+    method_used_constrained = dd_permapprox_complete$constrained$method_used,
+    shape_permapprox_unconstrained = extract_gpd_column(
+      dd_permapprox_complete$unconstrained,
+      "shape"
+    ),
+    shape_permapprox_constrained = extract_gpd_column(
+      dd_permapprox_complete$constrained,
+      "shape"
+    ),
+    scale_permapprox_unconstrained = extract_gpd_column(
+      dd_permapprox_complete$unconstrained,
+      "scale"
+    ),
+    scale_permapprox_constrained = extract_gpd_column(
+      dd_permapprox_complete$constrained,
+      "scale"
+    )
+  )
+
+dd_permapprox_complete_summary <- dd_results_complete_all %>%
+  summarise(
+    n_taxa = n(),
+    n_testable_waddr = sum(!is.na(pval)),
+    n_testable_permapprox_unconstrained = sum(!is.na(p_permapprox_unconstrained)),
+    n_testable_permapprox_constrained = sum(!is.na(p_permapprox_constrained)),
+    n_zero_waddr = sum(pval == 0, na.rm = TRUE),
+    n_zero_permapprox_unconstrained = sum(p_permapprox_unconstrained == 0, na.rm = TRUE),
+    n_zero_permapprox_constrained = sum(p_permapprox_constrained == 0, na.rm = TRUE),
+    n_sig_waddr_bh = sum(p.adj < alpha_diff_distribution, na.rm = TRUE),
+    n_sig_permapprox_unconstrained_bh = sum(
+      p_adj_permapprox_unconstrained < alpha_diff_distribution,
+      na.rm = TRUE
+    ),
+    n_sig_permapprox_constrained_bh = sum(
+      p_adj_permapprox_constrained < alpha_diff_distribution,
+      na.rm = TRUE
+    )
+  )
+
+dd_permapprox_complete_summary
+```
+
+```{r save_complete_clr_permapprox_results}
+saveRDS(
+  dd_results_complete_all,
+  file = path_target("diff_distribution_complete_clr_results_all.rds")
+)
+
+write_csv(
+  dd_results_complete_all,
+  file = path_target("diff_distribution_complete_clr_results_all.csv")
+)
+
+write_csv(
+  dd_permapprox_complete_summary,
+  file = path_target("diff_distribution_complete_clr_permapprox_summary.csv")
+)
+```
+
+### P-values from complete CLR waddR and permApprox
+
+This is the same zero-p-value diagnostic, but for the complete CLR approach
+where originally zero counts remain in the distributions after multiplicative
+replacement and CLR transformation.
+
+```{r pvalue_plot_complete_clr_data}
+pvalue_plot_complete_clr_df <- purrr::map_dfr(
+  seq_len(nrow(plot_methods)),
+  function(i) {
+    p_col <- plot_methods$p_col[i]
+    
+    dd_results_complete_all %>%
+      transmute(
+        taxon_id,
+        taxon,
+        method_key = plot_methods$method_key[i],
+        method_label = plot_methods$method_label[i],
+        d_wass2 = `d.wass^2`,
+        pvalue = .data[[p_col]],
+        p_waddr = pval,
+        p_permapprox_unconstrained,
+        p_permapprox_constrained
+      )
+  }
+) %>%
+  mutate(
+    zero_class = case_when(
+      is.na(p_waddr) ~ "na_waddR",
+      p_waddr > 0 ~ "nonzero_waddR",
+      p_waddr == 0 & p_permapprox_unconstrained == 0 ~ "zero_both_unconstrained",
+      p_waddr == 0 ~ "zero_waddR_only",
+      TRUE ~ NA_character_
+    ),
+    zero_class = factor(
+      zero_class,
+      levels = c(
+        "nonzero_waddR",
+        "zero_waddR_only",
+        "zero_both_unconstrained",
+        "na_waddR"
+      )
+    ),
+    method_key = factor(method_key, levels = plot_methods$method_key),
+    method_label = factor(method_label, levels = plot_methods$method_label)
+  )
+
+facet_complete_clr_labels <- pvalue_plot_complete_clr_df %>%
+  group_by(method_label) %>%
+  summarise(
+    n_zero = sum(pvalue == 0, na.rm = TRUE),
+    n_non_na = sum(!is.na(pvalue)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = paste0(method_label, "\n(zeros: ", n_zero, " / ", n_non_na, ")")
+  )
+
+facet_complete_clr_labeller <- setNames(
+  facet_complete_clr_labels$label,
+  facet_complete_clr_labels$method_label
+)
+
+pvalue_plot_complete_clr_df
+```
+
+```{r pvalues_complete_clr_waddr_permapprox, fig.width=10, fig.height=4.5, dpi=250}
+pvalue_plot_complete_clr_df %>%
+  mutate(
+    pvalue_plot = case_when(
+      is.na(pvalue) ~ NA_real_,
+      pvalue == 0 ~ zero_repl,
+      pvalue < zero_repl ~ NA_real_,
+      TRUE ~ pvalue
+    )
+  ) %>%
+  ggplot(aes(x = d_wass2, y = pvalue_plot)) +
+  geom_point(
+    data = function(x) filter(x, zero_class == "nonzero_waddR"),
+    aes(color = zero_class, shape = zero_class),
+    size = 3,
+    alpha = 0.5,
+    stroke = 0.5
+  ) +
+  geom_point(
+    data = function(x) filter(x, zero_class == "zero_waddR_only"),
+    aes(color = zero_class, shape = zero_class),
+    size = 3,
+    alpha = 0.9,
+    stroke = 0.5
+  ) +
+  geom_point(
+    data = function(x) filter(x, zero_class == "zero_both_unconstrained"),
+    aes(color = zero_class, shape = zero_class),
+    size = 3,
+    alpha = 0.9,
+    stroke = 0.5
+  ) +
+  geom_point(
+    data = function(x) filter(x, zero_class == "na_waddR"),
+    aes(color = zero_class, shape = zero_class),
+    size = 2.8,
+    alpha = 0.9,
+    stroke = 0.6
+  ) +
+  geom_hline(yintercept = 1 / (n_perm + 1), linetype = "dashed", color = "black") +
+  facet_wrap(
+    ~ method_label,
+    nrow = 1,
+    labeller = as_labeller(facet_complete_clr_labeller)
+  ) +
+  scale_y_log10(
+    breaks = log_breaks,
+    labels = function(x) {
+      out <- scales::label_scientific()(x)
+      out[x <= zero_repl * 10] <- "0"
+      out
+    }
+  ) +
+  coord_cartesian(ylim = c(zero_repl / 2, 1)) +
+  scale_color_manual(
+    values = c(
+      "nonzero_waddR" = "grey40",
+      "zero_waddR_only" = "#1f77b4",
+      "zero_both_unconstrained" = "darkorange2",
+      "na_waddR" = "grey20"
+    ),
+    labels = c(
+      "nonzero_waddR" = "Non-zero in waddR",
+      "zero_waddR_only" = "Zero in waddR -> >0 in permApprox(U)",
+      "zero_both_unconstrained" = "Zero in waddR -> 0 in permApprox(U)",
+      "na_waddR" = "NA in waddR"
+    ),
+    drop = FALSE
+  ) +
+  scale_shape_manual(
+    values = c(
+      "nonzero_waddR" = 16,
+      "zero_waddR_only" = 17,
+      "zero_both_unconstrained" = 16,
+      "na_waddR" = 7
+    ),
+    labels = c(
+      "nonzero_waddR" = "Non-zero in waddR",
+      "zero_waddR_only" = "Zero in waddR -> >0 in permApprox(U)",
+      "zero_both_unconstrained" = "Zero in waddR -> 0 in permApprox(U)",
+      "na_waddR" = "NA in waddR"
+    ),
+    drop = FALSE
+  ) +
+  labs(
+    x = expression(d[W]^2),
+    y = expression(p),
+    color = NULL,
+    shape = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(color = "grey80"),
+    panel.spacing = unit(1.6, "lines"),
+    strip.text = element_text(size = 11),
+    legend.position = c(0.23, 0.32),
+    legend.background = element_rect(fill = "white", color = "black"),
+    legend.key = element_rect(fill = "white", color = NA)
+  )
+```
+
+### Constrained permApprox comparison for complete CLR waddR
+
+This two-panel version is intended for the paper. It focuses on the one-stage
+complete CLR analysis where waddR returns zero p-values and compares those
+directly with the constrained permApprox refinement, labelled simply as
+`permApprox`.
+
+```{r pvalue_plot_complete_clr_constrained_data}
+plot_methods_complete_constrained <- tibble(
+  method_key = c("waddR", "permApprox_constrained"),
+  method_label = c("waddR", "waddR + permApprox"),
+  p_col = c("pval", "p_permapprox_constrained")
+)
+
+pvalue_plot_complete_clr_constrained_df <- purrr::map_dfr(
+  seq_len(nrow(plot_methods_complete_constrained)),
+  function(i) {
+    p_col <- plot_methods_complete_constrained$p_col[i]
+    
+    dd_results_complete_all %>%
+      transmute(
+        taxon_id,
+        taxon,
+        method_key = plot_methods_complete_constrained$method_key[i],
+        method_label = plot_methods_complete_constrained$method_label[i],
+        d_wass2 = `d.wass^2`,
+        pvalue = .data[[p_col]],
+        p_waddr = pval,
+        p_permapprox = p_permapprox_constrained
+      )
+  }
+) %>%
+  mutate(
+    zero_class = case_when(
+      is.na(p_waddr) ~ "na_waddR",
+      p_waddr > 0 ~ "nonzero_waddR",
+      p_waddr == 0 & p_permapprox == 0 ~ "zero_both",
+      p_waddr == 0 ~ "zero_waddR_only",
+      TRUE ~ NA_character_
+    ),
+    zero_class = factor(
+      zero_class,
+      levels = c(
+        "nonzero_waddR",
+        "zero_waddR_only",
+        "zero_both",
+        "na_waddR"
+      )
+    ),
+    method_key = factor(
+      method_key,
+      levels = plot_methods_complete_constrained$method_key
+    ),
+    method_label = factor(
+      method_label,
+      levels = plot_methods_complete_constrained$method_label
+    )
+  )
+
+facet_complete_constrained_labels <- pvalue_plot_complete_clr_constrained_df %>%
+  group_by(method_label) %>%
+  summarise(
+    n_zero = sum(pvalue == 0, na.rm = TRUE),
+    n_non_na = sum(!is.na(pvalue)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = paste0(method_label, "\n(zeros: ", n_zero, " / ", n_non_na, ")")
+  )
+
+facet_complete_constrained_labeller <- setNames(
+  facet_complete_constrained_labels$label,
+  facet_complete_constrained_labels$method_label
+)
+
+pvalue_plot_complete_clr_constrained_df
+```
+
+```{r pvalues_complete_clr_waddr_permapprox_constrained_only, fig.width=10, fig.height=3.5, dpi=250}
+zero_repl_constrained_plot <- 1e-60
+log_breaks_constrained_plot <- c(
+  1e-3,
+  1e-10,
+  1e-25,
+  1e-50,
+  zero_repl_constrained_plot
+)
+
+pvalue_plot_complete_clr_constrained_df %>%
+  mutate(
+    pvalue_plot = case_when(
+      is.na(pvalue) ~ NA_real_,
+      pvalue == 0 ~ zero_repl_constrained_plot,
+      pvalue < zero_repl_constrained_plot ~ NA_real_,
+      TRUE ~ pvalue
+    )
+  ) %>%
+  ggplot(aes(x = d_wass2, y = pvalue_plot)) +
+  geom_point(
+    data = function(x) filter(x, zero_class == "nonzero_waddR"),
+    aes(color = zero_class, shape = zero_class),
+    size = 3,
+    alpha = 0.5,
+    stroke = 0.5
+  ) +
+  geom_point(
+    data = function(x) filter(x, zero_class == "zero_waddR_only"),
+    aes(color = zero_class, shape = zero_class),
+    size = 3,
+    alpha = 0.9,
+    stroke = 0.5
+  ) +
+  geom_point(
+    data = function(x) filter(x, zero_class == "na_waddR"),
+    aes(color = zero_class, shape = zero_class),
+    size = 2.8,
+    alpha = 0.9,
+    stroke = 0.6
+  ) +
+  geom_hline(yintercept = 1 / (n_perm + 1), linetype = "dashed", color = "black") +
+  facet_wrap(
+    ~ method_label,
+    nrow = 1,
+    labeller = as_labeller(facet_complete_constrained_labeller)
+  ) +
+  scale_y_log10(
+    breaks = log_breaks_constrained_plot,
+    labels = function(x) {
+      out <- scales::label_scientific()(x)
+      out[x <= zero_repl_constrained_plot * 10] <- "0"
+      out
+    }
+  ) +
+  coord_cartesian(ylim = c(zero_repl_constrained_plot / 2, 1)) +
+  scale_color_manual(
+    values = c(
+      "nonzero_waddR" = "grey40",
+      "zero_waddR_only" = "darkorange2",
+      "na_waddR" = "grey20"
+    ),
+    labels = c(
+      "nonzero_waddR" = "Non-zero in waddR",
+      "zero_waddR_only" = "Zero in waddR",
+      "na_waddR" = "NA in waddR"
+    ),
+    drop = FALSE
+  ) +
+  scale_shape_manual(
+    values = c(
+      "nonzero_waddR" = 16,
+      "zero_waddR_only" = 16,
+      "na_waddR" = 7
+    ),
+    labels = c(
+      "nonzero_waddR" = "Non-zero in waddR",
+      "zero_waddR_only" = "Zero in waddR",
+      "na_waddR" = "NA in waddR"
+    ),
+    drop = FALSE
+  ) +
+  labs(
+    x = expression(d[W]^2),
+    y = expression(p),
+    color = NULL,
+    shape = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    strip.text = element_text(size = 14),
+    legend.text = element_text(size = 13),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(color = "grey80"),
+    panel.spacing = unit(1.6, "lines"),
+    legend.position = c(0.5, 0.35),
+    legend.background = element_rect(fill = "white", color = "black"),
+    legend.key = element_rect(fill = "white", color = NA)
+  )
+```
+
+### Volcano plot
+
+The one-stage volcano plot uses the complete CLR Wasserstein statistic and the
+constrained permApprox p-value refinement. Colours indicate BH significance at
+the same alpha level used for the two-stage component plots.
+
+```{r complete_clr_volcano_plot_data}
+complete_clr_volcano_label_n <- 6
+complete_clr_volcano_alpha_label <- paste0("BH < ", alpha_diff_distribution)
+
+complete_clr_volcano_df <- dd_results_complete_all %>%
+  filter(is.finite(`d.wass^2`), is.finite(p_permapprox_constrained)) %>%
+  mutate(
+    component = "Complete CLR distribution",
+    neglog10_p = -log10(p_permapprox_constrained),
+    significance_class = if_else(
+      p_adj_permapprox_constrained < alpha_diff_distribution,
+      complete_clr_volcano_alpha_label,
+      "Not significant"
+    ),
+    significance_class = factor(
+      significance_class,
+      levels = c(complete_clr_volcano_alpha_label, "Not significant")
+    ),
+    label_taxon = stringr::str_trunc(
+      if_else(
+        is.na(taxon) | taxon == "",
+        taxon_id,
+        taxon
+      ),
+      width = volcano_label_width
+    )
+  ) %>%
+  mutate(
+    component = factor(component, levels = "Complete CLR distribution")
+  )
+
+complete_clr_volcano_label_df <- complete_clr_volcano_df %>%
+  filter(significance_class == complete_clr_volcano_alpha_label) %>%
+  arrange(p_adj_permapprox_constrained, desc(neglog10_p)) %>%
+  slice_head(n = complete_clr_volcano_label_n)
+
+complete_clr_volcano_labeller <- setNames(
+  paste0(
+    "Complete CLR distribution\n(",
+    complete_clr_volcano_alpha_label,
+    ": ",
+    sum(
+      complete_clr_volcano_df$p_adj_permapprox_constrained < alpha_diff_distribution,
+      na.rm = TRUE
+    ),
+    " / ",
+    sum(!is.na(complete_clr_volcano_df$p_adj_permapprox_constrained)),
+    ")"
+  ),
+  "Complete CLR distribution"
+)
+
+complete_clr_volcano_df
+```
+
+```{r volcano_plot_one_stage, fig.width=4.5, fig.height=4.5, dpi=250}
+volcano_one_stage <- ggplot(
+  complete_clr_volcano_df,
+  aes(x = `d.wass^2`, y = neglog10_p)
+) +
+  geom_point(
+    aes(color = significance_class),
+    size = 2.3,
+    alpha = 0.85
+  ) +
+  geom_text_repel(
+    data = complete_clr_volcano_label_df,
+    aes(label = label_taxon),
+    size = 4,
+    min.segment.length = 0,
+    box.padding = 0.35,
+    max.overlaps = Inf,
+    segment.color = "grey50",
+    segment.alpha = 0.55,
+    seed = permutation_seed
+  ) +
+  geom_hline(
+    yintercept = -log10(alpha_diff_distribution),
+    linetype = "dashed",
+    color = "grey35"
+  ) +
+  facet_wrap(
+    ~ component,
+    nrow = 1,
+    labeller = as_labeller(complete_clr_volcano_labeller)
+  ) +
+  scale_color_manual(
+    values = setNames(
+      c("#D55E00", "grey60"),
+      c(complete_clr_volcano_alpha_label, "Not significant")
+    ),
+    drop = FALSE
+  ) +
+  labs(
+    x = expression(d[W]^2),
+    y = expression(-log[10](p)),
+    color = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    strip.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
+```
+
+```{r volcano_two_stage_one_stage_combined, fig.width=11, fig.height=5, dpi=250}
+(
+  volcano_combined_two_stage +
+    labs(title = "Two-stage approach") +
+    theme(
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      legend.position = "bottom"
+    )
+) +
+  (
+    volcano_one_stage +
+      labs(title = "One-stage approach") +
+      theme(
+        plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+        legend.position = "bottom"
+      )
+  ) +
+  plot_layout(widths = c(3, 1), guides = "collect") &
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 16)
+  )
+```
+
+
+### Distribution diagnostics for selected genera
+
+These plots use the complete CLR-transformed distributions from the one-stage
+analysis. Originally zero counts are included through their multiplicative
+replacement CLR values, matching the data passed to the one-stage Wasserstein
+test.
+
+```{r selected_taxa_complete_clr_distribution_data}
+selected_complete_taxa_df <- dd_results_complete_all %>%
+  filter(!is.na(`d.wass^2`), !is.na(p_permapprox_constrained)) %>%
+  arrange(p_adj_permapprox_constrained, p_permapprox_constrained) %>%
+  slice_head(n = n_distribution_taxa) %>%
+  mutate(
+    taxon_label = taxon,
+    taxon_label = if_else(
+      is.na(taxon_label) | taxon_label == "",
+      taxon_id,
+      taxon_label
+    ),
+    panel_label = paste0(
+      stringr::str_trunc(taxon_label, width = 22),
+      "\n(d = ", signif(d.wass, 3),
+      "; p = ", sci(p_permapprox_constrained), ")"
+    )
+  )
+
+selected_complete_taxa_ids <- selected_complete_taxa_df$taxon_id
+selected_complete_panel_labels <- setNames(
+  selected_complete_taxa_df$panel_label,
+  selected_complete_taxa_ids
+)
+
+selected_complete_distribution_data <- make_distribution_diagnostic_data(
+  results = waddr_complete_results,
+  perm_stats = waddr_complete_perm_stats,
+  clr_mat = X_clr,
+  count_mat = X_counts,
+  sample_data = dd_sample_data,
+  selected_taxa = selected_complete_taxa_df,
+  include_original_zeros = TRUE
+)
+
+selected_complete_taxa_df
+```
+
+```{r selected_taxa_complete_clr_distribution_diagnostics, fig.width=10, fig.height=7.5, dpi=250}
+plot_distribution_diagnostics(
+  diag_data = selected_complete_distribution_data,
+  panel_labels = selected_complete_panel_labels,
+  group_palette = dd_group_palette,
+  ncol = n_distribution_taxa,
+  axis_title_size = 14,
+  axis_text_size = 14,
+  strip_text_size = 13,
+  legend_text_size = 16,
+  legend_title_size = 16,
+  row_spacing = 20
+)
+```
+
+## Comparative p-value table
+
+```{r table_pvalues_all_approaches, results="asis"}
+pvalues_all_approaches_tbl <- dd_results_all %>%
+  transmute(
+    taxon_id,
+    Taxon = taxon,
+    `$p_{+}$` = p_permapprox_constrained,
+    `$q_{+}$` = p_adj_permapprox_constrained,
+    `$p_{0}$` = p.zero,
+    `$q_{0}$` = p.adj.zero,
+    `$p_{comb}$` = p_combined_permapprox_constrained,
+    `$q_{comb}$` = p_adj_combined_permapprox_constrained
+  ) %>%
+  left_join(
+    dd_results_complete_all %>%
+      transmute(
+        taxon_id,
+        `$p_{1stage}$` = p_permapprox_constrained,
+        `$q_{1stage}$` = p_adj_permapprox_constrained
+      ),
+    by = "taxon_id"
+  ) %>%
+  mutate(
+    min_q = pmin(
+      `$q_{+}$`,
+      `$q_{0}$`,
+      `$q_{comb}$`,
+      `$q_{1stage}$`,
+      na.rm = TRUE
+    )
+  ) %>%
+  arrange(min_q, Taxon) %>%
+  select(-taxon_id, -min_q) %>%
+  mutate(
+    across(
+      where(is.numeric),
+      sci
+    )
+  )
+
+pvalues_all_approaches_table <- kbl(
+  pvalues_all_approaches_tbl,
+  format = "latex",
+  booktabs = TRUE,
+  escape = FALSE,
+  caption = paste0(
+    "P-values and BH-adjusted p-values for the adapted two-stage ",
+    "differential distribution analysis and the one-stage complete CLR ",
+    "analysis. The non-zero, combined, and one-stage p-values use the ",
+    "constrained \\texttt{permApprox} refinement."
+  ),
+  label = "application:diff-distribution-pvalues-all-approaches"
+) %>%
+  kable_styling(latex_options = c("hold_position"), font_size = 7)
+
+pvalues_all_approaches_table
+
+save_kable(
+  pvalues_all_approaches_table,
+  path_target("diff_distribution_pvalues_all_approaches_table.tex")
 )
 ```
 

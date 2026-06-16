@@ -1,0 +1,2 @@
+n_taxa,n_testable_waddr,n_testable_permapprox_unconstrained,n_testable_permapprox_constrained,n_zero_waddr,n_zero_permapprox_unconstrained,n_zero_permapprox_constrained,n_sig_waddr_bh,n_sig_permapprox_unconstrained_bh,n_sig_permapprox_constrained_bh
+117,116,117,117,5,6,0,22,23,23
