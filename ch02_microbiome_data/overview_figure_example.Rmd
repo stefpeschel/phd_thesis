@@ -15,10 +15,22 @@ params:
 here::i_am(paste0(params$name, ".Rmd"), uuid = "5b90232d-7e46-48b6-b05c-dbaebffebb89")
 ```
 
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params$name, "/overview_"),
+  echo = FALSE)
+```
+
 This script generates some example data used for the overview figures.
 
 ```{r packages}
 library("conflicted")
+library(ggplot2)
 library(zCompositions)
 ```
 
@@ -26,6 +38,12 @@ library(zCompositions)
 clr_transform <- function(x) {
   log_x <- log(x)
   sweep(log_x, 1, rowMeans(log_x), "-")
+}
+
+shannon_index <- function(x) {
+  p <- x / sum(x)
+  p <- p[p > 0]
+  -sum(p * log(p))
 }
 ```
 
@@ -46,15 +64,20 @@ path_source <- projthis::proj_path_source(params$name)
 set.seed(1)
 
 # Rows shown in the schematic
-row_names <- c("1", "...", "k", "...", "n1", "n1+1", "...", "l", "...", "n")
+row_names <- c(
+  "1", "...", "k", "m", "...", "n1",
+  "n1+1", "n1+2", "...", "l", "...", "n"
+)
 
-# First three genera exactly as in the figure
+# First three displayed genera represent columns 1, i, and p in the figure
 visible_counts <- matrix(
   c(
     127,  3,  8,
       0, 15,  4,
+      0,  0,  1,
     242,  1,  0,
       5, 24,  0,
+      0,  1,  0,
       0, 37, 14,
      14,  2,  3
   ),
@@ -64,7 +87,7 @@ visible_counts <- matrix(
 
 # Insert rows that are displayed as "..."
 counts_first3 <- matrix(NA_integer_, nrow = length(row_names), ncol = 3)
-counts_first3[c(1, 3, 5, 6, 8, 10), ] <- visible_counts
+counts_first3[c(1, 3, 4, 6, 7, 8, 10, 12), ] <- visible_counts
 
 # Fill the "..." rows with arbitrary counts
 counts_first3[is.na(counts_first3)] <- sample(
@@ -98,11 +121,26 @@ extra_counts <- sapply(seq_len(n_extra), function(j) {
 
 extra_counts <- as.matrix(extra_counts)
 
+# Keep the two additional schematic rows sparse across the full data set.
+sparse_row_idx <- match(c("m", "n1+2"), row_names)
+extra_counts[sparse_row_idx, ] <- 0
+extra_counts[sparse_row_idx, 1] <- 1
+
 # Combined count matrix
 counts <- cbind(counts_first3, extra_counts)
 
 rownames(counts) <- row_names
-colnames(counts) <- paste0("Genus_", seq_len(ncol(counts)))
+colnames(counts) <- c(
+  "Genus_1",
+  "Genus_i",
+  "Genus_p",
+  paste0("Genus_extra_", seq_len(n_extra))
+)
+
+sample_group <- factor(
+  ifelse(seq_along(row_names) <= match("n1", row_names), "Group 1", "Group 2"),
+  levels = c("Group 1", "Group 2")
+)
 
 counts
 ```
@@ -111,6 +149,61 @@ counts
 
 ```{r}
 counts[, 1:3]
+```
+
+## Alpha diversity
+
+```{r}
+# Shannon index computed from the unfiltered, untransformed count matrix.
+alpha_diversity <- data.frame(
+  sample = rownames(counts),
+  group = sample_group,
+  shannon = apply(counts, 1, shannon_index),
+  row.names = NULL
+)
+
+alpha_diversity_table <- alpha_diversity
+alpha_diversity_table$shannon <- round(alpha_diversity_table$shannon, 2)
+alpha_diversity_table
+```
+
+```{r alpha_diversity_boxplot, fig.width=4.5, fig.height=5.5, dpi=250}
+group_colors <- c(
+  "Group 1" = "#2456D9",
+  "Group 2" = "#3F7F2A"
+)
+
+group_fills <- c(
+  "Group 1" = "#E8F0FF",
+  "Group 2" = "#EAF5E7"
+)
+
+ggplot(alpha_diversity, aes(x = group, y = shannon, fill = group, color = group)) +
+  geom_boxplot(
+    width = 0.55,
+    linewidth = 0.8,
+    alpha = 0.75,
+    outlier.shape = NA
+  ) +
+  geom_jitter(
+    width = 0.08,
+    height = 0,
+    size = 5,
+    alpha = 0.85
+  ) +
+  scale_color_manual(values = group_colors) +
+  scale_fill_manual(values = group_fills) +
+  labs(
+    x = NULL,
+    y = "Within-sample diversity"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.title.y = element_text(face = "bold", size = 16),
+    axis.text.x = element_text(face = "bold", size = 15),
+    axis.text.y = element_text(size = 12),
+    legend.position = "none"
+  )
 ```
 
 
