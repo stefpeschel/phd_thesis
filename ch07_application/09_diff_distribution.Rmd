@@ -147,6 +147,74 @@ safe_fisher_combine <- function(p1, p2) {
   })
 }
 
+safe_fisher_statistic <- function(p1, p2) {
+  p1[!is.na(p1) & p1 <= 0] <- .Machine$double.xmin
+  p2[!is.na(p2) & p2 <= 0] <- .Machine$double.xmin
+  
+  purrr::map2_dbl(p1, p2, function(a, b) {
+    x <- c(a, b)
+    
+    if (sum(is.na(x)) == 0) {
+      -2 * sum(log(x))
+    } else {
+      NA_real_
+    }
+  })
+}
+
+compute_zero_prevalence_stats <- function(count_mat, groups) {
+  counts_taxa_by_samples <- t(count_mat)
+  detection <- colSums(counts_taxa_by_samples > 0) / nrow(counts_taxa_by_samples)
+  taxon_ids <- rownames(counts_taxa_by_samples)
+  
+  purrr::map_dfr(taxon_ids, function(taxon_id) {
+    counts <- counts_taxa_by_samples[taxon_id, ]
+    
+    if (sum(counts == 0) == 0) {
+      return(tibble(
+        taxon_id = taxon_id,
+        zero_prevalence_estimate = NA_real_,
+        zero_prevalence_z = NA_real_
+      ))
+    }
+    
+    fit <- tryCatch(
+      suppressWarnings(
+        bayesglm(
+          counts > 0 ~ detection + factor(groups),
+          family = binomial(link = "logit"),
+          Warning = FALSE
+        )
+      ),
+      error = function(e) NULL
+    )
+    
+    if (is.null(fit)) {
+      return(tibble(
+        taxon_id = taxon_id,
+        zero_prevalence_estimate = NA_real_,
+        zero_prevalence_z = NA_real_
+      ))
+    }
+    
+    coef_tbl <- summary(fit)$coefficients
+    
+    if (nrow(coef_tbl) < 3) {
+      return(tibble(
+        taxon_id = taxon_id,
+        zero_prevalence_estimate = NA_real_,
+        zero_prevalence_z = NA_real_
+      ))
+    }
+    
+    tibble(
+      taxon_id = taxon_id,
+      zero_prevalence_estimate = coef_tbl[3, 1],
+      zero_prevalence_z = coef_tbl[3, 3]
+    )
+  })
+}
+
 taxon_labels_from_phyloseq <- function(phylo) {
   tax_tab <- tax_table(phylo) %>%
     as("matrix") %>%
@@ -360,8 +428,7 @@ make_permapprox_results <- function(obs_stats, perm_stats, sample_size, cores) {
       perm_stats = perm_stats[, valid, drop = FALSE],
       method = "gpd",
       alternative = "greater",
-      null_center = "mean",
-      approx_thresh = 1,
+      approx_thresh = 0.01,
       adjust_method = "none",
       gpd_ctrl = gpd_ctrl_unconstr,
       cores = cores,
@@ -373,8 +440,7 @@ make_permapprox_results <- function(obs_stats, perm_stats, sample_size, cores) {
       perm_stats = perm_stats[, valid, drop = FALSE],
       method = "gpd",
       alternative = "greater",
-      null_center = "mean",
-      approx_thresh = 1,
+      approx_thresh = 0.01,
       adjust_method = "none",
       gpd_ctrl = gpd_ctrl_constr,
       cores = cores,
@@ -564,7 +630,7 @@ plot_distribution_diagnostics <- function(
       breaks = "Observed test statistic",
       name = NULL
     ) +
-    labs(x = expression(d[W]^2), y = "Permutation count") +
+    labs(x = expression(W[2]^2), y = "Permutation count") +
     theme_minimal() +
     theme(
       axis.title = element_text(size = axis_title_size),
@@ -837,7 +903,13 @@ summary(dd_permapprox$constrained)
 ```
 
 ```{r combine_results}
+zero_prevalence_stats <- compute_zero_prevalence_stats(
+  count_mat = X_counts,
+  groups = y_groups
+)
+
 dd_results_all <- waddr_results %>%
+  left_join(zero_prevalence_stats, by = "taxon_id") %>%
   mutate(
     taxon = base::unname(taxon_labels[taxon_id]),
     p_permapprox_unconstrained = dd_permapprox$unconstrained$p_unadjusted,
@@ -865,6 +937,10 @@ dd_results_all <- waddr_results %>%
     p_adj_combined_permapprox_constrained = p.adjust(
       p_combined_permapprox_constrained,
       method = "BH"
+    ),
+    fisher_statistic_permapprox_constrained = safe_fisher_statistic(
+      p.zero,
+      p_permapprox_constrained
     ),
     method_used_unconstrained = dd_permapprox$unconstrained$method_used,
     method_used_constrained = dd_permapprox$constrained$method_used,
@@ -1105,7 +1181,7 @@ pvalue_plot_df %>%
     drop = FALSE
   ) +
   labs(
-    x = expression(d[W]^2),
+    x = expression("Non-zero-stage " * W[2]^2),
     y = expression(p),
     color = NULL,
     shape = NULL
@@ -1126,7 +1202,9 @@ pvalue_plot_df %>%
 
 This panel plot separates the three p-values used in the adapted two-stage
 analysis: the non-zero Wasserstein component, the zero component, and the
-combined p-value. Colours indicate BH significance within each component.
+combined p-value. The x-axis is the observed squared 2-Wasserstein distance
+from the non-zero stage, so it is the direct Wasserstein test statistic only in
+the non-zero panel. Colours indicate BH significance within each component.
 
 ```{r two_stage_pvalue_components_data}
 alpha_diff_distribution_label <- paste0("BH < ", alpha_diff_distribution)
@@ -1264,7 +1342,7 @@ volcano_combined_two_stage <- ggplot(
     drop = FALSE
   ) +
   labs(
-    x = expression(d[W]^2),
+    x = expression(W[2]^2),
     y = expression(-log[10](p)),
     color = NULL
   ) +
@@ -1330,9 +1408,10 @@ save_kable(
 
 ### Volcano plot
 
-The differential distribution volcano plot uses the observed squared
-Wasserstein distance as the effect statistic and the constrained permApprox
-combined p-value for the zero and non-zero stages as the significance measure.
+The differential distribution volcano plot shows the observed squared
+2-Wasserstein distance from the non-zero stage on the x-axis and the constrained
+permApprox combined p-value for the zero and non-zero stages as the significance
+measure.
 
 ```{r volcano_plot_data}
 volcano_q_threshold <- alpha_diff_distribution
@@ -1416,7 +1495,7 @@ ggplot(
   labs(
     title = "Differential distribution volcano plot",
     subtitle = "Adapted waddR with constrained permApprox p-value refinement",
-    x = expression(d[W]^2),
+    x = expression(W[2]^2),
     y = expression(-log[10](p[combined])),
     color = NULL
   ) +
@@ -1450,7 +1529,7 @@ selected_taxa_df <- dd_results_all %>%
     ),
     panel_label = paste0(
       stringr::str_trunc(taxon_label, width = 22),
-      "\n(d = ", signif(d.wass, 3),
+      "\n(W  = ", signif(`d.wass^2`, 3),
       "; p = ", sci(p_permapprox_constrained), ")"
     )
   )
@@ -1849,7 +1928,7 @@ pvalue_plot_complete_clr_df %>%
     drop = FALSE
   ) +
   labs(
-    x = expression(d[W]^2),
+    x = expression(W[2]^2),
     y = expression(p),
     color = NULL,
     shape = NULL
@@ -2027,7 +2106,7 @@ pvalue_plot_complete_clr_constrained_df %>%
     drop = FALSE
   ) +
   labs(
-    x = expression(d[W]^2),
+    x = expression(W[2]^2),
     y = expression(p),
     color = NULL,
     shape = NULL
@@ -2049,9 +2128,9 @@ pvalue_plot_complete_clr_constrained_df %>%
 
 ### Volcano plot
 
-The one-stage volcano plot uses the complete CLR Wasserstein statistic and the
-constrained permApprox p-value refinement. Colours indicate BH significance at
-the same alpha level used for the two-stage component plots.
+The one-stage volcano plot uses the complete-CLR squared 2-Wasserstein statistic
+and the constrained permApprox p-value refinement. Colours indicate BH
+significance at the same alpha level used for the two-stage component plots.
 
 ```{r complete_clr_volcano_plot_data}
 complete_clr_volcano_label_n <- 6
@@ -2147,7 +2226,7 @@ volcano_one_stage <- ggplot(
     drop = FALSE
   ) +
   labs(
-    x = expression(d[W]^2),
+    x = expression(W[2]^2),
     y = expression(-log[10](p)),
     color = NULL
   ) +
@@ -2162,9 +2241,168 @@ volcano_one_stage <- ggplot(
   )
 ```
 
+### Two-stage volcano plot with complete-CLR Wasserstein statistic
+
+This version keeps the three two-stage p-values but uses the complete-CLR
+squared 2-Wasserstein statistic on the x-axis. This makes the two-stage panels
+directly comparable with the one-stage complete-CLR volcano plot, while avoiding
+the implication that the zero-prevalence and combined p-values are based on the
+non-zero-stage statistic.
+
+```{r volcano_two_stage_complete_clr_x_data}
+two_stage_pvalue_components_complete_x_df <- bind_rows(
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Non-zero distribution",
+      pvalue = p_permapprox_constrained,
+      qvalue = p_adj_permapprox_constrained
+    ),
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Zero prevalence",
+      pvalue = p.zero,
+      qvalue = p.adj.zero
+    ),
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Combined",
+      pvalue = p_combined_permapprox_constrained,
+      qvalue = p_adj_combined_permapprox_constrained
+    )
+) %>%
+  left_join(
+    dd_results_complete_all %>%
+      select(taxon_id, complete_clr_d_wass2 = `d.wass^2`),
+    by = "taxon_id"
+  ) %>%
+  filter(is.finite(complete_clr_d_wass2), is.finite(pvalue)) %>%
+  mutate(
+    component = factor(
+      component,
+      levels = c("Non-zero distribution", "Zero prevalence", "Combined")
+    ),
+    neglog10_p = -log10(pvalue),
+    significance_class = if_else(
+      qvalue < alpha_diff_distribution,
+      alpha_diff_distribution_label,
+      "Not significant"
+    ),
+    significance_class = factor(
+      significance_class,
+      levels = c(alpha_diff_distribution_label, "Not significant")
+    )
+  )
+
+two_stage_component_complete_x_labels <- two_stage_pvalue_components_complete_x_df %>%
+  group_by(component) %>%
+  summarise(
+    n_sig = sum(significance_class == alpha_diff_distribution_label, na.rm = TRUE),
+    n_testable = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = paste0(
+      component,
+      "\n(",
+      alpha_diff_distribution_label,
+      ": ",
+      n_sig,
+      " / ",
+      n_testable,
+      ")"
+    )
+  )
+
+two_stage_component_complete_x_labeller <- setNames(
+  two_stage_component_complete_x_labels$label,
+  two_stage_component_complete_x_labels$component
+)
+
+two_stage_component_complete_x_label_df <- two_stage_pvalue_components_complete_x_df %>%
+  filter(significance_class == alpha_diff_distribution_label) %>%
+  group_by(component) %>%
+  arrange(qvalue, desc(neglog10_p), .by_group = TRUE) %>%
+  slice_head(n = two_stage_component_label_n) %>%
+  ungroup() %>%
+  mutate(
+    label_taxon = stringr::str_trunc(
+      if_else(
+        is.na(taxon) | taxon == "",
+        taxon_id,
+        taxon
+      ),
+      width = volcano_label_width
+    )
+  )
+
+two_stage_pvalue_components_complete_x_df
+```
+
+```{r volcano_two_stage_three_panels_complete_clr_x, fig.width=10, fig.height=4.5, dpi=250}
+volcano_combined_two_stage_complete_x <- ggplot(
+  two_stage_pvalue_components_complete_x_df,
+  aes(x = complete_clr_d_wass2, y = neglog10_p)
+) +
+  geom_point(
+    aes(color = significance_class),
+    size = 2.3,
+    alpha = 0.85
+  ) +
+  geom_text_repel(
+    data = two_stage_component_complete_x_label_df,
+    aes(label = label_taxon),
+    size = 4,
+    min.segment.length = 0,
+    box.padding = 0.5,
+    max.overlaps = Inf,
+    segment.color = "grey50",
+    segment.alpha = 0.55,
+    seed = permutation_seed
+  ) +
+  geom_hline(
+    yintercept = -log10(alpha_diff_distribution),
+    linetype = "dashed",
+    color = "grey35"
+  ) +
+  facet_wrap(
+    ~ component,
+    nrow = 1,
+    labeller = as_labeller(two_stage_component_complete_x_labeller)
+  ) +
+  scale_color_manual(
+    values = c(
+      setNames("#D55E00", alpha_diff_distribution_label),
+      "Not significant" = "grey60"
+    ),
+    drop = FALSE
+  ) +
+  labs(
+    x = expression("Complete-CLR " * W[2]^2),
+    y = expression(-log[10](p)),
+    color = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    strip.text = element_text(size = 14),
+    legend.text = element_text(size = 16),
+    panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.5, "lines"),
+    legend.position = "bottom"
+  )
+volcano_combined_two_stage_complete_x
+```
+
 ```{r volcano_two_stage_one_stage_combined, fig.width=11, fig.height=5, dpi=250}
 (
-  volcano_combined_two_stage +
+  volcano_combined_two_stage_complete_x +
     labs(title = "Two-stage approach") +
     theme(
       plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
@@ -2184,6 +2422,245 @@ volcano_one_stage <- ggplot(
     legend.position = "bottom",
     legend.text = element_text(size = 16)
   )
+```
+
+### Two-stage volcano plot with native component statistics
+
+This diagnostic version uses the statistic native to each two-stage component:
+the non-zero-stage squared 2-Wasserstein statistic \(T_{i,+}\), the absolute
+Wald statistic \(|Z_{i,0}|\) from the zero-prevalence logistic regression, and
+Fisher's combined statistic \(C_i\). The x-axis therefore has
+component-specific units and is shown with free scales.
+
+```{r volcano_two_stage_native_statistics_data}
+two_stage_native_stat_df <- bind_rows(
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Non-zero distribution",
+      native_statistic = `d.wass^2`,
+      pvalue = p_permapprox_constrained,
+      qvalue = p_adj_permapprox_constrained
+    ),
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Zero prevalence",
+      native_statistic = abs(zero_prevalence_z),
+      pvalue = p.zero,
+      qvalue = p.adj.zero
+    ),
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Combined",
+      native_statistic = fisher_statistic_permapprox_constrained,
+      pvalue = p_combined_permapprox_constrained,
+      qvalue = p_adj_combined_permapprox_constrained
+    )
+) %>%
+  filter(is.finite(native_statistic), is.finite(pvalue)) %>%
+  mutate(
+    component = factor(
+      component,
+      levels = c("Non-zero distribution", "Zero prevalence", "Combined")
+    ),
+    neglog10_p = -log10(pvalue),
+    significance_class = if_else(
+      qvalue < alpha_diff_distribution,
+      alpha_diff_distribution_label,
+      "Not significant"
+    ),
+    significance_class = factor(
+      significance_class,
+      levels = c(alpha_diff_distribution_label, "Not significant")
+    )
+  )
+
+two_stage_native_stat_labels <- two_stage_native_stat_df %>%
+  group_by(component) %>%
+  summarise(
+    n_sig = sum(significance_class == alpha_diff_distribution_label, na.rm = TRUE),
+    n_testable = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = paste0(
+      component,
+      "\n(",
+      alpha_diff_distribution_label,
+      ": ",
+      n_sig,
+      " / ",
+      n_testable,
+      ")"
+    )
+  )
+
+two_stage_native_stat_labeller <- setNames(
+  two_stage_native_stat_labels$label,
+  two_stage_native_stat_labels$component
+)
+
+two_stage_native_stat_label_df <- two_stage_native_stat_df %>%
+  filter(significance_class == alpha_diff_distribution_label) %>%
+  group_by(component) %>%
+  arrange(qvalue, desc(neglog10_p), .by_group = TRUE) %>%
+  slice_head(n = two_stage_component_label_n) %>%
+  ungroup() %>%
+  mutate(
+    label_taxon = stringr::str_trunc(
+      if_else(
+        is.na(taxon) | taxon == "",
+        taxon_id,
+        taxon
+      ),
+      width = volcano_label_width
+    )
+  )
+
+two_stage_native_stat_df
+```
+
+```{r volcano_two_stage_native_statistics, fig.width=10, fig.height=4.5, dpi=250}
+plot_native_stat_panel <- function(component_name, x_label, show_y_title = FALSE) {
+  panel_df <- two_stage_native_stat_df %>%
+    filter(component == component_name)
+  
+  label_df <- two_stage_native_stat_label_df %>%
+    filter(component == component_name)
+  
+  ggplot(panel_df, aes(x = native_statistic, y = neglog10_p)) +
+    geom_point(
+      aes(color = significance_class),
+      size = 2.3,
+      alpha = 0.85
+    ) +
+    geom_text_repel(
+      data = label_df,
+      aes(label = label_taxon),
+      size = 4,
+      min.segment.length = 0,
+      box.padding = 0.5,
+      max.overlaps = Inf,
+      segment.color = "grey50",
+      segment.alpha = 0.55,
+      seed = permutation_seed
+    ) +
+    geom_hline(
+      yintercept = -log10(alpha_diff_distribution),
+      linetype = "dashed",
+      color = "grey35"
+    ) +
+    scale_color_manual(
+      values = c(
+        setNames("#D55E00", alpha_diff_distribution_label),
+        "Not significant" = "grey60"
+      ),
+      drop = FALSE
+    ) +
+    labs(
+      title = two_stage_native_stat_labeller[[component_name]],
+      x = x_label,
+      y = if (show_y_title) expression(-log[10](p)) else NULL,
+      color = NULL
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = 16),
+      axis.text = element_text(size = 14),
+      plot.title = element_text(size = 14, hjust = 0.5),
+      legend.text = element_text(size = 16),
+      panel.grid.minor = element_blank(),
+      legend.position = "bottom"
+    )
+}
+
+native_stat_nonzero_plot <- plot_native_stat_panel(
+  component_name = "Non-zero distribution",
+  x_label = expression("Non-zero " * W[2]^2),
+  show_y_title = TRUE
+)
+
+native_stat_zero_plot <- plot_native_stat_panel(
+  component_name = "Zero prevalence",
+  x_label = expression("Zero-stage " * abs(Z["0"]))
+)
+
+native_stat_combined_plot <- plot_native_stat_panel(
+  component_name = "Combined",
+  x_label = expression("Combined statistic " * C)
+)
+
+
+volcano_two_stage_native <- native_stat_nonzero_plot +
+  native_stat_zero_plot +
+  native_stat_combined_plot +
+  plot_layout(nrow = 1, guides = "collect") &
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 16)
+  )
+
+volcano_two_stage_native
+```
+
+```{r volcano_two_stage_one_stage_native, fig.width=11, fig.height=5, dpi=250}
+one_stage_native_panel <- volcano_one_stage +
+  facet_null() +
+  labs(
+    title = complete_clr_volcano_labeller[["Complete CLR distribution"]],
+    x = expression("Complete-CLR " * W[2]^2),
+    y = expression(-log[10](p))
+  ) +
+  theme(
+    plot.title = element_text(size = 14, hjust = 0.5),
+    strip.text = element_blank(),
+    legend.position = "bottom"
+  )
+
+native_combined_design <- "
+AAAB
+CDEF
+GGGG
+"
+
+two_stage_title_grob <- wrap_elements(
+  full = grid::textGrob(
+    "Two-stage approach",
+    gp = grid::gpar(fontface = "bold", fontsize = 16)
+  )
+)
+
+one_stage_title_grob <- wrap_elements(
+  full = grid::textGrob(
+    "One-stage approach",
+    gp = grid::gpar(fontface = "bold", fontsize = 16)
+  )
+)
+
+native_four_panel_base <- two_stage_title_grob +
+  one_stage_title_grob +
+  native_stat_nonzero_plot +
+  native_stat_zero_plot +
+  native_stat_combined_plot +
+  one_stage_native_panel +
+  guide_area() +
+  plot_layout(
+    design = native_combined_design,
+    heights = c(0.075, 1, 0.13),
+    guides = "collect"
+  ) &
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 16),
+    plot.margin = margin(t = 2, r = 4, b = 4, l = 4)
+  )
+
+native_four_panel_base
 ```
 
 
@@ -2208,7 +2685,7 @@ selected_complete_taxa_df <- dd_results_complete_all %>%
     ),
     panel_label = paste0(
       stringr::str_trunc(taxon_label, width = 22),
-      "\n(d = ", signif(d.wass, 3),
+      "\n(W  = ", signif(`d.wass^2`, 3),
       "; p = ", sci(p_permapprox_constrained), ")"
     )
   )
