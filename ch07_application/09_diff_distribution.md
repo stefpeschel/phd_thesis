@@ -1,6 +1,6 @@
 Differential distribution analysis
 ================
-Compiled at 2026-06-17 13:23:32 UTC
+Compiled at 2026-06-17 14:52:12 UTC
 
 ## Set global parameters
 
@@ -83,25 +83,25 @@ of the tested taxon is positive.
     ## ----------------------------
     ## Number of tests             : 117
     ## Approximation method        : GPD tail approximation
-    ## Approximation threshold     : p-values <   1
+    ## Approximation threshold     : p-values <0.01
     ## Multiple testing adjustment : none
     ## 
     ## Fit status counts:
-    ##   Successful fits          : 44
+    ##   Successful fits          : 19
     ##   GOF rejections           : 0
     ##   Fit failed               : 0
-    ##   No threshold found       : 19
-    ##   Discrete distributions   : 5
-    ##   Not selected for fitting : 48
+    ##   No threshold found       : 0
+    ##   Discrete distributions   : 0
+    ##   Not selected for fitting : 97
     ## 
     ## GPD parameter summary (successful fits)
     ## --------------------------------------
     ##   shape:
-    ##     min = -0.2, median = -0.0151, mean = -0.00387, max = 0.201
+    ##     min = -0.2, median = -0.042, mean = -0.0305, max = 0.123
     ##   scale:
-    ##     min = 0.0272, median = 0.131, mean = 0.292, max = 2.12
+    ##     min = 0.0349, median = 0.108, mean = 0.236, max = 1.43
     ##   n_exceed:
-    ##     min =  170, median =  250, mean =  245, max =  250
+    ##     min =  210, median =  250, mean =  246, max =  250
     ## 
     ## P-value summary
     ## ---------------
@@ -134,8 +134,8 @@ unconstrained or constrained permApprox resolves those zeros.
     ##    <chr>              <chr> <fct>      <fct>          <dbl>    <dbl>    <dbl>                  <dbl>                  <dbl> <fct>     
     ##  1 Phascolarctobacte… Phas… waddR      waddR         6.69   2.30e- 2 2.30e- 2            0.024                  0.024       nonzero_w…
     ##  2 Veillonella        Veil… waddR      waddR         0.0479 8.29e- 1 8.29e- 1            0.829                  0.829       nonzero_w…
-    ##  3 Negativicoccus     Nega… waddR      waddR         1.92   2.50e- 2 2.50e- 2            0.0243                 0.0243      nonzero_w…
-    ##  4 Dialister          Dial… waddR      waddR         0.101  1.64e- 1 1.64e- 1            0.164                  0.164       nonzero_w…
+    ##  3 Negativicoccus     Nega… waddR      waddR         1.92   2.50e- 2 2.50e- 2            0.026                  0.026       nonzero_w…
+    ##  4 Dialister          Dial… waddR      waddR         0.101  1.64e- 1 1.64e- 1            0.165                  0.165       nonzero_w…
     ##  5 Megasphaera        Mega… waddR      waddR         3.22   2.69e- 1 2.69e- 1            0.27                   0.27        nonzero_w…
     ##  6 Anaeroglobus       Anae… waddR      waddR         0.262  1   e+ 0 1   e+ 0            1                      1           nonzero_w…
     ##  7 Megamonas          Mega… waddR      waddR         3.57   9.31e- 2 9.31e- 2            0.094                  0.094       nonzero_w…
@@ -159,13 +159,13 @@ BH significance within each component.
     ## # A tibble: 347 × 8
     ##    taxon_id              taxon                 component             d_wass2      pvalue    qvalue neglog10_p significance_class
     ##    <chr>                 <chr>                 <fct>                   <dbl>       <dbl>     <dbl>      <dbl> <fct>             
-    ##  1 Phascolarctobacterium Phascolarctobacterium Non-zero distribution  6.69   0.024       0.110         1.62   Not significant   
+    ##  1 Phascolarctobacterium Phascolarctobacterium Non-zero distribution  6.69   0.024       0.116         1.62   Not significant   
     ##  2 Veillonella           Veillonella           Non-zero distribution  0.0479 0.829       0.891         0.0814 Not significant   
-    ##  3 Negativicoccus        Negativicoccus        Non-zero distribution  1.92   0.0243      0.110         1.61   Not significant   
-    ##  4 Dialister             Dialister             Non-zero distribution  0.101  0.164       0.422         0.786  Not significant   
+    ##  3 Negativicoccus        Negativicoccus        Non-zero distribution  1.92   0.026       0.120         1.59   Not significant   
+    ##  4 Dialister             Dialister             Non-zero distribution  0.101  0.165       0.422         0.783  Not significant   
     ##  5 Megasphaera           Megasphaera           Non-zero distribution  3.22   0.27        0.531         0.569  Not significant   
     ##  6 Anaeroglobus          Anaeroglobus          Non-zero distribution  0.262  1           1             0      Not significant   
-    ##  7 Megamonas             Megamonas             Non-zero distribution  3.57   0.094       0.287         1.03   Not significant   
+    ##  7 Megamonas             Megamonas             Non-zero distribution  3.57   0.094       0.280         1.03   Not significant   
     ##  8 Streptococcus         Streptococcus         Non-zero distribution  0.365  0.000000748 0.0000145     6.13   BH < 0.01         
     ##  9 Lactococcus           Lactococcus           Non-zero distribution  6.49   0.0000231   0.000268      4.64   BH < 0.01         
     ## 10 Gemella               Gemella               Non-zero distribution  0.0961 0.419       0.666         0.378  Not significant   
@@ -265,25 +265,25 @@ separate zero stage.
     ## ----------------------------
     ## Number of tests             : 117
     ## Approximation method        : GPD tail approximation
-    ## Approximation threshold     : p-values <   1
+    ## Approximation threshold     : p-values <0.01
     ## Multiple testing adjustment : none
     ## 
     ## Fit status counts:
-    ##   Successful fits          : 66
+    ##   Successful fits          : 28
     ##   GOF rejections           : 0
     ##   Fit failed               : 0
-    ##   No threshold found       : 25
+    ##   No threshold found       : 1
     ##   Discrete distributions   : 0
-    ##   Not selected for fitting : 26
+    ##   Not selected for fitting : 88
     ## 
     ## GPD parameter summary (successful fits)
     ## --------------------------------------
     ##   shape:
-    ##     min = -0.266, median = -0.0505, mean = -0.0627, max = 0.134
+    ##     min = -0.187, median = -0.0481, mean = -0.0458, max = 0.134
     ##   scale:
-    ##     min = 0.0164, median = 0.117, mean = 0.118, max = 0.342
+    ##     min = 0.0413, median = 0.126, mean = 0.125, max = 0.342
     ##   n_exceed:
-    ##     min =  130, median =  250, mean =  242, max =  250
+    ##     min =  130, median =  250, mean =  234, max =  250
     ## 
     ## P-value summary
     ## ---------------
@@ -293,7 +293,7 @@ separate zero stage.
     ## 
     ## Final p-values (unadjusted):
     ##   unadjusted:
-    ##     min = 2.900e-46, median = 1.060e-01, mean = 2.000e-01, max = 8.070e-01
+    ##     min = 2.900e-46, median = 1.030e-01, mean = 2.004e-01, max = 8.070e-01
 
     ## # A tibble: 1 × 10
     ##   n_taxa n_testable_waddr n_testable_permapprox_un…¹ n_testable_permappro…² n_zero_waddr n_zero_permapprox_un…³ n_zero_permapprox_co…⁴
@@ -312,9 +312,9 @@ multiplicative replacement and CLR transformation.
     ## # A tibble: 351 × 10
     ##    taxon_id             taxon method_key method_label d_wass2  pvalue p_waddr p_permapprox_unconst…¹ p_permapprox_constra…² zero_class
     ##    <chr>                <chr> <fct>      <fct>          <dbl>   <dbl>   <dbl>                  <dbl>                  <dbl> <fct>     
-    ##  1 Phascolarctobacteri… Phas… waddR      waddR         0.174  1.83e-1 1.83e-1            0.189                     1.89e- 1 nonzero_w…
+    ##  1 Phascolarctobacteri… Phas… waddR      waddR         0.174  1.83e-1 1.83e-1            0.184                     1.84e- 1 nonzero_w…
     ##  2 Veillonella          Veil… waddR      waddR         0.687  8.83e-3 8.83e-3            0.00919                   9.19e- 3 nonzero_w…
-    ##  3 Negativicoccus       Nega… waddR      waddR         0.146  1.72e-1 1.72e-1            0.175                     1.75e- 1 nonzero_w…
+    ##  3 Negativicoccus       Nega… waddR      waddR         0.146  1.72e-1 1.72e-1            0.173                     1.73e- 1 nonzero_w…
     ##  4 Dialister            Dial… waddR      waddR         0.0359 5.54e-1 5.54e-1            0.554                     5.54e- 1 nonzero_w…
     ##  5 Megasphaera          Mega… waddR      waddR         0.185  2.39e-1 2.39e-1            0.24                      2.4 e- 1 nonzero_w…
     ##  6 Anaeroglobus         Anae… waddR      waddR         0.0680 3.48e-1 3.48e-1            0.349                     3.49e- 1 nonzero_w…
@@ -337,9 +337,9 @@ labelled simply as `permApprox`.
     ## # A tibble: 234 × 9
     ##    taxon_id              taxon                 method_key method_label d_wass2     pvalue    p_waddr p_permapprox zero_class     
     ##    <chr>                 <chr>                 <fct>      <fct>          <dbl>      <dbl>      <dbl>        <dbl> <fct>          
-    ##  1 Phascolarctobacterium Phascolarctobacterium waddR      waddR         0.174  0.183      0.183          1.89e- 1 nonzero_waddR  
+    ##  1 Phascolarctobacterium Phascolarctobacterium waddR      waddR         0.174  0.183      0.183          1.84e- 1 nonzero_waddR  
     ##  2 Veillonella           Veillonella           waddR      waddR         0.687  0.00883    0.00883        9.19e- 3 nonzero_waddR  
-    ##  3 Negativicoccus        Negativicoccus        waddR      waddR         0.146  0.172      0.172          1.75e- 1 nonzero_waddR  
+    ##  3 Negativicoccus        Negativicoccus        waddR      waddR         0.146  0.172      0.172          1.73e- 1 nonzero_waddR  
     ##  4 Dialister             Dialister             waddR      waddR         0.0359 0.554      0.554          5.54e- 1 nonzero_waddR  
     ##  5 Megasphaera           Megasphaera           waddR      waddR         0.185  0.239      0.239          2.4 e- 1 nonzero_waddR  
     ##  6 Anaeroglobus          Anaeroglobus          waddR      waddR         0.0680 0.348      0.348          3.49e- 1 nonzero_waddR  
@@ -389,13 +389,13 @@ and combined p-values are based on the non-zero-stage statistic.
     ## # A tibble: 349 × 8
     ##    taxon_id              taxon                 component             pvalue  qvalue complete_clr_d_wass2 neglog10_p significance_class
     ##    <chr>                 <chr>                 <fct>                  <dbl>   <dbl>                <dbl>      <dbl> <fct>             
-    ##  1 Phascolarctobacterium Phascolarctobacterium Non-zero distributi… 2.4 e-2 1.10e-1               0.174      1.62   Not significant   
+    ##  1 Phascolarctobacterium Phascolarctobacterium Non-zero distributi… 2.4 e-2 1.16e-1               0.174      1.62   Not significant   
     ##  2 Veillonella           Veillonella           Non-zero distributi… 8.29e-1 8.91e-1               0.687      0.0814 Not significant   
-    ##  3 Negativicoccus        Negativicoccus        Non-zero distributi… 2.43e-2 1.10e-1               0.146      1.61   Not significant   
-    ##  4 Dialister             Dialister             Non-zero distributi… 1.64e-1 4.22e-1               0.0359     0.786  Not significant   
+    ##  3 Negativicoccus        Negativicoccus        Non-zero distributi… 2.6 e-2 1.20e-1               0.146      1.59   Not significant   
+    ##  4 Dialister             Dialister             Non-zero distributi… 1.65e-1 4.22e-1               0.0359     0.783  Not significant   
     ##  5 Megasphaera           Megasphaera           Non-zero distributi… 2.7 e-1 5.31e-1               0.185      0.569  Not significant   
     ##  6 Anaeroglobus          Anaeroglobus          Non-zero distributi… 1   e+0 1   e+0               0.0680     0      Not significant   
-    ##  7 Megamonas             Megamonas             Non-zero distributi… 9.4 e-2 2.87e-1               0.0647     1.03   Not significant   
+    ##  7 Megamonas             Megamonas             Non-zero distributi… 9.4 e-2 2.80e-1               0.0647     1.03   Not significant   
     ##  8 Streptococcus         Streptococcus         Non-zero distributi… 7.48e-7 1.45e-5               0.556      6.13   BH < 0.01         
     ##  9 Lactococcus           Lactococcus           Non-zero distributi… 2.31e-5 2.68e-4               3.40       4.64   BH < 0.01         
     ## 10 Gemella               Gemella               Non-zero distributi… 4.19e-1 6.66e-1               0.0550     0.378  Not significant   
@@ -416,13 +416,13 @@ therefore has component-specific units and is shown with free scales.
     ## # A tibble: 347 × 8
     ##    taxon_id              taxon                 component             native_statistic     pvalue  qvalue neglog10_p significance_class
     ##    <chr>                 <chr>                 <fct>                            <dbl>      <dbl>   <dbl>      <dbl> <fct>             
-    ##  1 Phascolarctobacterium Phascolarctobacterium Non-zero distribution           6.69      2.4 e-2 1.10e-1     1.62   Not significant   
+    ##  1 Phascolarctobacterium Phascolarctobacterium Non-zero distribution           6.69      2.4 e-2 1.16e-1     1.62   Not significant   
     ##  2 Veillonella           Veillonella           Non-zero distribution           0.0479    8.29e-1 8.91e-1     0.0814 Not significant   
-    ##  3 Negativicoccus        Negativicoccus        Non-zero distribution           1.92      2.43e-2 1.10e-1     1.61   Not significant   
-    ##  4 Dialister             Dialister             Non-zero distribution           0.101     1.64e-1 4.22e-1     0.786  Not significant   
+    ##  3 Negativicoccus        Negativicoccus        Non-zero distribution           1.92      2.6 e-2 1.20e-1     1.59   Not significant   
+    ##  4 Dialister             Dialister             Non-zero distribution           0.101     1.65e-1 4.22e-1     0.783  Not significant   
     ##  5 Megasphaera           Megasphaera           Non-zero distribution           3.22      2.7 e-1 5.31e-1     0.569  Not significant   
     ##  6 Anaeroglobus          Anaeroglobus          Non-zero distribution           0.262     1   e+0 1   e+0     0      Not significant   
-    ##  7 Megamonas             Megamonas             Non-zero distribution           3.57      9.4 e-2 2.87e-1     1.03   Not significant   
+    ##  7 Megamonas             Megamonas             Non-zero distribution           3.57      9.4 e-2 2.80e-1     1.03   Not significant   
     ##  8 Streptococcus         Streptococcus         Non-zero distribution           0.365     7.48e-7 1.45e-5     6.13   BH < 0.01         
     ##  9 Lactococcus           Lactococcus           Non-zero distribution           6.49      2.31e-5 2.68e-4     4.64   BH < 0.01         
     ## 10 Gemella               Gemella               Non-zero distribution           0.0961    4.19e-1 6.66e-1     0.378  Not significant   
@@ -464,14 +464,14 @@ These files have been written to the target directory,
     ## # A tibble: 23 × 4
     ##    path                                                  type         size modification_time  
     ##    <fs::path>                                            <fct> <fs::bytes> <dttm>             
-    ##  1 diff_distribution_analysis_objects.rds                file       276.6K 2026-06-17 13:23:38
-    ##  2 diff_distribution_analysis_summary.csv                file          117 2026-06-17 13:23:38
-    ##  3 diff_distribution_complete_clr_permapprox_summary.csv file          281 2026-06-17 13:23:52
-    ##  4 diff_distribution_complete_clr_results_all.csv        file        43.9K 2026-06-17 13:23:52
-    ##  5 diff_distribution_complete_clr_results_all.rds        file        14.9K 2026-06-17 13:23:52
-    ##  6 diff_distribution_group_summary.csv                   file           40 2026-06-17 13:23:38
-    ##  7 diff_distribution_multrepl_clr_object.rds             file       262.7K 2026-06-17 13:23:38
-    ##  8 diff_distribution_permapprox_summary.csv              file          398 2026-06-17 13:23:40
-    ##  9 diff_distribution_preprocessing_summary.csv           file          233 2026-06-17 13:23:38
-    ## 10 diff_distribution_pvalues_all_approaches_table.tex    file          13K 2026-06-17 13:24:12
+    ##  1 diff_distribution_analysis_objects.rds                file      276.58K 2026-06-17 14:52:18
+    ##  2 diff_distribution_analysis_summary.csv                file          117 2026-06-17 14:52:18
+    ##  3 diff_distribution_complete_clr_permapprox_summary.csv file          281 2026-06-17 14:52:33
+    ##  4 diff_distribution_complete_clr_results_all.csv        file       42.99K 2026-06-17 14:52:33
+    ##  5 diff_distribution_complete_clr_results_all.rds        file       14.63K 2026-06-17 14:52:32
+    ##  6 diff_distribution_group_summary.csv                   file           40 2026-06-17 14:52:18
+    ##  7 diff_distribution_multrepl_clr_object.rds             file      262.74K 2026-06-17 14:52:17
+    ##  8 diff_distribution_permapprox_summary.csv              file          398 2026-06-17 14:52:20
+    ##  9 diff_distribution_preprocessing_summary.csv           file          233 2026-06-17 14:52:17
+    ## 10 diff_distribution_pvalues_all_approaches_table.tex    file        2.33K 2026-06-17 14:52:54
     ## # ℹ 13 more rows

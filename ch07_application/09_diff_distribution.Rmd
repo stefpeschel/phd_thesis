@@ -2727,41 +2727,61 @@ plot_distribution_diagnostics(
 ## Comparative p-value table
 
 ```{r table_pvalues_all_approaches, results="asis"}
+add_significance_stars <- function(x) {
+  case_when(
+    is.na(x) ~ "",
+    x < 0.001 ~ "***",
+    x < 0.01 ~ "**",
+    x < 0.05 ~ "*",
+    TRUE ~ ""
+  )
+}
+
+format_bh_pvalue <- function(x) {
+  if_else(
+    is.na(x),
+    NA_character_,
+    paste0(sci(x), add_significance_stars(x))
+  )
+}
+
 pvalues_all_approaches_tbl <- dd_results_all %>%
   transmute(
     taxon_id,
     Taxon = taxon,
-    `$p_{+}$` = p_permapprox_constrained,
-    `$q_{+}$` = p_adj_permapprox_constrained,
-    `$p_{0}$` = p.zero,
-    `$q_{0}$` = p.adj.zero,
-    `$p_{comb}$` = p_combined_permapprox_constrained,
-    `$q_{comb}$` = p_adj_combined_permapprox_constrained
+    `Non-zero` = p_adj_permapprox_constrained,
+    `Zero prevalence` = p.adj.zero,
+    `Combined` = p_adj_combined_permapprox_constrained
   ) %>%
   left_join(
     dd_results_complete_all %>%
       transmute(
         taxon_id,
-        `$p_{1stage}$` = p_permapprox_constrained,
-        `$q_{1stage}$` = p_adj_permapprox_constrained
+        `One-stage` = p_adj_permapprox_constrained
       ),
     by = "taxon_id"
   ) %>%
   mutate(
     min_q = pmin(
-      `$q_{+}$`,
-      `$q_{0}$`,
-      `$q_{comb}$`,
-      `$q_{1stage}$`,
+      `Non-zero`,
+      `Zero prevalence`,
+      `Combined`,
+      `One-stage`,
       na.rm = TRUE
     )
+  ) %>%
+  filter(
+    `Non-zero` < alpha_diff_distribution |
+      `Zero prevalence` < alpha_diff_distribution |
+      `Combined` < alpha_diff_distribution |
+      `One-stage` < alpha_diff_distribution
   ) %>%
   arrange(min_q, Taxon) %>%
   select(-taxon_id, -min_q) %>%
   mutate(
     across(
       where(is.numeric),
-      sci
+      format_bh_pvalue
     )
   )
 
@@ -2771,10 +2791,12 @@ pvalues_all_approaches_table <- kbl(
   booktabs = TRUE,
   escape = FALSE,
   caption = paste0(
-    "P-values and BH-adjusted p-values for the adapted two-stage ",
-    "differential distribution analysis and the one-stage complete CLR ",
-    "analysis. The non-zero, combined, and one-stage p-values use the ",
-    "constrained \\texttt{permApprox} refinement."
+    "BH-adjusted p-values for genera significant at BH < ",
+    alpha_diff_distribution,
+    " in at least one panel of the two-stage and one-stage volcano plots. ",
+    "The non-zero, combined, and one-stage p-values use the constrained ",
+    "\\texttt{permApprox} refinement. Significance codes: ",
+    "* BH < 0.05, ** BH < 0.01, *** BH < 0.001."
   ),
   label = "application:diff-distribution-pvalues-all-approaches"
 ) %>%
