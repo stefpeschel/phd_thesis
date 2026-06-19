@@ -1,0 +1,584 @@
+---
+title: "Example figures for the methods chapter"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output: 
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+params:
+  name: "example_figures" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "a8d40ab2-6177-4d45-bb75-de680b946e54")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params$name, "/netcomi_"),
+  echo = FALSE)
+```
+
+```{r packages}
+library("conflicted")
+library("dplyr")
+library("ggplot2")
+library("igraph")
+library("NetCoMi")
+library("patchwork")
+library("tidyr")
+
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::mutate)
+conflicts_prefer(dplyr::select)
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+projthis::proj_create_dir_target(params$name, clean = TRUE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Introduction
+
+This script collects small, self-contained figures used to illustrate concepts in
+the NetCoMi chapter. The examples are meant to be visually simple rather than
+data-driven: each figure isolates one methodological step so that it can be used
+as explanatory material in the thesis text or during a presentation.
+
+## Association transformations
+
+The following plot compares signed and unsigned transformations from sparse
+associations to dissimilarities and the corresponding similarities. The signed
+transformation treats negative associations as large dissimilarities and small
+similarities, whereas the unsigned transformation uses only association strength.
+
+```{r asso_diss_transformation, fig.width=8, fig.height=3, dpi=200}
+cols <- c("darkorange2", "#1f77b4")
+
+association_grid <- tibble(
+  association = seq(-1, 1, length.out = 501)
+)
+
+association_transforms <- association_grid |>
+  mutate(
+    Signed = sqrt(0.5 * (1 - association)),
+    Unsigned = sqrt(1 - association^2)
+  ) |>
+  pivot_longer(
+    cols = -association,
+    names_to = "Transformation",
+    values_to = "Dissimilarity"
+  ) |>
+  mutate(
+    Similarity = 1 - Dissimilarity
+  )
+
+transformation_colors <- c(
+  "Signed" = cols[1],
+  "Unsigned" = cols[2]
+)
+
+base_transform_plot <- ggplot(
+  association_transforms,
+  aes(x = association, color = Transformation)
+) +
+  geom_vline(
+    xintercept = 0,
+    linewidth = 0.3,
+    linetype = "dotted"
+  ) +
+  scale_color_manual(values = transformation_colors) +
+  scale_x_continuous(
+    breaks = seq(-1, 1, by = 0.5),
+    limits = c(-1, 1)
+  ) +
+  labs(
+    x = "Association",
+    color = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank()
+  )
+
+dissimilarity_plot <- base_transform_plot +
+  geom_line(aes(y = Dissimilarity), linewidth = 1.1) +
+  scale_y_continuous(
+    breaks = seq(0, 1, by = 0.25),
+    limits = c(-0.05, 1.05),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    y = "Dissimilarity"
+  )
+
+similarity_plot <- base_transform_plot +
+  geom_line(aes(y = Similarity), linewidth = 1.1) +
+  scale_y_continuous(
+    breaks = seq(0, 1, by = 0.25),
+    limits = c(-0.05, 1.05),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    y = "Similarity"
+  )
+
+dissimilarity_plot + similarity_plot +
+  plot_layout(guides = "collect") &
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.text = element_text(size = 14),
+    legend.position = "bottom")
+```
+
+## Standard networks and graphlet correlation matrices
+
+The following examples show four standard networks with the same number of
+nodes as the filtered genus-level data set used in the application chapter. An
+Erdos-Renyi graph is compared with a scale-free Barabasi-Albert graph and a
+stochastic block model, which represents a modular ecological network with
+denser within-module than between-module connectivity. The last network adds
+connector and peripheral taxa to this modular structure to create a stronger
+contrast between core/module and leaf-like graphlet roles. The Erdos-Renyi graph
+is generated with the same edge count as the stochastic block model. For each
+graph, the corresponding graphlet correlation matrix is computed from the binary
+adjacency matrix.
+
+```{r standard_network_gcms_functions, fig.width=8, fig.height=13, dpi=250}
+set.seed(20260619)
+
+n_genera <- 117
+connect_components <- function(graph) {
+  component_info <- igraph::components(graph)
+  if (component_info$no == 1) {
+    return(graph)
+  }
+
+  representative_nodes <- vapply(
+    seq_len(component_info$no),
+    function(component) which(component_info$membership == component)[1],
+    numeric(1)
+  )
+  connection_edges <- c(rbind(
+    head(representative_nodes, -1),
+    tail(representative_nodes, -1)
+  ))
+
+  igraph::add_edges(graph, connection_edges)
+}
+
+sample_ecological_core_periphery <- function(
+    core_sizes = c(16, 16, 16, 16),
+    n_connectors = 11,
+    n_peripheral = 42,
+    p_within = 0.35,
+    p_between = 0.005) {
+  n_core <- sum(core_sizes)
+  n_total <- n_core + n_connectors + n_peripheral
+  module_probabilities <- matrix(
+    p_between,
+    nrow = length(core_sizes),
+    ncol = length(core_sizes)
+  )
+  diag(module_probabilities) <- p_within
+
+  graph <- igraph::sample_sbm(
+    n = n_core,
+    pref.matrix = module_probabilities,
+    block.sizes = core_sizes,
+    directed = FALSE,
+    loops = FALSE
+  )
+  graph <- igraph::add_vertices(graph, n_total - n_core)
+
+  module_starts <- cumsum(c(1, head(core_sizes, -1)))
+  module_ends <- cumsum(core_sizes)
+  module_hubs <- vapply(
+    seq_along(core_sizes),
+    function(module) {
+      module_nodes <- module_starts[module]:module_ends[module]
+      module_nodes[which.max(igraph::degree(graph, v = module_nodes))]
+    },
+    numeric(1)
+  )
+
+  connector_nodes <- (n_core + 1):(n_core + n_connectors)
+  peripheral_nodes <- (n_core + n_connectors + 1):n_total
+  ecological_edges <- c()
+
+  for (connector_node in connector_nodes) {
+    connected_modules <- sample(seq_along(core_sizes), 2)
+    for (module in connected_modules) {
+      ecological_edges <- c(
+        ecological_edges,
+        connector_node,
+        sample(module_starts[module]:module_ends[module], 2)
+      )
+    }
+  }
+
+  for (peripheral_index in seq_along(peripheral_nodes)) {
+    peripheral_node <- peripheral_nodes[peripheral_index]
+    if (peripheral_index <= 0.75 * length(peripheral_nodes)) {
+      target_node <- sample(module_hubs, 1)
+    } else {
+      target_node <- sample(connector_nodes, 1)
+    }
+
+    ecological_edges <- c(ecological_edges, peripheral_node, target_node)
+    if (runif(1) < 0.12) {
+      ecological_edges <- c(
+        ecological_edges,
+        peripheral_node,
+        sample(module_hubs, 1)
+      )
+    }
+  }
+
+  connect_components(igraph::add_edges(graph, ecological_edges))
+}
+
+g_ba <- igraph::sample_pa(
+  n = n_genera,
+  m = 2,
+  directed = FALSE
+)
+module_sizes <- c(22, 20, 19, 18, 20, 18)
+module_probabilities <- matrix(
+  0.003,
+  nrow = length(module_sizes),
+  ncol = length(module_sizes)
+)
+diag(module_probabilities) <- c(0.24, 0.22, 0.23, 0.21, 0.22, 0.20)
+g_sbm <- igraph::sample_sbm(
+  n = n_genera,
+  pref.matrix = module_probabilities,
+  block.sizes = module_sizes,
+  directed = FALSE,
+  loops = FALSE
+)
+module_starts <- cumsum(c(1, head(module_sizes, -1)))
+module_edges <- cbind(
+  module_starts[-length(module_starts)],
+  module_starts[-1]
+)
+g_sbm <- igraph::add_edges(g_sbm, t(module_edges))
+g_sbm <- connect_components(g_sbm)
+g_ecological <- sample_ecological_core_periphery()
+g_er <- igraph::sample_gnm(
+  n = n_genera,
+  m = igraph::ecount(g_sbm),
+  directed = FALSE,
+  loops = FALSE
+)
+
+standard_networks <- list(
+  "Erdos-Renyi" = g_er,
+  "Barabasi-Albert" = g_ba,
+  "Stochastic block model" = g_sbm,
+  "Core-periphery ecological" = g_ecological
+)
+
+gcm_orbits <- c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)
+
+calc_standard_gcm <- function(graph) {
+  adja <- igraph::as_adjacency_matrix(graph, sparse = FALSE)
+  NetCoMi::calcGCM(as.matrix(adja), orbits = gcm_orbits)[["gcm"]]
+}
+
+standard_gcms <- lapply(standard_networks, calc_standard_gcm)
+network_layouts <- lapply(
+  standard_networks,
+  igraph::layout_with_fr
+)
+
+plot_standard_network <- function(graph, layout, main) {
+  plot(
+    graph,
+    layout = layout,
+    vertex.size = 3.5,
+    vertex.label = NA,
+    vertex.color = "#009E73",
+    vertex.frame.color = NA,
+    edge.color = adjustcolor("gray20", alpha.f = 0.45),
+    edge.width = 0.5,
+    main = main
+  )
+}
+
+plot_gcm_heatmap <- function(gcm, main) {
+  gcm <- gcm[paste0("O", gcm_orbits), paste0("O", gcm_orbits)]
+  orbit_labels <- sub("^O", "", rownames(gcm))
+  heat_cols <- c(
+    colorRampPalette(c("#2166AC", "white"))(101),
+    colorRampPalette(c("white", "#E69F00", "#B2182B"))(101)[-1]
+  )
+  old_xpd <- par("xpd")
+  on.exit(par(xpd = old_xpd), add = TRUE)
+
+  image(
+    x = seq(0.5, ncol(gcm) + 0.5, by = 1),
+    y = seq(0.5, nrow(gcm) + 0.5, by = 1),
+    z = t(gcm[nrow(gcm):1, ]),
+    col = heat_cols,
+    zlim = c(-1, 1),
+    xlim = c(0.5, ncol(gcm) + 2.2),
+    axes = FALSE,
+    xlab = "",
+    ylab = "",
+    main = ""
+  )
+  axis(
+    side = 3,
+    at = seq_along(orbit_labels),
+    labels = orbit_labels,
+    tick = FALSE,
+    line = -0.8,
+    cex.axis = 0.9
+  )
+  axis(
+    side = 2,
+    at = seq_along(orbit_labels),
+    labels = rev(orbit_labels),
+    tick = FALSE,
+    las = 1,
+    line = -0.5,
+    cex.axis = 0.9
+  )
+  title(main = main, line = 2.1)
+  rect(0.5, 0.5, ncol(gcm) + 0.5, nrow(gcm) + 0.5)
+
+  legend_x <- c(ncol(gcm) + 0.9, ncol(gcm) + 1.15)
+  legend_y <- seq(0.5, nrow(gcm) + 0.5, length.out = length(heat_cols) + 1)
+  image(
+    x = legend_x,
+    y = legend_y,
+    z = matrix(seq(-1, 1, length.out = length(heat_cols)), nrow = 1),
+    col = heat_cols,
+    zlim = c(-1, 1),
+    add = TRUE
+  )
+  text(
+    x = ncol(gcm) + 1.8,
+    y = seq(1, nrow(gcm), length.out = 5),
+    labels = seq(-1, 1, by = 0.5),
+    cex = 0.9
+  )
+}
+```
+
+```{r}
+old_par <- par(no.readonly = TRUE)
+```
+
+### Erdos-Renyi network
+
+The Erdos-Renyi network is used as a random baseline. Edges are placed without
+an explicit preference for hubs or modules, so any local structure arises from
+chance rather than from an imposed ecological organization.
+
+```{r standard_network_gcms_ER, fig.width=8, fig.height=3.5, dpi=250}
+network_name <- "Erdos-Renyi"
+
+par(
+  mfrow = c(1, 2),
+  mar = c(0.5, 1.6, 3.8, 2.8),
+  oma = c(0, 0, 0, 0)
+)
+
+plot_standard_network(
+  standard_networks[[network_name]],
+  network_layouts[[network_name]],
+  paste(network_name, "network")
+)
+plot_gcm_heatmap(
+  standard_gcms[[network_name]],
+  paste(network_name, "GCM")
+)
+```
+
+The GCM shows broadly positive correlations among most graphlet orbits. This is
+expected for a random graph of this size and density: nodes with higher degree
+also tend to participate more often in many other small graphlet positions,
+whereas clear opposing orbit roles are largely absent.
+
+### Barabasi-Albert network
+
+The Barabasi-Albert network represents a scale-free hub structure. New nodes
+preferentially attach to already well-connected nodes, producing a few hubs and
+many nodes with low to moderate degree.
+
+```{r standard_network_gcms_BA, fig.width=8, fig.height=3.5, dpi=250}
+network_name <- "Barabasi-Albert"
+
+par(
+  mfrow = c(1, 2),
+  mar = c(0.5, 1.6, 3.8, 2.8),
+  oma = c(0, 0, 0, 0)
+)
+
+plot_standard_network(
+  standard_networks[[network_name]],
+  network_layouts[[network_name]],
+  paste(network_name, "network")
+)
+plot_gcm_heatmap(
+  standard_gcms[[network_name]],
+  paste(network_name, "GCM")
+)
+```
+
+The GCM has more visible block structure than the random baseline. Orbits
+associated with hub participation are highly correlated with each other, while
+orbits describing peripheral or degree-one roles form a second group. This
+matches the interpretation of scale-free networks as being dominated by
+hub-related graphlet dependencies.
+
+### Stochastic block model
+
+The stochastic block model represents a modular ecological network. Edges are
+more likely within modules than between modules, mimicking groups of taxa that
+share similar niches or co-occurrence patterns.
+
+```{r standard_network_gcms_SB, fig.width=8, fig.height=3.5, dpi=250}
+network_name <- "Stochastic block model"
+
+par(
+  mfrow = c(1, 2),
+  mar = c(0.5, 1.6, 3.8, 2.8),
+  oma = c(0, 0, 0, 0)
+)
+
+plot_standard_network(
+  standard_networks[[network_name]],
+  network_layouts[[network_name]],
+  paste(network_name, "network")
+)
+plot_gcm_heatmap(
+  standard_gcms[[network_name]],
+  paste(network_name, "GCM")
+)
+```
+
+The GCM reflects the modular structure through correlated groups of orbits.
+Dense within-module neighborhoods increase the dependence among graphlet roles
+that occur in locally clustered regions, while between-module links contribute
+less strongly. The result is more structured than the Erdos-Renyi baseline but
+less hub-dominated than the Barabasi-Albert network.
+
+### Core-periphery ecological network
+
+The core-periphery ecological network combines dense module cores with connector
+taxa and many peripheral taxa. This creates a contrast between taxa embedded in
+locally dense communities and taxa attached as leaves or sparse connectors.
+
+```{r standard_network_gcms_Eco, fig.width=8, fig.height=3.5, dpi=250}
+network_name <- "Core-periphery ecological"
+
+par(
+  mfrow = c(1, 2),
+  mar = c(0.5, 1.6, 3.8, 2.8),
+  oma = c(0, 0, 0, 0)
+)
+
+plot_standard_network(
+  standard_networks[[network_name]],
+  network_layouts[[network_name]],
+  paste(network_name, "network")
+)
+plot_gcm_heatmap(
+  standard_gcms[[network_name]],
+  paste(network_name, "GCM")
+)
+```
+
+The GCM shows the clearest contrast between graphlet roles. Orbits 0, 2, 5, and
+7 describe degree and internal or branching positions in open structures, while
+orbits 8, 10, and 11 describe participation in cycle- or triangle-related
+structures. In this example, these roles are concentrated in the module cores
+and connector taxa. Their negative correlations with orbits 6 and 9 indicate
+that nodes frequently participating in core, branching, or cyclic graphlets are
+not usually the same nodes that occupy terminal graphlet positions. Conversely,
+nodes with high counts for terminal roles tend to be peripheral taxa attached to
+the network boundary and therefore have low counts for the denser core-related
+orbits.
+
+### Combined overview
+
+The combined figure places the four network types and their GCMs next to each
+other to make the structural differences easier to compare.
+
+```{r standard_network_gcms, fig.width=8, fig.height=13, dpi=250}
+par(
+  mfrow = c(4, 2),
+  mar = c(0.5, 1.6, 3.8, 2.8),
+  oma = c(0, 0, 0, 0)
+)
+
+for (network_name in names(standard_networks)) {
+  plot_standard_network(
+    standard_networks[[network_name]],
+    network_layouts[[network_name]],
+    paste(network_name, "network")
+  )
+  plot_gcm_heatmap(
+    standard_gcms[[network_name]],
+    paste(network_name, "GCM")
+  )
+}
+```
+
+Across the four examples, the GCMs become more structured as the networks move
+away from a homogeneous random baseline. The random network mainly shows
+degree-driven positive orbit correlations, the Barabasi-Albert network
+highlights hub-related dependencies, the stochastic block model emphasizes
+module-related dependencies, and the core-periphery network introduces the
+strongest separation between dense-core and peripheral graphlet roles.
+
+The following plot is used for the thesis:
+
+```{r standard_network_gcms_two_panels, fig.width=8, fig.height=6, dpi=250}
+par(
+  mfrow = c(2, 2),
+  mar = c(0.5, 1.6, 3.8, 2.8),
+  oma = c(0, 0, 0, 0)
+)
+
+for (network_name in c("Barabasi-Albert", "Core-periphery ecological")) {
+  plot_standard_network(
+    standard_networks[[network_name]],
+    network_layouts[[network_name]],
+    paste(network_name, "network")
+  )
+  plot_gcm_heatmap(
+    standard_gcms[[network_name]],
+    paste(network_name, "GCM")
+  )
+}
+
+par(old_par)
+```
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
