@@ -98,8 +98,9 @@ base_transform_plot <- ggplot(
 ) +
   geom_vline(
     xintercept = 0,
-    linewidth = 0.3,
-    linetype = "dotted"
+    linewidth = 1,
+    linetype = "dashed",
+    color = "gray40"
   ) +
   scale_color_manual(values = transformation_colors) +
   scale_x_continuous(
@@ -151,13 +152,13 @@ dissimilarity_plot + similarity_plot +
 
 The following example uses a modular core-periphery network to illustrate how
 different centrality measures highlight different structural roles. The network
-contains dense module cores, connector nodes between modules, and peripheral
-leaf-like nodes. This structure resembles the ecological example used below for
-graphlet correlations, but is kept smaller so that the highlighted nodes remain
-visible.
+contains two subnetworks with different internal densities, peripheral leaf-like
+nodes, and one low-degree bridge node connecting the subnetworks. This structure
+is kept separate from the larger graphlet examples below so that the highlighted
+centrality roles remain visible.
 
-```{r centrality_measures_network, fig.width=8, fig.height=7, dpi=250}
-set.seed(20260619)
+```{r}
+set.seed(42)
 
 connect_components <- function(graph) {
   component_info <- igraph::components(graph)
@@ -179,68 +180,82 @@ connect_components <- function(graph) {
 }
 
 sample_centrality_ecological_network <- function(
-    module_sizes = rep(12, 4),
-    n_leaves_per_module = 4,
-    p_within = 0.38,
-    p_between = 0.01) {
-  n_core <- sum(module_sizes)
-  n_connectors <- length(module_sizes)
-  n_leaves <- n_leaves_per_module * length(module_sizes)
-  n_total <- n_core + n_connectors + n_leaves
+    subnetwork_sizes = c(15, 15),
+    n_leaves_per_subnetwork = 6,
+    p_within = c(0.12, 0.28),
+    n_bridge_targets = 3) {
+  n_core <- sum(subnetwork_sizes)
+  n_bridge_nodes <- 1
+  n_leaves <- length(subnetwork_sizes) * n_leaves_per_subnetwork
+  n_total <- n_core + n_bridge_nodes + n_leaves
 
-  module_probabilities <- matrix(
-    p_between,
-    nrow = length(module_sizes),
-    ncol = length(module_sizes)
+  subnetworks <- lapply(
+    seq_along(subnetwork_sizes),
+    function(subnetwork_index) {
+      repeat {
+        sampled_subnetwork <- igraph::sample_gnp(
+          n = subnetwork_sizes[subnetwork_index],
+          p = p_within[subnetwork_index],
+          directed = FALSE,
+          loops = FALSE
+        )
+        if (igraph::components(sampled_subnetwork)$no == 1) {
+          return(sampled_subnetwork)
+        }
+      }
+    }
   )
-  diag(module_probabilities) <- p_within
-
-  graph <- igraph::sample_sbm(
-    n = n_core,
-    pref.matrix = module_probabilities,
-    block.sizes = module_sizes,
-    directed = FALSE,
-    loops = FALSE
-  )
+  graph <- Reduce(igraph::disjoint_union, subnetworks)
   graph <- igraph::add_vertices(graph, n_total - n_core)
 
-  module_starts <- cumsum(c(1, head(module_sizes, -1)))
-  module_ends <- cumsum(module_sizes)
-  module_hubs <- vapply(
-    seq_along(module_sizes),
-    function(module) {
-      module_nodes <- module_starts[module]:module_ends[module]
+  subnetwork_starts <- cumsum(c(1, head(subnetwork_sizes, -1)))
+  subnetwork_ends <- cumsum(subnetwork_sizes)
+  subnetwork_hubs <- vapply(
+    seq_along(subnetwork_sizes),
+    function(subnetwork) {
+      module_nodes <- subnetwork_starts[subnetwork]:subnetwork_ends[subnetwork]
       module_nodes[which.max(igraph::degree(graph, v = module_nodes))]
     },
     numeric(1)
   )
+  subnetwork_connectors <- lapply(
+    seq_along(subnetwork_sizes),
+    function(subnetwork) {
+      module_nodes <- subnetwork_starts[subnetwork]:subnetwork_ends[subnetwork]
+      connector_candidates <- setdiff(module_nodes, subnetwork_hubs[subnetwork])
+      connector_candidates[
+        order(igraph::degree(graph, v = connector_candidates))
+      ][seq_len(n_bridge_targets)]
+    }
+  )
 
-  connector_nodes <- (n_core + 1):(n_core + n_connectors)
-  leaf_nodes <- (n_core + n_connectors + 1):n_total
+  bridge_node <- n_core + 1
+  leaf_nodes <- (n_core + n_bridge_nodes + 1):n_total
   ecological_edges <- c()
 
-  for (module in seq_along(module_sizes)) {
-    next_module <- ifelse(module == length(module_sizes), 1, module + 1)
-    ecological_edges <- c(
-      ecological_edges,
-      connector_nodes[module],
-      module_hubs[module],
-      connector_nodes[module],
-      module_hubs[next_module]
-    )
-  }
+  ecological_edges <- c(
+    ecological_edges,
+    as.vector(rbind(subnetwork_connectors[[1]], bridge_node)),
+    as.vector(rbind(bridge_node, subnetwork_connectors[[2]]))
+  )
 
   leaf_groups <- split(
     leaf_nodes,
-    rep(seq_along(module_sizes), each = n_leaves_per_module)
+    rep(seq_along(subnetwork_sizes), each = n_leaves_per_subnetwork)
   )
-  for (module in seq_along(leaf_groups)) {
-    for (leaf_node in leaf_groups[[module]]) {
-      ecological_edges <- c(ecological_edges, leaf_node, module_hubs[module])
+  for (subnetwork in seq_along(leaf_groups)) {
+    hub_index <- as.numeric(names(leaf_groups)[subnetwork])
+    for (leaf_node in leaf_groups[[subnetwork]]) {
+      ecological_edges <- c(
+        ecological_edges,
+        leaf_node,
+        subnetwork_hubs[hub_index]
+      )
     }
   }
 
-  connect_components(igraph::add_edges(graph, ecological_edges))
+  graph <- igraph::add_edges(graph, ecological_edges)
+  igraph::simplify(graph, remove.multiple = TRUE, remove.loops = TRUE)
 }
 
 centrality_network <- sample_centrality_ecological_network()
@@ -271,10 +286,11 @@ scale_to_unit <- function(x) {
 }
 
 centrality_palette <- colorRampPalette(
-  c("gray90", "#E69F00", "#B2182B")
+  c("gray80", "#E69F00", "#B2182B")
 )(101)
 
-plot_centrality_network <- function(graph, layout, values, main) {
+plot_centrality_network <- function(graph, layout, values, main,
+                                    vertex_size = 8, title_size = 1) {
   scaled_values <- scale_to_unit(values)
   node_colors <- centrality_palette[
     pmax(1, round(scaled_values * 100) + 1)
@@ -283,20 +299,24 @@ plot_centrality_network <- function(graph, layout, values, main) {
   plot(
     graph,
     layout = layout,
-    vertex.size = 4.5,
+    vertex.size = vertex_size,
     vertex.label = NA,
     vertex.color = node_colors,
     vertex.frame.color = "white",
-    edge.color = adjustcolor("gray30", alpha.f = 0.35),
+    edge.color = adjustcolor("gray20", alpha.f = 0.35),
     edge.width = 0.6,
-    main = main
+    main = NA
   )
+  title(main = main, cex.main = title_size, line = 0.4)
 }
+```
 
+
+```{r centrality_measures_network, fig.width=10, fig.height=3, dpi=250}
 old_par_centrality <- par(no.readonly = TRUE)
 par(
-  mfrow = c(2, 2),
-  mar = c(0.5, 0.5, 2.4, 0.5),
+  mfrow = c(1, 4),
+  mar = c(0.5, 0, 2.4, 0),
   oma = c(0, 0, 0, 0)
 )
 
@@ -305,7 +325,9 @@ for (centrality_name in names(centrality_values)) {
     centrality_network,
     centrality_layout,
     centrality_values[[centrality_name]],
-    centrality_name
+    centrality_name,
+    vertex_size = 10,
+    title_size = 1.8
   )
 }
 
@@ -313,27 +335,26 @@ par(old_par_centrality)
 ```
 
 Degree highlights taxa with many direct neighbors, here mainly module hubs to
-which several peripheral nodes are attached. Betweenness emphasizes connector
-nodes that lie on shortest paths between modules. Closeness favors nodes that
-are globally well positioned with respect to the whole network, often near the
-module connectors. Eigenvector centrality highlights nodes embedded in central
-and well-connected neighborhoods, rather than nodes that are merely bridges.
+which several peripheral nodes are attached. Betweenness emphasizes the
+low-degree bridge node that lies on shortest paths between the two subnetworks,
+even though this node is not highly connected itself. Closeness
+favors nodes that are globally well positioned with respect to the whole
+network, often near the bridge between subnetworks. Eigenvector centrality
+highlights nodes embedded in central and well-connected neighborhoods, rather
+than nodes that are merely bridges, and is therefore higher in the denser
+subnetwork.
 
 ## Standard networks and graphlet correlation matrices
 
-The following examples show four standard networks with the same number of
-nodes as the filtered genus-level data set used in the application chapter. An
-Erdos-Renyi graph is compared with a scale-free Barabasi-Albert graph and a
-stochastic block model, which represents a modular ecological network with
-denser within-module than between-module connectivity. The last network adds
-connector and peripheral taxa to this modular structure to create a stronger
-contrast between core/module and leaf-like graphlet roles. The Erdos-Renyi graph
-is generated with the same edge count as the stochastic block model. For each
-graph, the corresponding graphlet correlation matrix is computed from the binary
-adjacency matrix.
+The following examples compare three standard network models with the same
+number of nodes as the filtered genus-level data set used in the application
+chapter: an Erdos-Renyi graph, a scale-free Barabasi-Albert graph, and a
+stochastic block model. The Erdos-Renyi graph is generated with the same edge
+count as the stochastic block model. For each graph, the corresponding graphlet
+correlation matrix is computed from the binary adjacency matrix.
 
-```{r standard_network_gcms_functions, fig.width=8, fig.height=13, dpi=250}
-set.seed(20260619)
+```{r network_gcms_functions, fig.width=8, fig.height=13, dpi=250}
+set.seed(42)
 
 n_genera <- 117
 connect_components <- function(graph) {
@@ -426,10 +447,37 @@ sample_ecological_core_periphery <- function(
   connect_components(igraph::add_edges(graph, ecological_edges))
 }
 
+add_peripheral_leaves_to_hubs <- function(graph, n_leaves = 25, hub_pool = 8) {
+  n_core <- igraph::vcount(graph)
+  graph <- igraph::add_vertices(graph, n_leaves)
+  hub_nodes <- order(igraph::degree(graph, v = seq_len(n_core)),
+                     decreasing = TRUE)[seq_len(hub_pool)]
+  leaf_nodes <- (n_core + 1):(n_core + n_leaves)
+  leaf_targets <- sample(
+    hub_nodes,
+    size = n_leaves,
+    replace = TRUE,
+    prob = igraph::degree(graph, v = hub_nodes)
+  )
+  leaf_edges <- as.vector(rbind(leaf_nodes, leaf_targets))
+
+  igraph::add_edges(graph, leaf_edges)
+}
+
 g_ba <- igraph::sample_pa(
   n = n_genera,
   m = 2,
   directed = FALSE
+)
+n_ba_peripheral <- 25
+g_ba_peripheral <- igraph::sample_pa(
+  n = n_genera - n_ba_peripheral,
+  m = 2,
+  directed = FALSE
+)
+g_ba_peripheral <- add_peripheral_leaves_to_hubs(
+  g_ba_peripheral,
+  n_leaves = n_ba_peripheral
 )
 module_sizes <- c(22, 20, 19, 18, 20, 18)
 module_probabilities <- matrix(
@@ -463,8 +511,12 @@ g_er <- igraph::sample_gnm(
 standard_networks <- list(
   "Erdos-Renyi" = g_er,
   "Barabasi-Albert" = g_ba,
-  "Stochastic block model" = g_sbm,
-  "Core-periphery ecological" = g_ecological
+  "Stochastic block model" = g_sbm
+)
+stopifnot(
+  all(vapply(standard_networks, igraph::vcount, numeric(1)) == n_genera),
+  igraph::vcount(g_ecological) == n_genera,
+  igraph::vcount(g_ba_peripheral) == n_genera
 )
 
 gcm_orbits <- c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1)
@@ -479,22 +531,28 @@ network_layouts <- lapply(
   standard_networks,
   igraph::layout_with_fr
 )
+ba_peripheral_gcm <- calc_standard_gcm(g_ba_peripheral)
+ba_peripheral_layout <- igraph::layout_with_fr(g_ba_peripheral)
+ecological_gcm <- calc_standard_gcm(g_ecological)
+ecological_layout <- igraph::layout_with_fr(g_ecological)
 
-plot_standard_network <- function(graph, layout, main) {
+plot_standard_network <- function(graph, layout, main, title_size = 1) {
   plot(
     graph,
     layout = layout,
-    vertex.size = 3.5,
+    vertex.size = 4,
     vertex.label = NA,
-    vertex.color = "#009E73",
+    vertex.color = "gray40",
     vertex.frame.color = NA,
     edge.color = adjustcolor("gray20", alpha.f = 0.45),
     edge.width = 0.5,
-    main = main
+    main = NA
   )
+  title(main = main, cex.main = title_size, line = 0.4)
 }
 
-plot_gcm_heatmap <- function(gcm, main) {
+plot_gcm_heatmap <- function(gcm, main, title_size = 1,
+                             orbit_size = 0.9, legend_size = 0.9) {
   gcm <- gcm[paste0("O", gcm_orbits), paste0("O", gcm_orbits)]
   orbit_labels <- sub("^O", "", rownames(gcm))
   heat_cols <- c(
@@ -522,7 +580,8 @@ plot_gcm_heatmap <- function(gcm, main) {
     labels = orbit_labels,
     tick = FALSE,
     line = -0.8,
-    cex.axis = 0.9
+    cex.axis = orbit_size,
+    gap.axis = -1
   )
   axis(
     side = 2,
@@ -531,9 +590,10 @@ plot_gcm_heatmap <- function(gcm, main) {
     tick = FALSE,
     las = 1,
     line = -0.5,
-    cex.axis = 0.9
+    cex.axis = orbit_size,
+    gap.axis = -1
   )
-  title(main = main, line = 2.1)
+  title(main = main, line = 2.1, cex.main = title_size)
   rect(0.5, 0.5, ncol(gcm) + 0.5, nrow(gcm) + 0.5)
 
   legend_x <- c(ncol(gcm) + 0.9, ncol(gcm) + 1.15)
@@ -547,16 +607,12 @@ plot_gcm_heatmap <- function(gcm, main) {
     add = TRUE
   )
   text(
-    x = ncol(gcm) + 1.8,
+    x = ncol(gcm) + 1.7,
     y = seq(1, nrow(gcm), length.out = 5),
     labels = seq(-1, 1, by = 0.5),
-    cex = 0.9
+    cex = legend_size
   )
 }
-```
-
-```{r}
-old_par <- par(no.readonly = TRUE)
 ```
 
 ### Erdos-Renyi network
@@ -565,7 +621,7 @@ The Erdos-Renyi network is used as a random baseline. Edges are placed without
 an explicit preference for hubs or modules, so any local structure arises from
 chance rather than from an imposed ecological organization.
 
-```{r standard_network_gcms_ER, fig.width=8, fig.height=3.5, dpi=250}
+```{r network_gcms_ER, fig.width=8, fig.height=3.5, dpi=250}
 network_name <- "Erdos-Renyi"
 
 par(
@@ -596,7 +652,7 @@ The Barabasi-Albert network represents a scale-free hub structure. New nodes
 preferentially attach to already well-connected nodes, producing a few hubs and
 many nodes with low to moderate degree.
 
-```{r standard_network_gcms_BA, fig.width=8, fig.height=3.5, dpi=250}
+```{r network_gcms_BA, fig.width=8, fig.height=3.5, dpi=250}
 network_name <- "Barabasi-Albert"
 
 par(
@@ -617,10 +673,64 @@ plot_gcm_heatmap(
 ```
 
 The GCM has more visible block structure than the random baseline. Orbits
-associated with hub participation are highly correlated with each other, while
-orbits describing peripheral or degree-one roles form a second group. This
-matches the interpretation of scale-free networks as being dominated by
-hub-related graphlet dependencies.
+associated with hub participation are highly correlated with each other. Since
+the network is generated with two edges for each newly added node, it contains
+few or no terminal nodes; the terminal-orbit group is therefore less pronounced
+than in ecological networks with many endpoints.
+
+### Barabasi-Albert network with peripheral leaves
+
+This exploratory variant keeps a scale-free Barabasi-Albert core but adds
+degree-one peripheral taxa attached preferentially to hubs. It therefore
+combines hub-dominated structure with endpoints, a feature that is often more
+plausible for ecological or microbiome networks than a pure Barabasi-Albert
+model with `m = 2`.
+
+```{r network_gcms_BA_peripheral, fig.width=8, fig.height=3.5, dpi=250}
+network_name <- "Barabasi-Albert with leaves"
+
+par(
+  mfrow = c(1, 2),
+  mar = c(0.5, 1.6, 3.8, 2.8),
+  oma = c(0, 0, 0, 0)
+)
+
+plot_standard_network(
+  g_ba_peripheral,
+  ba_peripheral_layout,
+  paste(network_name, "network")
+)
+plot_gcm_heatmap(
+  ba_peripheral_gcm,
+  paste(network_name, "GCM")
+)
+```
+
+Compared with the pure Barabasi-Albert graph, this network should strengthen
+the contrast between hub-related orbits and terminal-node roles. Hubs remain
+important for orbits associated with degree and internal graphlet positions,
+while the added leaves increase counts for terminal orbits and can make their
+relationship to the hub-dominated part of the network easier to see.
+
+```{r network_gcms_BA_peripheral_thesis, fig.width=8, fig.height=3.5, dpi=250}
+network_name <- "Barabasi-Albert with leaves"
+
+par(
+  mfrow = c(1, 2),
+  mar = c(0.5, 1.5, 1.5, 1.5),
+  oma = c(0, 0, 0, 0)
+)
+
+plot_standard_network(
+  g_ba_peripheral,
+  ba_peripheral_layout,
+  main = NA
+)
+plot_gcm_heatmap(
+  ba_peripheral_gcm,
+  main = NA
+)
+```
 
 ### Stochastic block model
 
@@ -628,7 +738,7 @@ The stochastic block model represents a modular ecological network. Edges are
 more likely within modules than between modules, mimicking groups of taxa that
 share similar niches or co-occurrence patterns.
 
-```{r standard_network_gcms_SB, fig.width=8, fig.height=3.5, dpi=250}
+```{r network_gcms_SB, fig.width=8, fig.height=3.5, dpi=250}
 network_name <- "Stochastic block model"
 
 par(
@@ -660,7 +770,7 @@ The core-periphery ecological network combines dense module cores with connector
 taxa and many peripheral taxa. This creates a contrast between taxa embedded in
 locally dense communities and taxa attached as leaves or sparse connectors.
 
-```{r standard_network_gcms_Eco, fig.width=8, fig.height=3.5, dpi=250}
+```{r network_gcms_Eco, fig.width=8, fig.height=3.5, dpi=250}
 network_name <- "Core-periphery ecological"
 
 par(
@@ -670,12 +780,12 @@ par(
 )
 
 plot_standard_network(
-  standard_networks[[network_name]],
-  network_layouts[[network_name]],
+  g_ecological,
+  ecological_layout,
   paste(network_name, "network")
 )
 plot_gcm_heatmap(
-  standard_gcms[[network_name]],
+  ecological_gcm,
   paste(network_name, "GCM")
 )
 ```
@@ -693,12 +803,13 @@ orbits.
 
 ### Combined overview
 
-The combined figure places the four network types and their GCMs next to each
-other to make the structural differences easier to compare.
+The combined figure places the three standard network models and their GCMs
+next to each other to make the structural differences easier to compare. This is
+the version intended for the thesis appendix.
 
-```{r standard_network_gcms, fig.width=8, fig.height=13, dpi=250}
+```{r network_gcms, fig.width=8, fig.height=9.75, dpi=250}
 par(
-  mfrow = c(4, 2),
+  mfrow = c(3, 2),
   mar = c(0.5, 1.6, 3.8, 2.8),
   oma = c(0, 0, 0, 0)
 )
@@ -707,45 +818,21 @@ for (network_name in names(standard_networks)) {
   plot_standard_network(
     standard_networks[[network_name]],
     network_layouts[[network_name]],
-    paste(network_name, "network")
+    paste(network_name, "network"),
+    title_size = 1.5
   )
   plot_gcm_heatmap(
     standard_gcms[[network_name]],
-    paste(network_name, "GCM")
+    paste(network_name, "GCM"),
+    title_size = 1.5,
+    orbit_size = 1.15,
+    legend_size = 1.15
   )
 }
 ```
 
-Across the four examples, the GCMs become more structured as the networks move
-away from a homogeneous random baseline. The random network mainly shows
-degree-driven positive orbit correlations, the Barabasi-Albert network
-highlights hub-related dependencies, the stochastic block model emphasizes
-module-related dependencies, and the core-periphery network introduces the
-strongest separation between dense-core and peripheral graphlet roles.
-
-The following plot is used for the thesis:
-
-```{r standard_network_gcms_two_panels, fig.width=8, fig.height=6, dpi=250}
-par(
-  mfrow = c(2, 2),
-  mar = c(0.5, 1.6, 3.8, 2.8),
-  oma = c(0, 0, 0, 0)
-)
-
-for (network_name in c("Barabasi-Albert", "Core-periphery ecological")) {
-  plot_standard_network(
-    standard_networks[[network_name]],
-    network_layouts[[network_name]],
-    paste(network_name, "network")
-  )
-  plot_gcm_heatmap(
-    standard_gcms[[network_name]],
-    paste(network_name, "GCM")
-  )
-}
-
-par(old_par)
-```
+Across the three standard models, the GCMs become more structured as the
+networks move away from a homogeneous random baseline. The random network mainly shows degree-driven positive orbit correlations, the Barabasi-Albert network highlights hub-related dependencies, and the stochastic block model emphasizes module-related dependencies.
 
 ## Files written
 

@@ -1,6 +1,6 @@
 Example figures for the methods chapter
 ================
-Compiled at 2026-06-19 19:50:42 UTC
+Compiled at 2026-06-20 11:25:02 UTC
 
     ## [conflicted] Removing existing preference.
     ## [conflicted] Will prefer dplyr::filter over any other package.
@@ -27,19 +27,37 @@ transformation uses only association strength.
 
 ![](figures/example_figures/netcomi_asso_diss_transformation-1.png)<!-- -->
 
+## Centrality measures
+
+The following example uses a modular core-periphery network to
+illustrate how different centrality measures highlight different
+structural roles. The network contains two subnetworks with different
+internal densities, peripheral leaf-like nodes, and one low-degree
+bridge node connecting the subnetworks. This structure is kept separate
+from the larger graphlet examples below so that the highlighted
+centrality roles remain visible.
+
+![](figures/example_figures/netcomi_centrality_measures_network-1.png)<!-- -->
+
+Degree highlights taxa with many direct neighbors, here mainly module
+hubs to which several peripheral nodes are attached. Betweenness
+emphasizes the low-degree bridge node that lies on shortest paths
+between the two subnetworks, even though this node is not highly
+connected itself. Closeness favors nodes that are globally well
+positioned with respect to the whole network, often near the bridge
+between subnetworks. Eigenvector centrality highlights nodes embedded in
+central and well-connected neighborhoods, rather than nodes that are
+merely bridges, and is therefore higher in the denser subnetwork.
+
 ## Standard networks and graphlet correlation matrices
 
-The following examples show four standard networks with the same number
-of nodes as the filtered genus-level data set used in the application
-chapter. An Erdos-Renyi graph is compared with a scale-free
-Barabasi-Albert graph and a stochastic block model, which represents a
-modular ecological network with denser within-module than between-module
-connectivity. The last network adds connector and peripheral taxa to
-this modular structure to create a stronger contrast between core/module
-and leaf-like graphlet roles. The Erdos-Renyi graph is generated with
-the same edge count as the stochastic block model. For each graph, the
-corresponding graphlet correlation matrix is computed from the binary
-adjacency matrix.
+The following examples compare three standard network models with the
+same number of nodes as the filtered genus-level data set used in the
+application chapter: an Erdos-Renyi graph, a scale-free Barabasi-Albert
+graph, and a stochastic block model. The Erdos-Renyi graph is generated
+with the same edge count as the stochastic block model. For each graph,
+the corresponding graphlet correlation matrix is computed from the
+binary adjacency matrix.
 
 ### Erdos-Renyi network
 
@@ -48,7 +66,7 @@ without an explicit preference for hubs or modules, so any local
 structure arises from chance rather than from an imposed ecological
 organization.
 
-![](figures/example_figures/netcomi_standard_network_gcms_ER-1.png)<!-- -->
+![](figures/example_figures/netcomi_network_gcms_ER-1.png)<!-- -->
 
 The GCM shows broadly positive correlations among most graphlet orbits.
 This is expected for a random graph of this size and density: nodes with
@@ -62,13 +80,33 @@ The Barabasi-Albert network represents a scale-free hub structure. New
 nodes preferentially attach to already well-connected nodes, producing a
 few hubs and many nodes with low to moderate degree.
 
-![](figures/example_figures/netcomi_standard_network_gcms_BA-1.png)<!-- -->
+![](figures/example_figures/netcomi_network_gcms_BA-1.png)<!-- -->
 
 The GCM has more visible block structure than the random baseline.
 Orbits associated with hub participation are highly correlated with each
-other, while orbits describing peripheral or degree-one roles form a
-second group. This matches the interpretation of scale-free networks as
-being dominated by hub-related graphlet dependencies.
+other. Since the network is generated with two edges for each newly
+added node, it contains few or no terminal nodes; the terminal-orbit
+group is therefore less pronounced than in ecological networks with many
+endpoints.
+
+### Barabasi-Albert network with peripheral leaves
+
+This exploratory variant keeps a scale-free Barabasi-Albert core but
+adds degree-one peripheral taxa attached preferentially to hubs. It
+therefore combines hub-dominated structure with endpoints, a feature
+that is often more plausible for ecological or microbiome networks than
+a pure Barabasi-Albert model with `m = 2`.
+
+![](figures/example_figures/netcomi_network_gcms_BA_peripheral-1.png)<!-- -->
+
+Compared with the pure Barabasi-Albert graph, this network should
+strengthen the contrast between hub-related orbits and terminal-node
+roles. Hubs remain important for orbits associated with degree and
+internal graphlet positions, while the added leaves increase counts for
+terminal orbits and can make their relationship to the hub-dominated
+part of the network easier to see.
+
+![](figures/example_figures/netcomi_network_gcms_BA_peripheral_thesis-1.png)<!-- -->
 
 ### Stochastic block model
 
@@ -76,7 +114,7 @@ The stochastic block model represents a modular ecological network.
 Edges are more likely within modules than between modules, mimicking
 groups of taxa that share similar niches or co-occurrence patterns.
 
-![](figures/example_figures/netcomi_standard_network_gcms_SB-1.png)<!-- -->
+![](figures/example_figures/netcomi_network_gcms_SB-1.png)<!-- -->
 
 The GCM reflects the modular structure through correlated groups of
 orbits. Dense within-module neighborhoods increase the dependence among
@@ -92,7 +130,7 @@ connector taxa and many peripheral taxa. This creates a contrast between
 taxa embedded in locally dense communities and taxa attached as leaves
 or sparse connectors.
 
-![](figures/example_figures/netcomi_standard_network_gcms_Eco-1.png)<!-- -->
+![](figures/example_figures/netcomi_network_gcms_Eco-1.png)<!-- -->
 
 The GCM shows the clearest contrast between graphlet roles. Orbits 0, 2,
 5, and 7 describe degree and internal or branching positions in open
@@ -108,22 +146,17 @@ denser core-related orbits.
 
 ### Combined overview
 
-The combined figure places the four network types and their GCMs next to
-each other to make the structural differences easier to compare.
+The combined figure places the three standard network models and their
+GCMs next to each other to make the structural differences easier to
+compare. This is the version intended for the thesis appendix.
 
-![](figures/example_figures/netcomi_standard_network_gcms-1.png)<!-- -->
+![](figures/example_figures/netcomi_network_gcms-1.png)<!-- -->
 
-Across the four examples, the GCMs become more structured as the
+Across the three standard models, the GCMs become more structured as the
 networks move away from a homogeneous random baseline. The random
 network mainly shows degree-driven positive orbit correlations, the
-Barabasi-Albert network highlights hub-related dependencies, the
-stochastic block model emphasizes module-related dependencies, and the
-core-periphery network introduces the strongest separation between
-dense-core and peripheral graphlet roles.
-
-The following plot is used for the thesis:
-
-![](figures/example_figures/netcomi_standard_network_gcms_two_panels-1.png)<!-- -->
+Barabasi-Albert network highlights hub-related dependencies, and the
+stochastic block model emphasizes module-related dependencies.
 
 ## Files written
 
