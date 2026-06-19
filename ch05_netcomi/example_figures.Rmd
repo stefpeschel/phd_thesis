@@ -147,6 +147,178 @@ dissimilarity_plot + similarity_plot +
     legend.position = "bottom")
 ```
 
+## Centrality measures
+
+The following example uses a modular core-periphery network to illustrate how
+different centrality measures highlight different structural roles. The network
+contains dense module cores, connector nodes between modules, and peripheral
+leaf-like nodes. This structure resembles the ecological example used below for
+graphlet correlations, but is kept smaller so that the highlighted nodes remain
+visible.
+
+```{r centrality_measures_network, fig.width=8, fig.height=7, dpi=250}
+set.seed(20260619)
+
+connect_components <- function(graph) {
+  component_info <- igraph::components(graph)
+  if (component_info$no == 1) {
+    return(graph)
+  }
+
+  representative_nodes <- vapply(
+    seq_len(component_info$no),
+    function(component) which(component_info$membership == component)[1],
+    numeric(1)
+  )
+  connection_edges <- c(rbind(
+    head(representative_nodes, -1),
+    tail(representative_nodes, -1)
+  ))
+
+  igraph::add_edges(graph, connection_edges)
+}
+
+sample_centrality_ecological_network <- function(
+    module_sizes = rep(12, 4),
+    n_leaves_per_module = 4,
+    p_within = 0.38,
+    p_between = 0.01) {
+  n_core <- sum(module_sizes)
+  n_connectors <- length(module_sizes)
+  n_leaves <- n_leaves_per_module * length(module_sizes)
+  n_total <- n_core + n_connectors + n_leaves
+
+  module_probabilities <- matrix(
+    p_between,
+    nrow = length(module_sizes),
+    ncol = length(module_sizes)
+  )
+  diag(module_probabilities) <- p_within
+
+  graph <- igraph::sample_sbm(
+    n = n_core,
+    pref.matrix = module_probabilities,
+    block.sizes = module_sizes,
+    directed = FALSE,
+    loops = FALSE
+  )
+  graph <- igraph::add_vertices(graph, n_total - n_core)
+
+  module_starts <- cumsum(c(1, head(module_sizes, -1)))
+  module_ends <- cumsum(module_sizes)
+  module_hubs <- vapply(
+    seq_along(module_sizes),
+    function(module) {
+      module_nodes <- module_starts[module]:module_ends[module]
+      module_nodes[which.max(igraph::degree(graph, v = module_nodes))]
+    },
+    numeric(1)
+  )
+
+  connector_nodes <- (n_core + 1):(n_core + n_connectors)
+  leaf_nodes <- (n_core + n_connectors + 1):n_total
+  ecological_edges <- c()
+
+  for (module in seq_along(module_sizes)) {
+    next_module <- ifelse(module == length(module_sizes), 1, module + 1)
+    ecological_edges <- c(
+      ecological_edges,
+      connector_nodes[module],
+      module_hubs[module],
+      connector_nodes[module],
+      module_hubs[next_module]
+    )
+  }
+
+  leaf_groups <- split(
+    leaf_nodes,
+    rep(seq_along(module_sizes), each = n_leaves_per_module)
+  )
+  for (module in seq_along(leaf_groups)) {
+    for (leaf_node in leaf_groups[[module]]) {
+      ecological_edges <- c(ecological_edges, leaf_node, module_hubs[module])
+    }
+  }
+
+  connect_components(igraph::add_edges(graph, ecological_edges))
+}
+
+centrality_network <- sample_centrality_ecological_network()
+centrality_layout <- igraph::layout_with_fr(centrality_network)
+
+centrality_values <- list(
+  "Degree" = igraph::degree(centrality_network),
+  "Betweenness" = igraph::betweenness(
+    centrality_network,
+    directed = FALSE,
+    normalized = TRUE
+  ),
+  "Closeness" = igraph::closeness(
+    centrality_network,
+    normalized = TRUE
+  ),
+  "Eigenvector" = igraph::eigen_centrality(
+    centrality_network,
+    directed = FALSE
+  )$vector
+)
+
+scale_to_unit <- function(x) {
+  if (diff(range(x)) == 0) {
+    return(rep(0, length(x)))
+  }
+  (x - min(x)) / diff(range(x))
+}
+
+centrality_palette <- colorRampPalette(
+  c("gray90", "#E69F00", "#B2182B")
+)(101)
+
+plot_centrality_network <- function(graph, layout, values, main) {
+  scaled_values <- scale_to_unit(values)
+  node_colors <- centrality_palette[
+    pmax(1, round(scaled_values * 100) + 1)
+  ]
+
+  plot(
+    graph,
+    layout = layout,
+    vertex.size = 4.5,
+    vertex.label = NA,
+    vertex.color = node_colors,
+    vertex.frame.color = "white",
+    edge.color = adjustcolor("gray30", alpha.f = 0.35),
+    edge.width = 0.6,
+    main = main
+  )
+}
+
+old_par_centrality <- par(no.readonly = TRUE)
+par(
+  mfrow = c(2, 2),
+  mar = c(0.5, 0.5, 2.4, 0.5),
+  oma = c(0, 0, 0, 0)
+)
+
+for (centrality_name in names(centrality_values)) {
+  plot_centrality_network(
+    centrality_network,
+    centrality_layout,
+    centrality_values[[centrality_name]],
+    centrality_name
+  )
+}
+
+par(old_par_centrality)
+```
+
+Degree highlights taxa with many direct neighbors, here mainly module hubs to
+which several peripheral nodes are attached. Betweenness emphasizes connector
+nodes that lie on shortest paths between modules. Closeness favors nodes that
+are globally well positioned with respect to the whole network, often near the
+module connectors. Eigenvector centrality highlights nodes embedded in central
+and well-connected neighborhoods, rather than nodes that are merely bridges.
+
 ## Standard networks and graphlet correlation matrices
 
 The following examples show four standard networks with the same number of
