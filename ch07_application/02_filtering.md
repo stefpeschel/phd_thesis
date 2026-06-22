@@ -1,6 +1,6 @@
 Taxonomic aggregation and filtering
 ================
-Compiled at 2026-06-15 20:11:47 UTC
+Compiled at 2026-06-22 07:51:20 UTC
 
 ## Load packages
 
@@ -97,6 +97,8 @@ proportion of zero entries.
 | $\geq 10\%$ of samples  |               41 |             48.4 |
 | $\geq 20\%$ of samples  |               31 |             36.4 |
 
+![](figures/02_filtering/filter_zero_fraction_plot-1.png)<!-- -->
+
 ## Files written
 
 These files have been written to the target directory,
@@ -105,12 +107,12 @@ These files have been written to the target directory,
     ## # A tibble: 9 × 4
     ##   path                               type         size modification_time  
     ##   <fs::path>                         <fct> <fs::bytes> <dttm>             
-    ## 1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-06-15 20:12:19
+    ## 1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-06-22 07:51:57
     ## 2 bact_phylo_2m_genus_prev10.rds     file        56.5K 2026-06-09 10:59:27
-    ## 3 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-15 20:12:19
-    ## 4 prevalence_filtering.csv           file          246 2026-06-15 20:12:18
-    ## 5 prevalence_filtering.tex           file          663 2026-06-15 20:12:18
-    ## 6 taxonomic_overview.csv             file          123 2026-06-15 20:12:08
-    ## 7 taxonomic_overview.tex             file          557 2026-06-15 20:12:08
-    ## 8 top_genera.csv                     file          283 2026-06-15 20:12:18
-    ## 9 top_genera.tex                     file          809 2026-06-15 20:12:18
+    ## 3 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-22 07:51:57
+    ## 4 prevalence_filtering.csv           file          246 2026-06-22 07:51:57
+    ## 5 prevalence_filtering.tex           file          663 2026-06-22 07:51:57
+    ## 6 taxonomic_overview.csv             file          123 2026-06-22 07:51:47
+    ## 7 taxonomic_overview.tex             file          556 2026-06-22 07:51:47
+    ## 8 top_genera.csv                     file          283 2026-06-22 07:51:56
+    ## 9 top_genera.tex                     file          808 2026-06-22 07:51:56

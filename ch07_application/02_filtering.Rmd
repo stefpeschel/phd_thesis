@@ -320,7 +320,7 @@ data.frame(
   theme_bw()
 ```
 
-```{r prevalence_asv, fig.width=7, fig.height=3}
+```{r prevalence_asv, fig.width=7, fig.height=2.5}
 data.frame(
   prevalence   = rowSums(otutab_asv > 0) / ncol(otutab_asv),
   total_counts = rowSums(otutab_asv)
@@ -333,12 +333,12 @@ data.frame(
     x        = "Prevalence (fraction of samples)",
     y        = "Total counts"
   ) +
+  theme_bw() +
   theme(
     axis.title        = element_text(size = 13),
     axis.text         = element_text(size = 12),
     plot.title        = element_text(size = 14)
-  ) +
-  theme_bw()
+  )
 ```
 
 ## Most abundant genera
@@ -502,6 +502,29 @@ saveRDS(
 )
 ```
 
+```{r zero_fraction_plot, fig.width=7, fig.height=2.5, dpi = 200}
+count_mat <- get_sample_by_taxa(phylo_genus_prev10)
+
+tibble(
+  genus = colnames(count_mat),
+  zero_fraction = colMeans(count_mat == 0)
+) |>
+  ggplot(aes(x = zero_fraction)) +
+  geom_histogram(binwidth = 0.05, boundary = 0) +
+  scale_x_continuous(
+    labels = scales::percent_format(),
+    breaks = seq(0, 1, by = 0.1)
+  ) +
+  labs(
+    x = "Zero fraction",
+    y = "Number of genera"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 13)
+  ) 
+```
 
 
 ## Files written
