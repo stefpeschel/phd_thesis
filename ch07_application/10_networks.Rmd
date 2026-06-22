@@ -1,0 +1,1292 @@
+---
+title: "Network analysis"
+date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
+output: 
+  github_document: default
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+params:
+  name: "10_networks" # change if you rename file
+---
+
+```{r here, message=FALSE}
+here::i_am(paste0(params$name, ".Rmd"), uuid = "147f8b0c-cb4b-427a-9549-8c8b8e3ea46b")
+```
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params$name, "/net_"),
+  echo = FALSE)
+```
+
+```{r packages, message=FALSE, warning=FALSE}
+library(conflicted)
+library(phyloseq)
+library(tidyverse)
+library(NetCoMi)
+library(permApprox)
+library(igraph)
+library(kableExtra)
+library(patchwork)
+library(ggplot2)
+
+# For network comparison
+library(foreach)
+library(future)
+library(doFuture)
+library(doRNG)
+library(progressr)
+library(filematrix)
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::rename)
+conflicts_prefer(dplyr::mutate)
+conflicts_prefer(dplyr::arrange)
+conflicts_prefer(dplyr::count)
+
+# Load global functions
+application_path <- rprojroot::find_root(rprojroot::has_file("README.md"))
+source(file.path(application_path, "functions.R"))
+```
+
+```{r directories}
+# create or *empty* the target directory, used to write this file's data: 
+projthis::proj_create_dir_target(params$name, clean = FALSE)
+
+# function to get path to target directory: path_target("sample.csv")
+path_target <- projthis::proj_path_target(params$name)
+
+# function to get path to previous data: path_source("00-import", "sample.csv")
+path_source <- projthis::proj_path_source(params$name)
+```
+
+## Aim
+
+This script contains the network analyses for the application chapter. The first
+part builds one complete network on the filtered genus-level data and evaluates
+how sensitive the resulting network is to common preprocessing and association
+choices. The complete-network analysis will compare the standard preprocessing
+approach with the final method used in this thesis, and then vary one component
+at a time: zero replacement, normalization, and association measure.
+
+The second part will compare networks between the two main exclusive
+breastfeeding groups used throughout this chapter, `EBF duration = 0` and
+`EBF duration >=2`. The network-comparison analysis will contrast the classical
+empirical permutation results with `permApprox`-refined p-values. For the
+`permApprox` analysis we will fit both the unconstrained approximation and the
+proposed constrained version, so that the unconstrained fit can be used to
+inspect how many zero-valued permutation statistics would be expected without
+the constraint.
+
+## Set global parameters
+
+```{r parameters}
+zero_replacement_fraction <- 0.65
+network_seed <- 42
+permutation_seed <- 42
+n_perm_network_comparison <- 999
+cores <- 10
+
+association_measure_final <- "spieceasi"
+normalization_final <- "clr"
+zero_replacement_final <- "multRepl"
+
+refit_complete_network <- FALSE
+refit_method_comparison <- FALSE
+refit_network_comparison <- FALSE
+```
+
+## Load data
+
+```{r load_data}
+phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev01.rds"))
+sampdata <- readRDS(path_source("00_build_dataset", "sampdata.rds"))
+```
+
+### Phyloseq object on genus level
+
+```{r}
+phylo_genus
+```
+## Helper functions
+
+```{r functions}
+## Function to turn an association matrix into a graph object
+# Arguments:
+# - assoMat: association matrix
+# - threshold: associations below the threshold are set to zero
+# - dissTrans: dissimilarity transformation ("signed" or "unsigned")
+
+transform_asso <- function(assoMat, thresh = NULL, dissTrans = "signed") {
+    # Sparsification
+    if (!is.null(thresh)) {
+        assoMat[abs(assoMat) < thresh] <- 0
+    }
+
+    # Compute dissimilarity matrix
+    if (dissTrans == "signed") {
+        dissMat <- sqrt(0.5 * (1 - assoMat))
+    } else {
+        dissMat <- sqrt(1 - assoMat^2)
+    }
+
+    # Dissimilarity between nodes with zero correlation is set to 1
+    # (these nodes are unconnected and thus should have maximum dissimilarity)
+    dissMat[assoMat == 0] <- 1
+
+    # Compute similarity matrix
+    simMat <- 1 - dissMat
+
+    # Turn into igraph object
+    graphObj <- SpiecEasi::adj2igraph(simMat)
+
+    return(list(graph = graphObj, adja = simMat, asso = assoMat, diss = dissMat))
+}
+```
+
+
+## Prepare data
+
+The network analyses use the same filtered genus-level object as the
+differential abundance and differential distribution analyses. Counts are
+represented as a samples-by-taxa matrix. Relative abundances are prepared here
+because several network workflows use them directly. 
+
+Since SpiecEasi does only provide pseudo count zero replacement, we need to 
+apply zero replacement with multRepl beforehand. 
+
+```{r prepare_matrices, warning=FALSE}
+counts_raw <- get_sample_by_taxa(phylo_genus)
+
+sampdata_net <- sampdata %>%
+  filter(SampleID %in% rownames(counts_raw)) %>%
+  arrange(match(SampleID, rownames(counts_raw)))
+
+counts_raw <- counts_raw[sampdata_net$SampleID, , drop = FALSE]
+
+stopifnot(identical(rownames(counts_raw), sampdata_net$SampleID))
+
+counts_rel <- counts_to_rel_abund(counts_raw)
+
+zero_repl_object <- compute_multrepl_clr(
+  rel_abund_mat = counts_rel,
+  frac = zero_replacement_fraction
+)
+
+counts_rel_multrepl <- zero_repl_object$rel_abund_repl
+
+net_preprocessing_summary <- tibble(
+  n_samples = nrow(counts_raw),
+  n_taxa = ncol(counts_raw),
+  min_library_size = min(rowSums(counts_raw)),
+  median_library_size = median(rowSums(counts_raw)),
+  max_library_size = max(rowSums(counts_raw)),
+  zero_fraction_orig = mean(counts_raw == 0),
+  zero_fraction_repl = mean(counts_rel_multrepl == 0)
+)
+
+net_preprocessing_summary
+```
+
+Rename taxonomic table and make rank Genus unique.
+
+```{r}
+phylo_genus <- renameTaxa(phylo_genus, 
+                          pat = "<name>", 
+                          substPat = "<name>_<subst_name>(<subst_R>)",
+                          numDupli = "Genus")
+```
+
+
+## Complete network with standard preprocessing
+
+This section will estimate the complete genus-level network using the final
+preprocessing and association pipeline selected for the thesis. The resulting
+object should be saved to the target directory and reused by downstream summary
+tables and figures.
+
+The preprocessing approach used throughout the thesis is:
+
+1. Transform counts to relative abundances
+2. Perform multiplicative zero replacement
+3. Perform CLR transformation
+
+### Network construction
+
+```{r generate_net_single_main}
+path_net_single_main <- path_target("net_single_main.rds")
+
+if (file.exists(path_net_single_main) && !refit_complete_network) {
+  net_single_main <- readRDS(path_net_single_main)
+} else {
+  net_single_main <- NetCoMi::netConstruct(
+    data = counts_rel_multrepl,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30, # Subsamples in StARS
+                                           thresh = 0.1), # StARS threshold
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_main, path_net_single_main)
+}
+```
+
+```{r}
+# Extract association matrix
+assomat_single_main <- net_single_main$assoMat1
+adjamat_single_main <- net_single_main$adjaMat1
+
+# Generate graph object
+graph_single_main <- transform_asso(assomat_single_main)$graph
+```
+
+### Network analysis
+
+#### Association heatmap
+
+**For all taxa**
+
+```{r single_association_heatmap, fig.width=20, fig.height=20}
+plotHeat(assomat_single_main, textUpp = "none", textLow = "none")
+```
+
+**For non-singletons only**
+
+```{r single_association_heatmap_nonzero, fig.width=15, fig.height=15}
+adjamat_single_main_nonzero <- net_single_main$adjaMat1
+diag(adjamat_single_main_nonzero) <- 0
+
+taxa_all <- colnames(assomat_single_main)
+taxa_with_associations <- taxa_all[rowSums(adjamat_single_main_nonzero) > 0]
+assomat_single_main_no_singletons <- 
+  assomat_single_main[taxa_with_associations, taxa_with_associations]
+
+plotHeat(
+  assomat_single_main_no_singletons,
+  textUpp = "none",
+  textLow = "none"
+)
+```
+
+#### Association histogram
+
+```{r single_association_histrogram, fig.width=8, fig.height=2}
+n_zero_asso <- sum(assomat_single_main[lower.tri(assomat_single_main)] == 0)
+
+data.frame(correlation = assomat_single_main[lower.tri(assomat_single_main)]) |>
+  ggplot(aes(x = correlation)) +
+  geom_histogram(binwidth = 0.005) +
+  annotate("text", x = 0.01, y = Inf, vjust = 1.5, hjust = 0,
+           label = paste0("n = ", n_zero_asso), size = 4) +
+  coord_cartesian(ylim = c(0, 50)) +
+  labs(x = "Estimated correlation",
+       y = "Count",
+       #title = "Estimated correlations after sparsification"
+       ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+  )
+```
+
+```{r}
+n_asso <- sum(lower.tri(assomat_single_main))
+cat("Entries in the lower triangle:", n_asso)
+
+cat("\nNon-zero entries in the lower triangle:", n_asso - n_zero_asso)
+```
+
+#### Degree distribution
+
+```{r single_degree_distribution, fig.width=8, fig.height=2, dpi = 200}
+# Compute degree distribution
+ddist <- igraph::degree.distribution(graph_single_main)
+
+# Data frame needed for ggplot2
+df <- data.frame(
+    Degree = as.factor((seq_along(ddist)) - 1), Fraction = ddist
+)
+
+ggplot(data = df, aes(x = Degree, y = Fraction, group = 1)) +
+  geom_line(color = "gray30") +
+  geom_point(size = 2, color = "gray30") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+```
+
+#### Analysis with netAnalyze()
+
+```{r}
+props_single_main <- netAnalyze(net_single_main,
+                                centrLCC = TRUE,
+                                clustMethod = "cluster_fast_greedy",
+                                hubPar = "eigenvector",
+                                weightDeg = FALSE, 
+                                normDeg = FALSE,
+                                normBetw = FALSE,
+                                normClose = FALSE)
+```
+
+```{r}
+print(summary(props_single_main))
+```
+
+### Graphlet correlation matrix
+
+```{r single_gcm, fig.width=6, fig.height=6, dpi = 200}
+plotGCM(props_single_main,
+        legendCex = 1, 
+        labCex = 1.1,
+        sigTextCex = 1.2,
+        titles = "",
+        mar = c(1,1,0,1))
+```
+
+
+### Network plot
+
+In the network plot, the following taxa are labelled: 
+
+* Taxa that appeared in the differential association analysis as well as the differential distribution analysis.
+* Most central taxa with respect to eigenvector centrality.
+* The three taxa with a negative correlation to Bifidobacterium
+
+
+```{r single_taxa_to_label}
+## Most abundant taxa
+top_genera_df <- readr::read_csv(
+  path_source("02_filtering", "top_genera.csv"),
+  show_col_types = FALSE
+)
+
+top_genera_plot <- top_genera_df$genus
+
+## Taxa labelled in differential abundance plot
+da_volcano_df <- readr::read_csv(
+  path_source("08_diff_abundance", "diff_abundance_volcano_plot_data.csv"),
+  show_col_types = FALSE
+)
+
+da_plot_taxa <- da_volcano_df %>%
+  filter(p_plot_raw < 1e-5) %>%
+  distinct(taxon_id, taxon) %>%
+  { setNames(.$taxon, .$taxon_id) }
+
+
+## Taxa labelled in differential distribution plot
+alpha_diff_distribution <- 0.01
+two_stage_component_label_n <- 6
+complete_clr_volcano_label_n <- 6
+
+dd_results_all <- readr::read_csv(
+  path_source("09_diff_distribution", "diff_distribution_results_all.csv"),
+  show_col_types = FALSE
+)
+
+dd_results_complete_all <- readr::read_csv(
+  path_source("09_diff_distribution", "diff_distribution_complete_clr_results_all.csv"),
+  show_col_types = FALSE
+)
+
+dd_two_stage_taxa <- dplyr::bind_rows(
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Non-zero distribution",
+      native_statistic = `d.wass^2`,
+      pvalue = p_permapprox_constrained,
+      qvalue = p_adj_permapprox_constrained
+    ),
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Zero prevalence",
+      native_statistic = abs(zero_prevalence_z),
+      pvalue = p.zero,
+      qvalue = p.adj.zero
+    ),
+  dd_results_all %>%
+    transmute(
+      taxon_id,
+      taxon,
+      component = "Combined",
+      native_statistic = fisher_statistic_permapprox_constrained,
+      pvalue = p_combined_permapprox_constrained,
+      qvalue = p_adj_combined_permapprox_constrained
+    )
+) %>%
+  filter(is.finite(native_statistic), is.finite(pvalue), qvalue < alpha_diff_distribution) %>%
+  group_by(component) %>%
+  arrange(qvalue, desc(-log10(pvalue)), .by_group = TRUE) %>%
+  slice_head(n = two_stage_component_label_n) %>%
+  ungroup() %>%
+  distinct(taxon_id, taxon)
+
+dd_one_stage_taxa <- dd_results_complete_all %>%
+  filter(
+    is.finite(`d.wass^2`),
+    is.finite(p_permapprox_constrained),
+    p_adj_permapprox_constrained < alpha_diff_distribution
+  ) %>%
+  arrange(p_adj_permapprox_constrained, desc(-log10(p_permapprox_constrained))) %>%
+  slice_head(n = complete_clr_volcano_label_n) %>%
+  distinct(taxon_id, taxon)
+
+dd_plot_taxa <- bind_rows(dd_two_stage_taxa, dd_one_stage_taxa) %>%
+  distinct(taxon_id, taxon) %>%
+  { setNames(.$taxon, .$taxon_id) }
+
+# Define taxa with highest eigenvector centrality
+taxa_high_eigen <- props_single_main$centralities$eigenv1 %>%
+  sort(decreasing = TRUE) %>%
+  head(10) %>%
+  names() %>%
+  { setNames(., .) }
+
+## Taxa negatively correlated with Bifidobacterium
+bif_neg_taxa <- assomat_single_main["Bifidobacterium", ] |>
+  (\(x) x[x < 0])() |>
+  names() |>
+  (\(x) setNames(x, x))()
+
+## Union across all sources
+taxa_to_label <- c(top_genera_plot, da_plot_taxa, dd_plot_taxa, taxa_high_eigen, bif_neg_taxa)
+taxa_to_label <- taxa_to_label[!duplicated(names(taxa_to_label))]
+
+plot_labels <- setNames(
+  rep("", ncol(net_single_main$adjaMat1)),
+  colnames(net_single_main$adjaMat1)
+)
+
+plot_labels[taxa_to_label] <- taxa_to_label
+```
+
+```{r}
+# Select nodes to plot
+adja_single_main <- net_single_main$adjaMat1
+diag(adja_single_main) <- 0
+
+non_singleton_taxa <- names(which(
+  rowSums(adja_single_main != 0) > 0 |
+    colSums(adja_single_main != 0) > 0
+))
+
+taxa_to_label_in_network <- intersect(
+  names(taxa_to_label),
+  colnames(net_single_main$adjaMat1)
+)
+
+taxa_to_plot <- unique(c(
+  non_singleton_taxa,
+  taxa_to_label_in_network
+))
+
+network_labels <- setNames(
+  rep("", ncol(net_single_main$adjaMat1)),
+  colnames(net_single_main$adjaMat1)
+)
+
+network_labels[taxa_to_label_in_network] <- taxa_to_label[taxa_to_label_in_network]
+```
+
+#### Node colors: clusters; node size: eigenvector centrality
+
+```{r single_net_plot_basic, fig.width=7, fig.height=6, dpi=250}
+clustcols <- c("#E69F00", "#CC79A7", "#F0E442", "#56B4E9", "#0072B2", 
+               "#009E73",  "#D55E00", "#33A02C", "#E69F00", "#CC79A7",
+               "#F0E442", "#56B4E9", "#0072B2", "#009E73",  "#D55E00")
+
+p <- plot(props_single_main,
+          nodeFilter = "names",
+          nodeFilterPar = taxa_to_plot,
+          labelScale = FALSE,
+          labels = network_labels,
+          repulsion = 0.899999,
+          nodeColor = "cluster", 
+          colorVec = clustcols,
+          nodeTransp = 40,
+          nodeSize = "eigenvector",
+          nodeSizeSpread = 3,
+          hubBorderCol = "gray40",
+          posCol = "gray50", 
+          negCol = "red3",
+          showTitle = FALSE,
+          cexLabels = 0.8,
+          mar = c(1, 1, 1, 1))
+```
+
+#### Nodes colored by phyla
+
+```{r , fig.width=7, fig.height=6, dpi=250}
+# Get phyla names
+taxtab <- as(tax_table(phylo_genus), "matrix")
+phyla <- as.factor(taxtab[, "Phylum"])
+names(phyla) <- taxtab[, "Genus"]
+table(phyla)
+
+# Define phylum colors
+phylcol <- c(
+  Actinobacteriota = "#E69F00",
+  Bacteroidota = "#CC79A7",
+  Desulfobacterota = "#97D0F2",
+  Firmicutes = "#0072B2",
+  Fusobacteriota = "#F0E442",
+  Proteobacteria = "#009E73",
+  Verrucomicrobiota = "#D55E00"
+)
+```
+
+
+
+```{r, fig.width=7, fig.height=6, dpi=250}
+layout <- p$layout$layout1
+layout["[Ruminococcus]_gnavugroup", ] <- c(-0.7,  -0.55)
+layout["Pseudomonas", ] <- c(-0.1, -0.22)
+layout["Blastococcus", ] <- c(-0.33, 0.13)
+layout["8_Comamonadaceae(F)", ] <- c(-0.2, -0.1)
+layout["Haemophilus", ] <- c(0.84, -0.5)
+```
+
+```{r single_net_plot_col_phyla, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_main,
+     layout = layout,
+          nodeFilter = "names",
+          nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.8,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+
+## Network comparison by EBF duration
+
+### Analysis data set
+
+The group comparison uses the two EBF groups that define the main contrast in
+this chapter: no exclusive breastfeeding and exclusive breastfeeding for at
+least two months. Samples with one month of exclusive breastfeeding are excluded
+from this comparison.
+
+```{r prepare_ebf_groups, warning=FALSE}
+# Generate data set for EBF comparison
+ebf_keep <- sampdata$`EBF duration` %in% c("0", ">=2")
+
+phylo_genus_ebf <- prune_samples(ebf_keep, phylo_genus)
+phylo_genus_ebf <- prune_taxa(taxa_sums(phylo_genus_ebf) > 0, phylo_genus_ebf)
+
+metadata_ebf <- sampdata[ebf_keep, , drop = FALSE] %>%
+  mutate(
+    ebf_group = factor(
+      as.character(`EBF duration`),
+      levels = c("0", ">=2"),
+      labels = c("0 months", ">=2 months")
+    )
+  )
+
+counts_ebf_raw <- get_sample_by_taxa(phylo_genus_ebf)
+counts_ebf_rel <- counts_to_rel_abund(counts_ebf_raw)
+
+ebf_group <- metadata_ebf$ebf_group
+
+zero_repl_object <- compute_multrepl_clr(
+  rel_abund_mat = counts_ebf_rel,
+  frac = zero_replacement_fraction
+)
+
+counts_ebf_rel_multrepl <- zero_repl_object$rel_abund_repl
+```
+
+```{r ebf_group_overview, eval=FALSE}
+metadata_ebf %>%
+  count(ebf_group, name = "n_samples")
+```
+
+### Network construction
+
+```{r generate_net_ebf_main}
+path_net_ebf_main <- path_target("net_ebf_main.rds")
+
+if (file.exists(path_net_ebf_main) && !refit_complete_network) {
+  net_ebf_main <- readRDS(path_net_ebf_main)
+} else {
+  net_ebf_main <- NetCoMi::netConstruct(
+    data = counts_ebf_rel_multrepl,
+    group = ebf_group,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30, # Subsamples in StARS
+                                           thresh = 0.1), # StARS threshold
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    jointPrepro = FALSE,
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_ebf_main, path_net_ebf_main)
+}
+```
+
+```{r}
+# Extract association matrices
+assomat_ebf_main1 <- net_ebf_main$assoMat1
+assomat_ebf_main2 <- net_ebf_main$assoMat2
+adjamat_ebf_main1 <- net_ebf_main$adjaMat1
+adjamat_ebf_main2 <- net_ebf_main$adjaMat2
+
+# Generate graph objectss
+graph_ebf_main1 <- transform_asso(assomat_ebf_main1)$graph
+graph_ebf_main2 <- transform_asso(assomat_ebf_main2)$graph
+```
+
+### Network analysis
+
+#### Association histogram
+
+```{r ebf_association_histrogram, fig.width=8, fig.height=4}
+
+
+n_zero_asso1 <- sum(assomat_ebf_main1[lower.tri(assomat_ebf_main1)] == 0)
+n_zero_asso2 <- sum(assomat_ebf_main2[lower.tri(assomat_ebf_main2)] == 0)
+
+p1 <- data.frame(correlation = assomat_ebf_main1[lower.tri(assomat_ebf_main1)]) |>
+  ggplot(aes(x = correlation)) +
+  geom_histogram(binwidth = 0.01) +
+  annotate("text", x = 0.01, y = Inf, vjust = 1.5, hjust = 0,
+           label = paste0("n = ", n_zero_asso1), size = 4) +
+  coord_cartesian(ylim = c(0, 50), xlim = c(-0.2, 0.8)) +
+  labs(x = "",
+       y = "Count",
+       ) +
+  theme_bw() +
+  theme(
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+
+p2 <- data.frame(correlation = assomat_ebf_main2[lower.tri(assomat_ebf_main2)]) |>
+  ggplot(aes(x = correlation)) +
+  geom_histogram(binwidth = 0.01) +
+  annotate("text", x = 0.01, y = Inf, vjust = 1.5, hjust = 0,
+           label = paste0("n = ", n_zero_asso2), size = 4) +
+  coord_cartesian(ylim = c(0, 50), xlim = c(-0.2, 0.8)) +
+  labs(x = "Estimated correlation",
+       y = "Count",
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+  )
+
+p1 / p2
+```
+
+#### Degree distribution
+
+```{r ebf_degree_distribution, fig.width=8, fig.height=4, dpi = 200}
+# Compute degree distribution
+ddist1 <- igraph::degree.distribution(graph_ebf_main1)
+ddist2 <- igraph::degree.distribution(graph_ebf_main2)
+
+# Data frame needed for ggplot2
+df1 <- data.frame(
+    Degree = (seq_along(ddist1) - 1), Fraction = ddist1
+)
+df2 <- data.frame(
+    Degree = (seq_along(ddist2) - 1), Fraction = ddist2
+)
+df1[28:40, "Degree"] <- 28:40
+df1[28:40, "Fraction"] <- 0
+
+p1 <- ggplot(data = df1, aes(x = Degree, y = Fraction, group = 1)) +
+  geom_line(color = "gray30") +
+  geom_point(size = 2, color = "gray30") +
+  theme_bw() +
+  theme(
+    axis.title.y = element_text(size = 14),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+
+p2 <- ggplot(data = df2, aes(x = Degree, y = Fraction, group = 1)) +
+  geom_line(color = "gray30") +
+  geom_point(size = 2, color = "gray30") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+
+p1 / p2
+```
+
+#### Analysis with netAnalyze()
+
+```{r}
+props_ebf_main <- netAnalyze(net_ebf_main,
+                             centrLCC = TRUE,
+                             clustMethod = "cluster_fast_greedy",
+                             hubPar = "eigenvector",
+                             weightDeg = FALSE, 
+                             normDeg = FALSE,
+                             normBetw = FALSE,
+                             normClose = FALSE)
+```
+
+### Graphlet correlation matrix
+
+```{r ebf_gcm, fig.width=10, fig.height=9, dpi = 200}
+plotGCM(props_ebf_main,
+        legendCex = 1.2, 
+        titleCex = 1.5,
+        labCex = 1.2,
+        sigTextCex = 1.3)
+```
+
+### Network plot
+
+```{r}
+plot(props_ebf_main,
+     title1 = "EBF = 0", 
+     title2 = "EBF >= 2")
+```
+
+### Generate permuted association matrices
+
+```{r generate permuted association matrices, eval=FALSE}
+permGroupMat <- createAssoPerm(props_ebf_main, 
+                               nPerm = 1000, 
+                               computeAsso = FALSE, 
+                               seed = 42)
+
+nPerm_all <- 1000
+blocksize <- 20
+repetitions <- nPerm_all / blocksize
+
+
+cores <- 8
+
+plan(multisession, workers = cores)
+registerDoFuture()
+
+with_progress({
+  p <- progressr::progressor(along = 1:repetitions)
+  
+  tmp <- foreach(i = 1:repetitions,
+                 .packages = c("NetCoMi")) %dorng% {
+    p()
+    file_base <- paste0("./data/10_networks/perm_asso_matrices/assoPerm_ebf", i)
+    bmat_file <- paste0(file_base, ".bmat")
+    if (!file.exists(bmat_file)) {
+      set.seed(permutation_seed + i)
+      NetCoMi::createAssoPerm(props_ebf_main, nPerm = blocksize,
+                              permGroupMat = permGroupMat[(i-1) * blocksize +
+                                                            1:blocksize, ],
+                              computeAsso = TRUE,
+                              fileStoreAssoPerm = file_base,
+                              storeCountsPerm = FALSE, append = FALSE)
+    }
+  }
+})
+
+# Reset to sequential execution
+plan(sequential)
+```
+
+
+```{r, eval=FALSE}
+# Combine the matrices and store them into a new file (because netCompare() 
+# needs an external file)
+assoPerm_all <- NULL
+
+for (i in 1:repetitions) {
+  file_base <- paste0("./data/10_networks/perm_asso_matrices/assoPerm_ebf", i)
+  
+  assoPerm_tmp <- fm.open(filenamebase = file_base, readonly = TRUE)
+  
+  assoPerm_all <- rbind(assoPerm_all, as.matrix(assoPerm_tmp))
+  
+  close(assoPerm_tmp)
+}
+
+dim(assoPerm_all)
+```
+The combined matrix has 117000 rows and 234 columns, which is plausible because:
+
+- n_rows = nPerm_all * n_taxa = 1000 * 117
+- n_cols = n_groups * n_taxa * 2 * 117
+
+We performed 1000 permutations, but want only 999 to get a round minimum possible
+p-value. We therefore reduce the matrix to 999 * 117 = 116883 rows.
+
+```{r, eval=FALSE}
+# Keep the number of stored permutations consistent with netCompare().
+n_perm_netcompare <- 999
+n_taxa_netcompare <- nrow(props_ebf_main$input$adjaMat1)
+n_rows_netcompare <- n_perm_netcompare * n_taxa_netcompare
+
+stopifnot(nrow(assoPerm_all) >= n_rows_netcompare)
+stopifnot(nrow(assoPerm_all) %% n_taxa_netcompare == 0)
+
+assoPerm_netcompare <- assoPerm_all[seq_len(n_rows_netcompare), , drop = FALSE]
+dim(assoPerm_netcompare)
+```
+
+```{r, eval=FALSE}
+# Combine the permutation association matrices
+fm.create.from.matrix(filenamebase = path_target("assoPerm_ebf"), 
+                      mat = assoPerm_netcompare)
+# >116883 x 234 filematrix with 8 byte "double" elements 
+```
+
+### Differential network analysis
+
+We start by comparing local and global network characteristics between the two 
+groups. This is done with NetCoMi' `netCompare()` function.
+
+The statistical tests will be based on three different types of p-values:
+
+* Empirical p-values
+* Empirical p-values with permApprox refinement (without support constraints)
+* Empirical p-values with permApprox refinement (with support constraints)
+
+#### Empirical p-values
+
+```{r run_netcompare_noBH}
+path_comp_ebf_main_noBH <- path_target("comp_ebf_main_noBH.rds")
+
+if (file.exists(path_comp_ebf_main_noBH) && !refit_complete_network) {
+  comp_ebf_main_noBH <- readRDS(path_comp_ebf_main_noBH)
+} else {
+  comp_ebf_main_noBH <- netCompare(props_ebf_main, 
+                              permTest = TRUE, 
+                              nPerm = 999,
+                              fileLoadAssoPerm = path_target("assoPerm_ebf"),
+                              adjust = "none",
+                              cores = 10,
+                              verbose = TRUE,
+                              seed = 42)
+  
+  saveRDS(comp_ebf_main_noBH, path_comp_ebf_main_noBH)
+}
+
+print(summary(comp_ebf_main_noBH, 
+        groupNames = c("EBF = 0", "EBF >= 2"),
+        showCentr = c("degree", "between", "closeness"), 
+        numbNodes = 5))
+```
+
+```{r run_netcompare_BH}
+path_comp_ebf_main_BH <- path_target("comp_ebf_main_BH.rds")
+
+if (file.exists(path_comp_ebf_main_BH) && !refit_complete_network) {
+  comp_ebf_main_BH <- readRDS(path_comp_ebf_main_BH)
+} else {
+  comp_ebf_main_BH <- netCompare(props_ebf_main, 
+                              permTest = TRUE, 
+                              nPerm = 999,
+                              fileLoadAssoPerm = path_target("assoPerm_ebf"),
+                              adjust = "BH",
+                              cores = 10,
+                              verbose = TRUE,
+                              seed = 42)
+  
+  saveRDS(comp_ebf_main_BH, path_comp_ebf_main_BH)
+}
+
+print(summary(comp_ebf_main_BH, 
+        groupNames = c("EBF = 0", "EBF >= 2"),
+        showCentr = c("degree", "between", "closeness"), 
+        numbNodes = 5))
+```
+
+#### permApprox refinement without constraint
+
+```{r run_netcompare_GPD_noConstr_noBH}
+path_comp_ebf_GPD_noConstr_noBH <- path_target("comp_ebf_GPD_noConstr_noBH.rds")
+
+if (file.exists(path_comp_ebf_GPD_noConstr_noBH) && !refit_complete_network) {
+  comp_ebf_GPD_noConstr_noBH <- readRDS(path_comp_ebf_GPD_noConstr_noBH)
+} else {
+  
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "none"
+  )
+  comp_ebf_GPD_noConstr_noBH <- 
+    netCompare(props_ebf_main, 
+               permTest = TRUE, 
+               nPerm = 999,
+               fileLoadAssoPerm = path_target("assoPerm_ebf"),
+               refinePermPvals = TRUE,
+               permApproxParams = list(
+                 method = "gpd",
+                 gpd_ctrl = gpd_ctrl
+               ),
+               adjust = "none",
+               cores = 10,
+               verbose = TRUE,
+               seed = 42)
+  
+  saveRDS(comp_ebf_GPD_noConstr_noBH, path_comp_ebf_GPD_noConstr_noBH)
+}
+
+print(summary(comp_ebf_GPD_noConstr_noBH, 
+        groupNames = c("EBF = 0", "EBF >= 2"),
+        showCentr = c("degree", "between", "closeness"), 
+        numbNodes = 5))
+```
+
+```{r run_netcompare_GPD_noConstr_BH}
+path_comp_ebf_GPD_noConstr_BH <- path_target("comp_ebf_GPD_noConstr_BH.rds")
+
+if (file.exists(path_comp_ebf_GPD_noConstr_BH) && !refit_complete_network) {
+  comp_ebf_GPD_noConstr_BH <- readRDS(path_comp_ebf_GPD_noConstr_BH)
+} else {
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "none"
+  )
+
+  comp_ebf_GPD_noConstr_BH <- 
+    netCompare(props_ebf_main, 
+               permTest = TRUE, 
+               nPerm = 999,
+               fileLoadAssoPerm = path_target("assoPerm_ebf"),
+               refinePermPvals = TRUE,
+               permApproxParams = list(
+                 method = "gpd",
+                 gpd_ctrl = gpd_ctrl
+               ),
+               adjust = "BH",
+               cores = 10,
+               verbose = TRUE,
+               seed = 42)
+  
+  saveRDS(comp_ebf_GPD_noConstr_BH, path_comp_ebf_GPD_noConstr_BH)
+}
+
+print(summary(comp_ebf_GPD_noConstr_BH, 
+              groupNames = c("EBF = 0", "EBF >= 2"),
+              showCentr = c("degree", "between", "closeness"), 
+              numbNodes = 5))
+
+```
+
+#### permApprox refinement with constraint
+
+```{r run_netcompare_GPD_constr_noBH}
+path_comp_ebf_GPD_constr_noBH <- path_target("comp_ebf_GPD_constr_noBH.rds")
+
+if (file.exists(path_comp_ebf_GPD_constr_noBH) && !refit_complete_network) {
+  comp_ebf_GPD_constr_noBH <- readRDS(path_comp_ebf_GPD_constr_noBH)
+} else {
+  
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "support_at_obs",
+    sample_size = min(as.vector(table(ebf_group)))
+  )
+  comp_ebf_GPD_constr_noBH <- 
+    netCompare(props_ebf_main, 
+               permTest = TRUE, 
+               nPerm = 999,
+               fileLoadAssoPerm = path_target("assoPerm_ebf"),
+               refinePermPvals = TRUE,
+               permApproxParams = list(
+                 method = "gpd",
+                 gpd_ctrl = gpd_ctrl
+               ),
+               adjust = "none",
+               cores = 10,
+               verbose = TRUE,
+               seed = 42)
+  
+  saveRDS(comp_ebf_GPD_constr_noBH, path_comp_ebf_GPD_constr_noBH)
+}
+
+print(summary(comp_ebf_GPD_constr_noBH, 
+        groupNames = c("EBF = 0", "EBF >= 2"),
+        showCentr = c("degree", "between", "closeness"), 
+        numbNodes = 5))
+```
+
+```{r run_netcompare_GPD_constr_BH}
+path_comp_ebf_GPD_constr_BH <- path_target("comp_ebf_GPD_constr_BH.rds")
+
+if (file.exists(path_comp_ebf_GPD_constr_BH) && !refit_complete_network) {
+  comp_ebf_GPD_constr_BH <- readRDS(path_comp_ebf_GPD_constr_BH)
+} else {
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "support_at_obs",
+    sample_size = min(as.vector(table(ebf_group)))
+  )
+  
+  comp_ebf_GPD_constr_BH <- 
+    netCompare(props_ebf_main, 
+               permTest = TRUE, 
+               nPerm = 999,
+               fileLoadAssoPerm = path_target("assoPerm_ebf"),
+               refinePermPvals = TRUE,
+               permApproxParams = list(
+                 method = "gpd",
+                 gpd_ctrl = gpd_ctrl
+               ),
+               adjust = "BH",
+               cores = 10,
+               verbose = TRUE,
+               seed = 42)
+  
+  saveRDS(comp_ebf_GPD_constr_BH, path_comp_ebf_GPD_constr_BH)
+}
+
+print(summary(comp_ebf_GPD_constr_BH, 
+        groupNames = c("EBF = 0", "EBF >= 2"),
+        showCentr = c("degree", "between", "closeness"), 
+        numbNodes = 5))
+```
+
+### Differential association analysis
+
+In this step we compare the associations itself by generating and plotting differential networks, which have an edge for differentially associated 
+genera only.
+
+The networks will be based on three different types of p-values:
+
+* Empirical p-values
+* Empirical p-values with permApprox refinement (without support constraints)
+* Empirical p-values with permApprox refinement (with support constraints)
+
+#### Empirical p-values
+
+```{r run_diffnet_noBH}
+path_diff_ebf_main_noBH <- path_target("diff_ebf_main_noBH.rds")
+
+if (file.exists(path_diff_ebf_main_noBH) && !refit_complete_network) {
+  diff_ebf_main_noBH <- readRDS(path_diff_ebf_main_noBH)
+} else {
+  diff_ebf_main_noBH <- diffnet(net_ebf_main,
+                              diffMethod = "permute",
+                              nPerm = 999L,
+                              fileLoadAssoPerm = path_target("assoPerm_ebf"),
+                              adjust = "none",
+                              cores = 10,
+                              verbose = TRUE,
+                              seed = 42)
+  
+  saveRDS(diff_ebf_main_noBH, path_diff_ebf_main_noBH)
+}
+
+summary(diff_ebf_main_noBH$pvalsVec)
+```
+
+```{r run_diffnet_BH}
+path_diff_ebf_main_BH <- path_target("diff_ebf_main_BH.rds")
+
+if (file.exists(path_diff_ebf_main_BH) && !refit_complete_network) {
+  diff_ebf_main_BH <- readRDS(path_diff_ebf_main_BH)
+} else {
+  diff_ebf_main_BH <- diffnet(net_ebf_main,
+                              diffMethod = "permute",
+                              nPerm = 999L,
+                              fileLoadAssoPerm = path_target("assoPerm_ebf"),
+                              adjust = "BH",
+                              cores = 10,
+                              verbose = TRUE,
+                              seed = 42)
+  
+  saveRDS(diff_ebf_main_BH, path_diff_ebf_main_BH)
+}
+
+summary(diff_ebf_main_BH$pAdjustVec)
+```
+
+#### permApprox refinement without constraint
+
+```{r run_diffnet_noConstr_noBH}
+path_diff_ebf_noConstr_noBH <- path_target("diff_ebf_noConstr_noBH.rds")
+
+if (file.exists(path_diff_ebf_noConstr_noBH) && !refit_complete_network) {
+  diff_ebf_noConstr_noBH <- readRDS(path_diff_ebf_noConstr_noBH)
+} else {
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "none"
+  )
+
+  diff_ebf_noConstr_noBH <- diffnet(net_ebf_main,
+                                    diffMethod = "permute",
+                                    nPerm = 999L,
+                                    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+                                    refinePermPvals = TRUE,
+                                    permApproxParams = list(
+                                      method = "gpd",
+                                      gpd_ctrl = gpd_ctrl
+                                    ),
+                                    adjust = "none",
+                                    cores = 10,
+                                    verbose = TRUE,
+                                    seed = 42)
+  
+  saveRDS(diff_ebf_noConstr_noBH, path_diff_ebf_noConstr_noBH)
+}
+
+summary(diff_ebf_noConstr_noBH$pvalsVec)
+```
+
+```{r run_diffnet_noConstr_BH}
+path_diff_ebf_noConstr_BH <- path_target("diff_ebf_noConstr_BH.rds")
+
+if (file.exists(path_diff_ebf_noConstr_BH) && !refit_complete_network) {
+  diff_ebf_noConstr_BH <- readRDS(path_diff_ebf_noConstr_BH)
+} else {
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "none"
+  )
+  
+  diff_ebf_noConstr_BH <- diffnet(net_ebf_main,
+                                  diffMethod = "permute",
+                                  nPerm = 999L,
+                                  fileLoadAssoPerm = path_target("assoPerm_ebf"),
+                                  refinePermPvals = TRUE,
+                                  permApproxParams = list(
+                                    method = "gpd",
+                                    gpd_ctrl = gpd_ctrl
+                                  ),
+                                  adjust = "BH",
+                                  cores = 10,
+                                  verbose = TRUE,
+                                  seed = 42)
+  
+  saveRDS(diff_ebf_noConstr_BH, path_diff_ebf_noConstr_BH)
+}
+
+summary(diff_ebf_noConstr_BH$pAdjustVec)
+```
+
+#### permApprox refinement with constraint
+
+```{r run_diffnet_constr_noBH}
+path_diff_ebf_constr_noBH <- path_target("diff_ebf_constr_noBH.rds")
+
+if (file.exists(path_diff_ebf_constr_noBH) && !refit_complete_network) {
+  diff_ebf_constr_noBH <- readRDS(path_diff_ebf_constr_noBH)
+} else {
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "support_at_obs",
+    sample_size = min(as.vector(table(ebf_group)))
+  )
+
+  diff_ebf_constr_noBH <- diffnet(net_ebf_main,
+                                    diffMethod = "permute",
+                                    nPerm = 999L,
+                                    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+                                    refinePermPvals = TRUE,
+                                    permApproxParams = list(
+                                      method = "gpd",
+                                      gpd_ctrl = gpd_ctrl
+                                    ),
+                                    adjust = "none",
+                                    cores = 10,
+                                    verbose = TRUE,
+                                    seed = 42)
+  
+  saveRDS(diff_ebf_constr_noBH, path_diff_ebf_constr_noBH)
+}
+
+summary(diff_ebf_constr_noBH$pvalsVec)
+```
+
+```{r run_diffnet_constr_BH}
+path_diff_ebf_constr_BH <- path_target("diff_ebf_constr_BH.rds")
+
+if (file.exists(path_diff_ebf_constr_BH) && !refit_complete_network) {
+  diff_ebf_constr_BH <- readRDS(path_diff_ebf_constr_BH)
+} else {
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "support_at_obs",
+    sample_size = min(as.vector(table(ebf_group)))
+  )
+  
+  diff_ebf_constr_BH <- diffnet(net_ebf_main,
+                                  diffMethod = "permute",
+                                  nPerm = 999L,
+                                  fileLoadAssoPerm = path_target("assoPerm_ebf"),
+                                  refinePermPvals = TRUE,
+                                  permApproxParams = list(
+                                    method = "gpd",
+                                    gpd_ctrl = gpd_ctrl
+                                  ),
+                                  adjust = "BH",
+                                  cores = 10,
+                                  verbose = TRUE,
+                                  seed = 42)
+  
+  saveRDS(diff_ebf_constr_BH, path_diff_ebf_constr_BH)
+}
+
+summary(diff_ebf_constr_BH$pAdjustVec)
+```
+
+## Files written
+
+These files have been written to the target directory, ```r paste0("data/", params$name)```:
+
+```{r list-files-target}
+projthis::proj_dir_info(path_target())
+```
