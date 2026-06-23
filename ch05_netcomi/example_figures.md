@@ -1,6 +1,6 @@
 Example figures for the methods chapter
 ================
-Compiled at 2026-06-20 11:25:02 UTC
+Compiled at 2026-06-23 11:21:13 UTC
 
     ## [conflicted] Removing existing preference.
     ## [conflicted] Will prefer dplyr::filter over any other package.

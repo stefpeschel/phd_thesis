@@ -555,10 +555,12 @@ plot_gcm_heatmap <- function(gcm, main, title_size = 1,
                              orbit_size = 0.9, legend_size = 0.9) {
   gcm <- gcm[paste0("O", gcm_orbits), paste0("O", gcm_orbits)]
   orbit_labels <- sub("^O", "", rownames(gcm))
-  heat_cols <- c(
-    colorRampPalette(c("#2166AC", "white"))(101),
-    colorRampPalette(c("white", "#E69F00", "#B2182B"))(101)[-1]
-  )
+  n_orb <- nrow(gcm)
+
+  heat_cols <- RColorBrewer::brewer.pal(n = 11, name = "RdBu")
+  heat_cols[6] <- "#FFFFFF"
+  heat_cols <- grDevices::colorRampPalette(heat_cols)(51)
+
   old_xpd <- par("xpd")
   on.exit(par(xpd = old_xpd), add = TRUE)
 
@@ -574,6 +576,7 @@ plot_gcm_heatmap <- function(gcm, main, title_size = 1,
     ylab = "",
     main = ""
   )
+
   axis(
     side = 3,
     at = seq_along(orbit_labels),
@@ -583,6 +586,7 @@ plot_gcm_heatmap <- function(gcm, main, title_size = 1,
     cex.axis = orbit_size,
     gap.axis = -1
   )
+
   axis(
     side = 2,
     at = seq_along(orbit_labels),
@@ -593,11 +597,26 @@ plot_gcm_heatmap <- function(gcm, main, title_size = 1,
     cex.axis = orbit_size,
     gap.axis = -1
   )
+
   title(main = main, line = 2.1, cex.main = title_size)
+
+  # Outer border
   rect(0.5, 0.5, ncol(gcm) + 0.5, nrow(gcm) + 0.5)
+
+  # Orbit-group rectangles:
+  # O0 | O2,O5,O7 | O8,O10,O11 | O6,O9,O4,O1
+  rect(
+    xleft   = c(0.5, 1.5, 4.5, 7.5),
+    ybottom = c(n_orb - 0.5, n_orb - 3.5, n_orb - 6.5, 0.5),
+    xright  = c(1.5, 4.5, 7.5, n_orb + 0.5),
+    ytop    = c(n_orb + 0.5, n_orb - 0.5, n_orb - 3.5, n_orb - 6.5),
+    lwd = 2,
+    xpd = NA
+  )
 
   legend_x <- c(ncol(gcm) + 0.9, ncol(gcm) + 1.15)
   legend_y <- seq(0.5, nrow(gcm) + 0.5, length.out = length(heat_cols) + 1)
+
   image(
     x = legend_x,
     y = legend_y,
@@ -606,6 +625,7 @@ plot_gcm_heatmap <- function(gcm, main, title_size = 1,
     zlim = c(-1, 1),
     add = TRUE
   )
+
   text(
     x = ncol(gcm) + 1.7,
     y = seq(1, nrow(gcm), length.out = 5),
