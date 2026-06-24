@@ -288,6 +288,43 @@ reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
 scale_y_reordered <- function(..., sep = "___") {
   scale_y_discrete(labels = function(x) gsub(paste0(sep, ".*$"), "", x), ...)
 }
+
+sig_stars <- function(p) {
+  dplyr::case_when(
+    p < 0.001 ~ "***",
+    p < 0.01  ~ "**",
+    p < 0.05  ~ "*",
+    p < 0.1   ~ ".",
+    TRUE      ~ ""
+  )
+}
+
+fmt_p_latex <- function(p_num) {
+  p_str <- formatC(p_num, format = "e", digits = 2)
+  stars <- sig_stars(p_num)
+  
+  ifelse(stars != "", paste0(p_str, "$^{", stars, "}$"), p_str)
+}
+
+fmt_p_table <- function(p_num) {
+  formatC(p_num, format = "e", digits = 2)
+}
+
+center_max_statistic <- function(statistic, n_taxa) {
+  statistic - 2 * log(n_taxa) + log(log(n_taxa))
+}
+
+gumbel_cdf_cao <- function(x) {
+  exp(-exp(-x / 2) / sqrt(pi))
+}
+
+gumbel_density_cao <- function(x) {
+  exp(-x / 2) * gumbel_cdf_cao(x) / (2 * sqrt(pi))
+}
+
+gumbel_upper_tail_cao <- function(x) {
+  1 - gumbel_cdf_cao(x)
+}
 ```
 
 ## Prepare CLR matrix
@@ -507,6 +544,8 @@ comp_results_all <- comp_results %>%
     n_taxa_zero_variance, statistic_obs, n_exceed, n_perm, p_empirical
   ) %>%
   mutate(
+    statistic_centered = center_max_statistic(statistic_obs, n_taxa_tested),
+    p_asymptotic_gumbel = gumbel_upper_tail_cao(statistic_centered),
     p_permapprox = comp_permapprox$p_unadjusted,
     method_used = comp_permapprox$method_used
   )
@@ -515,6 +554,7 @@ comp_results_all %>%
   arrange(contrast) %>%
   mutate(
     p_empirical = fmt_p_table(p_empirical),
+    p_asymptotic_gumbel = fmt_p_table(p_asymptotic_gumbel),
     p_permapprox = fmt_p_table(p_permapprox)
   )
 ```
@@ -532,13 +572,12 @@ comp_tex_df <- comp_results_all %>%
   arrange(contrast) %>%
   transmute(
     Contrast = as.character(contrast),
-    Groups = paste0(group1, " vs. ", group2),
-    n1 = n1,
-    n2 = n2,
     M = round(statistic_obs, 2),
+    Mc = round(statistic_centered, 2),
     n_exceed = n_exceed,
     p_emp = fmt_p_latex(p_empirical),
-    p_papp = fmt_p_latex(p_permapprox)
+    p_papp = fmt_p_latex(p_permapprox),
+    p_asy = fmt_p_latex(p_asymptotic_gumbel)
   )
 
 tex_comp_equivalence <- kbl(
@@ -546,15 +585,19 @@ tex_comp_equivalence <- kbl(
   format = "latex",
   booktabs = TRUE,
   escape = FALSE,
-  col.names = c("Contrast", "Groups", "$n_1$", "$n_2$", "$M_n$",
-                "\\# exceed", "$p$ (emp.)", "$p$ (GPD-refined)"),
-  align = "llrrrrrr",
+  col.names = c("Contrast", "$M_n$", "$M_n^c$", 
+                "\\# exceed", "$p$ (emp.)",
+                "$p$ (GPD-refined)", "$p$ (asym.)"),
+  align = "lrrrlll",
   caption = paste(
     "Compositional equivalence results for selected two-group contrasts.",
     "$M_n$ is the maximum standardized squared CLR mean difference.",
+    "$M_n^c = M_n - 2\\log(p) + \\log\\log(p)$ is the centered statistic",
+    "used for the asymptotic Gumbel approximation.",
     "\\# exceed: number of permuted statistics $\\geq$ observed.",
     "$p$ (emp.): empirical permutation $p$-value ($999$ permutations);",
-    "$p$ (GPD-refined): $p$-value refined with \\texttt{permApprox}."
+    "$p$ (GPD-refined): $p$-value refined with \\texttt{permApprox};",
+    "$p$ (asym.): asymptotic Gumbel $p$-value."
   ),
   label = "application:comp-equivalence"
 ) %>%
@@ -568,6 +611,116 @@ tex_comp_equivalence <- kbl(
 
 tex_comp_equivalence
 save_kable(tex_comp_equivalence, file = path_target("comp_equivalence_table.tex"))
+```
+
+## Asymptotic Gumbel comparison
+
+The maximum statistic can also be centered as
+$M_n^c = M_n - 2\log(p) + \log\log(p)$ and compared with the limiting Gumbel
+distribution used by Cao et al. The permutation statistics are
+centered in the same way, using the number of CLR coordinates tested in each
+contrast. This comparison is diagnostic: the permutation-based p-values remain
+the primary inferential results in this analysis.
+
+```{r comp_equivalence_gumbel_comparison_data}
+perm_gumbel_df <- comp_results %>%
+  select(contrast, n_taxa_tested, perm_stats) %>%
+  mutate(perm_id = purrr::map(perm_stats, seq_along)) %>%
+  tidyr::unnest(c(perm_stats, perm_id)) %>%
+  rename(statistic_perm = perm_stats) %>%
+  mutate(
+    contrast = factor(contrast, levels = contrast_order),
+    statistic_centered_perm = center_max_statistic(
+      statistic_perm,
+      n_taxa_tested
+    )
+  )
+
+obs_gumbel_df <- comp_results_all %>%
+  mutate(
+    contrast = factor(contrast, levels = contrast_order),
+    label = paste0(
+      "p-val. (perm.) = ", formatC(p_empirical, format = "e", digits = 2),
+      "\n",
+      "p-val. (asy.) = ",
+      formatC(p_asymptotic_gumbel, format = "e", digits = 2),
+      "\n",
+      "p-val. (GPD) = ", formatC(p_permapprox, format = "e", digits = 2)
+    )
+  )
+
+gumbel_curve_df <- purrr::map_dfr(
+  contrast_order,
+  function(current_contrast) {
+    perm_vals <- perm_gumbel_df %>%
+      filter(contrast == current_contrast) %>%
+      pull(statistic_centered_perm)
+    
+    obs_val <- obs_gumbel_df %>%
+      filter(contrast == current_contrast) %>%
+      pull(statistic_centered)
+    
+    x_grid <- seq(
+      min(c(perm_vals, obs_val), na.rm = TRUE) - 1,
+      max(c(perm_vals, obs_val), na.rm = TRUE) + 1,
+      length.out = 400
+    )
+    
+    tibble(
+      contrast = current_contrast,
+      statistic_centered = x_grid,
+      density = gumbel_density_cao(x_grid)
+    )
+  }
+) %>%
+  mutate(contrast = factor(contrast, levels = contrast_order))
+```
+
+```{r comp_equivalence_gumbel_comparison_plot, fig.width=9, fig.height=6, dpi = 200}
+perm_gumbel_df %>%
+  filter(contrast %in% contrast_order) %>%
+  ggplot(aes(x = statistic_centered_perm)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 45,
+    fill = "grey70",
+    color = "grey50",
+    alpha = 0.85
+  ) +
+  geom_line(
+    data = gumbel_curve_df,
+    aes(x = statistic_centered, y = density),
+    color = "gray20",
+    linewidth = 0.5,
+    inherit.aes = FALSE
+  ) +
+  geom_vline(
+    data = obs_gumbel_df %>% filter(contrast %in% contrast_order),
+    aes(xintercept = statistic_centered),
+    color = "tomato2",
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+  geom_text(
+    data = obs_gumbel_df %>% filter(contrast %in% contrast_order),
+    aes(x = Inf, y = Inf, label = label),
+    hjust = 1.05,
+    vjust = 1.2,
+    size = 3.5,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~ contrast, scales = "free", ncol = 3) +
+  labs(
+    x = expression(M[n] - 2 * log(p) + log(log(p))),
+    y = "Density"
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 13),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold", size = 14)
+  )
 ```
 
 ## Permutation distributions

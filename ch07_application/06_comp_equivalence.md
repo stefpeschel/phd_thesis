@@ -1,6 +1,6 @@
 Compositional equivalence
 ================
-Compiled at 2026-06-11 20:05:00 UTC
+Compiled at 2026-06-24 13:15:29 UTC
 
 ## Set global parameters
 
@@ -18,7 +18,8 @@ Compiled at 2026-06-11 20:05:00 UTC
 Counts are transformed to relative abundances, zeros are replaced by
 multiplicative replacement, and the CLR transformation is applied after
 replacement. This follows the same preprocessing strategy as the
-beta-diversity and regression analyses.
+beta-diversity and regression analyses. The shared preprocessing helpers
+are defined in `functions.R`.
 
 ## Prepare CLR matrix
 
@@ -80,20 +81,31 @@ CLR-transformed microbial profiles are kept fixed.
     ## Not selected for fitting : 3
     ## 
     ## Final p-values:
-    ##   min = 2.311e-66, median = 6.149e-02, max = 1.580e-01
+    ##   min = 0.00000000000000000000000000000000000000000000000000000000000000000231, median = 0.0615, max = 0.158
     ## 
     ## Use summary() for detailed fit diagnostics.
 
-    ## # A tibble: 6 × 15
-    ##   contrast     group1 group2    n1    n2 n_samples n_taxa n_taxa_tested n_taxa_zero_variance statistic_obs n_exceed n_perm p_empirical
-    ##   <fct>        <chr>  <chr>  <int> <int>     <int>  <int>         <int>                <int>         <dbl>    <int>  <dbl> <chr>      
-    ## 1 C-section    Cesar… Vagin…   121   468       589    117           117                    0         25.1         0    999 1.00e-03   
-    ## 2 BF duration  0 mon… >=2 m…    36   456       492    117           117                    0         33.2         3    999 4.00e-03   
-    ## 3 EBF duration 0 mon… >=2 m…   179   375       554    117           117                    0         74.7         0    999 1.00e-03   
-    ## 4 Sex          Female Male     294   298       592    117           117                    0          9.79      157    999 1.58e-01   
-    ## 5 Smoking      No     Yes      529    63       592    117           117                    0         13.9       119    999 1.20e-01   
-    ## 6 Siblings     0      >=1       46   457       503    117           117                    0         14.2       123    999 1.24e-01   
-    ## # ℹ 2 more variables: p_permapprox <chr>, method_used <chr>
+    ## # A tibble: 6 × 17
+    ##   contrast     group1  group2    n1    n2 n_samples n_taxa n_taxa_tested n_taxa_zero_variance statistic_obs n_exceed n_perm p_empirical
+    ##   <fct>        <chr>   <chr>  <int> <int>     <int>  <int>         <int>                <int>         <dbl>    <int>  <dbl> <chr>      
+    ## 1 C-section    Cesare… Vagin…   121   468       589    117           117                    0         25.1         0    999 1.00e-03   
+    ## 2 BF duration  0 mont… >=2 m…    36   456       492    117           117                    0         33.2         3    999 4.00e-03   
+    ## 3 EBF duration 0 mont… >=2 m…   179   375       554    117           117                    0         74.7         0    999 1.00e-03   
+    ## 4 Sex          Female  Male     294   298       592    117           117                    0          9.79      157    999 1.58e-01   
+    ## 5 Smoking      No      Yes      529    63       592    117           117                    0         13.9       119    999 1.20e-01   
+    ## 6 Siblings     0       >=1       46   457       503    117           117                    0         14.2       123    999 1.24e-01   
+    ## # ℹ 4 more variables: statistic_centered <dbl>, p_asymptotic_gumbel <chr>, p_permapprox <chr>, method_used <chr>
+
+## Asymptotic Gumbel comparison
+
+The maximum statistic can also be centered as
+$M_n^c = M_n - 2\log(p) + \log\log(p)$ and compared with the limiting
+Gumbel distribution used by Cao et al. The permutation statistics are
+centered in the same way, using the number of CLR coordinates tested in
+each contrast. This comparison is diagnostic: the permutation-based
+p-values remain the primary inferential results in this analysis.
+
+![](figures/06_comp_equivalence/comp_equi_comp_equivalence_gumbel_comparison_plot-1.png)<!-- -->
 
 ## Permutation distributions
 
@@ -126,13 +138,13 @@ These files have been written to the target directory,
     ## # A tibble: 10 × 4
     ##    path                                                 type         size modification_time  
     ##    <fs::path>                                           <fct> <fs::bytes> <dttm>             
-    ##  1 comp_equivalence_contrast_level_summary.csv          file          259 2026-06-11 20:05:05
-    ##  2 comp_equivalence_multrepl_clr_object.rds             file      262.74K 2026-06-11 20:05:05
+    ##  1 comp_equivalence_contrast_level_summary.csv          file          259 2026-06-24 13:15:32
+    ##  2 comp_equivalence_multrepl_clr_object.rds             file      262.74K 2026-06-24 13:15:32
     ##  3 comp_equivalence_permapprox_results_multrepl_clr.rds file       13.56K 2026-06-11 15:12:59
-    ##  4 comp_equivalence_preprocessing_summary.csv           file          233 2026-06-11 20:05:05
-    ##  5 comp_equivalence_results_multrepl_clr.csv            file          728 2026-06-11 20:05:06
+    ##  4 comp_equivalence_preprocessing_summary.csv           file          233 2026-06-24 13:15:32
+    ##  5 comp_equivalence_results_multrepl_clr.csv            file         1007 2026-06-24 13:15:33
     ##  6 comp_equivalence_results_multrepl_clr.rds            file       68.42K 2026-06-11 15:12:58
-    ##  7 comp_equivalence_table.tex                           file        1.25K 2026-06-11 20:05:06
-    ##  8 comp_equivalence_taxon_contrasts.csv                 file       87.54K 2026-06-11 20:05:11
-    ##  9 comp_equivalence_top10_taxon_contrasts.csv           file         7.6K 2026-06-11 20:05:13
+    ##  7 comp_equivalence_table.tex                           file        1.35K 2026-06-24 13:15:33
+    ##  8 comp_equivalence_taxon_contrasts.csv                 file       87.54K 2026-06-24 13:15:38
+    ##  9 comp_equivalence_top10_taxon_contrasts.csv           file         7.6K 2026-06-24 13:15:38
     ## 10 comp_equivalence_top20_taxon_contrasts.csv           file          15K 2026-06-11 20:00:55

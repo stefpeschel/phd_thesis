@@ -1,19 +1,19 @@
 \begin{table}[!h]
 \centering
-\caption{\label{tab:application:comp-equivalence}Compositional equivalence results for selected two-group contrasts. $M_n$ is the maximum standardized squared CLR mean difference. \# exceed: number of permuted statistics $\geq$ observed. $p$ (emp.): empirical permutation $p$-value ($999$ permutations); $p$ (GPD-refined): $p$-value refined with \texttt{permApprox}.}
+\caption{\label{tab:application:comp-equivalence}Compositional equivalence results for selected two-group contrasts. $M_n$ is the maximum standardized squared CLR mean difference. $M_n^c = M_n - 2\log(p) + \log\log(p)$ is the centered statistic used for the asymptotic Gumbel approximation. \# exceed: number of permuted statistics $\geq$ observed. $p$ (emp.): empirical permutation $p$-value ($999$ permutations); $p$ (GPD-refined): $p$-value refined with \texttt{permApprox}; $p$ (asym.): asymptotic Gumbel $p$-value.}
 \centering
 \begin{threeparttable}
-\begin{tabular}[t]{llrrrrrr}
+\begin{tabular}[t]{lrrrlll}
 \toprule
-Contrast & Groups & $n_1$ & $n_2$ & $M_n$ & \# exceed & $p$ (emp.) & $p$ (GPD-refined)\\
+Contrast & $M_n$ & $M_n^c$ & \# exceed & $p$ (emp.) & $p$ (GPD-refined) & $p$ (asym.)\\
 \midrule
-C-section & Cesarean vs. Vaginal & 121 & 468 & 25.06 & 0 & 1.00e-03$^{**}$ & 5.26e-04$^{***}$\\
-BF duration & 0 months vs. >=2 months & 36 & 456 & 33.16 & 3 & 4.00e-03$^{**}$ & 2.99e-03$^{**}$\\
-EBF duration & 0 months vs. >=2 months & 179 & 375 & 74.72 & 0 & 1.00e-03$^{**}$ & 2.31e-66$^{***}$\\
-Sex & Female vs. Male & 294 & 298 & 9.79 & 157 & 1.58e-01 & 1.58e-01\\
-Smoking & No vs. Yes & 529 & 63 & 13.91 & 119 & 1.20e-01 & 1.20e-01\\
+C-section & 25.06 & 17.09 & 0 & 1.00e-03$^{**}$ & 5.26e-04$^{***}$ & 1.09e-04$^{***}$\\
+BF duration & 33.16 & 25.19 & 3 & 4.00e-03$^{**}$ & 2.99e-03$^{**}$ & 1.91e-06$^{***}$\\
+EBF duration & 74.72 & 66.75 & 0 & 1.00e-03$^{**}$ & 2.31e-66$^{***}$ & 1.78e-15$^{***}$\\
+Sex & 9.79 & 1.83 & 157 & 1.58e-01 & 1.58e-01 & 2.03e-01\\
+Smoking & 13.91 & 5.95 & 119 & 1.20e-01 & 1.20e-01 & 2.84e-02$^{*}$\\
 \addlinespace
-Siblings & 0 vs. >=1 & 46 & 457 & 14.17 & 123 & 1.24e-01 & 1.24e-01\\
+Siblings & 14.17 & 6.21 & 123 & 1.24e-01 & 1.24e-01 & 2.50e-02$^{*}$\\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
