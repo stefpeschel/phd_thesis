@@ -1,6 +1,6 @@
 Taxonomic aggregation and filtering
 ================
-Compiled at 2026-06-22 07:51:20 UTC
+Compiled at 2026-06-25 18:11:22 UTC
 
 ## Load packages
 
@@ -97,6 +97,12 @@ proportion of zero entries.
 | $\geq 10\%$ of samples  |               41 |             48.4 |
 | $\geq 20\%$ of samples  |               31 |             36.4 |
 
+### 1% filter
+
+### 5% filter
+
+### 10% filter
+
 ![](figures/02_filtering/filter_zero_fraction_plot-1.png)<!-- -->
 
 ## Files written
@@ -104,15 +110,16 @@ proportion of zero entries.
 These files have been written to the target directory,
 `data/02_filtering`:
 
-    ## # A tibble: 9 × 4
-    ##   path                               type         size modification_time  
-    ##   <fs::path>                         <fct> <fs::bytes> <dttm>             
-    ## 1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-06-22 07:51:57
-    ## 2 bact_phylo_2m_genus_prev10.rds     file        56.5K 2026-06-09 10:59:27
-    ## 3 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-22 07:51:57
-    ## 4 prevalence_filtering.csv           file          246 2026-06-22 07:51:57
-    ## 5 prevalence_filtering.tex           file          663 2026-06-22 07:51:57
-    ## 6 taxonomic_overview.csv             file          123 2026-06-22 07:51:47
-    ## 7 taxonomic_overview.tex             file          556 2026-06-22 07:51:47
-    ## 8 top_genera.csv                     file          283 2026-06-22 07:51:56
-    ## 9 top_genera.tex                     file          808 2026-06-22 07:51:56
+    ## # A tibble: 10 × 4
+    ##    path                               type         size modification_time  
+    ##    <fs::path>                         <fct> <fs::bytes> <dttm>             
+    ##  1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-06-25 18:12:00
+    ##  2 bact_phylo_2m_genus_prev05.rds     file        47.3K 2026-06-25 18:12:00
+    ##  3 bact_phylo_2m_genus_prev10.rds     file        42.6K 2026-06-25 18:12:00
+    ##  4 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-25 18:12:00
+    ##  5 prevalence_filtering.csv           file          246 2026-06-25 18:11:59
+    ##  6 prevalence_filtering.tex           file          663 2026-06-25 18:11:59
+    ##  7 taxonomic_overview.csv             file          123 2026-06-25 18:11:49
+    ##  8 taxonomic_overview.tex             file          556 2026-06-25 18:11:49
+    ##  9 top_genera.csv                     file          283 2026-06-25 18:11:59
+    ## 10 top_genera.tex                     file          809 2026-06-25 18:11:59

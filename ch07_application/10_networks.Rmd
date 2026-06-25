@@ -196,6 +196,8 @@ net_preprocessing_summary <- tibble(
 net_preprocessing_summary
 ```
 
+Value imputed by multiplicative replacement: `r min(counts_rel[counts_rel > 0]) * 0.65`.
+
 Rename taxonomic table and make rank Genus unique.
 
 ```{r}
@@ -344,7 +346,8 @@ props_single_main <- netAnalyze(net_single_main,
                                 weightDeg = FALSE, 
                                 normDeg = FALSE,
                                 normBetw = FALSE,
-                                normClose = FALSE)
+                                normClose = FALSE,
+                                normEigen = FALSE)
 ```
 
 ```{r}
@@ -550,8 +553,8 @@ table(phyla)
 phylcol <- c(
   Actinobacteriota = "#E69F00",
   Bacteroidota = "#CC79A7",
-  Desulfobacterota = "#97D0F2",
-  Firmicutes = "#0072B2",
+  Desulfobacterota = "#00408A",
+  Firmicutes = "#56B4E9",
   Fusobacteriota = "#F0E442",
   Proteobacteria = "#009E73",
   Verrucomicrobiota = "#D55E00"
@@ -567,6 +570,7 @@ layout["Pseudomonas", ] <- c(-0.1, -0.22)
 layout["Blastococcus", ] <- c(-0.33, 0.13)
 layout["8_Comamonadaceae(F)", ] <- c(-0.2, -0.1)
 layout["Haemophilus", ] <- c(0.84, -0.5)
+layout["Lachnospira", ] <- c(-0.34, -0.05)
 ```
 
 ```{r single_net_plot_col_phyla, fig.width=8.5, fig.height=6, dpi=250}
@@ -588,7 +592,7 @@ plot(props_single_main,
      posCol = "gray50", 
      negCol = "red3",
      showTitle = FALSE,
-     cexLabels = 0.8,
+     cexLabels = 0.9,
      cexHubLabels = 0.9,
      hubBorderCol = "gray40",
      mar = c(1, 7, 1, 3))
@@ -606,6 +610,616 @@ legend(0.65, 1.1, cex = 1, title = "Estimated association:",
        bty = "n", horiz = TRUE, xpd = NA)
 ```
 
+## Alternative preprocessing steps
+
+In this section we analyze, how the network changes when alternative 
+preprocessing steps like filtering or zero replacement, or a different 
+association measure is used. 
+
+### Stronger filtering
+
+In the network above, a prevalence filter of 1% was used. We now increase this 
+to 5% and 10%. Everything else stays the same.
+
+#### 5% prevalence filter
+
+```{r}
+phylo_genus_prev05 <- 
+  readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev05.rds"))
+```
+
+```{r, warning=FALSE}
+counts_raw_prev05 <- get_sample_by_taxa(phylo_genus_prev05)
+
+sampdata_net_prev05 <- sampdata %>%
+  filter(SampleID %in% rownames(counts_raw_prev05)) %>%
+  arrange(match(SampleID, rownames(counts_raw_prev05)))
+
+counts_raw_prev05 <- counts_raw_prev05[sampdata_net_prev05$SampleID, , 
+                                       drop = FALSE]
+
+stopifnot(identical(rownames(counts_raw_prev05), sampdata_net_prev05$SampleID))
+
+counts_rel_prev05 <- counts_to_rel_abund(counts_raw_prev05)
+
+zero_repl_object <- compute_multrepl_clr(
+  rel_abund_mat = counts_rel_prev05,
+  frac = zero_replacement_fraction
+)
+
+counts_rel_multrepl_prev05 <- zero_repl_object$rel_abund_repl
+```
+
+
+```{r generate_net_single_prev05}
+path_net_single_prev05 <- path_target("net_single_prev05.rds")
+
+if (file.exists(path_net_single_prev05) && !refit_complete_network) {
+  net_single_prev05 <- readRDS(path_net_single_prev05)
+} else {
+  net_single_prev05 <- NetCoMi::netConstruct(
+    data = counts_rel_multrepl_prev05,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30, # Subsamples in StARS
+                                           thresh = 0.1), # StARS threshold
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_prev05, path_net_single_prev05)
+}
+```
+
+```{r}
+props_single_prev05 <- netAnalyze(net_single_prev05,
+                                  centrLCC = TRUE,
+                                  clustMethod = "cluster_fast_greedy",
+                                  hubPar = "eigenvector",
+                                  weightDeg = FALSE, 
+                                  normDeg = FALSE,
+                                  normBetw = FALSE,
+                                  normClose = FALSE,
+                                  normEigen = FALSE)
+```
+
+```{r single_net_plot_prev05, fig.width=8.5, fig.height=6, dpi=250}
+# Subset layout to prev05 taxa that exist in the main layout, preserving prev05 order.
+# NetCoMi passes the layout matrix to qgraph positionally (row i = node i), so the
+# row order must match colnames(adja1) after node filtering — which follows the
+# prev05 adjacency matrix order.
+taxa_prev05_in_layout <- colnames(net_single_prev05$adjaMat1)[
+  colnames(net_single_prev05$adjaMat1) %in% rownames(layout)
+]
+layout_prev05 <- layout[taxa_prev05_in_layout, ]
+
+plot(props_single_prev05,
+     layout = layout_prev05,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+#### 10% prevalence filter
+
+```{r}
+phylo_genus_prev10 <- 
+  readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev10.rds"))
+```
+
+```{r}
+counts_raw_prev10 <- get_sample_by_taxa(phylo_genus_prev10)
+
+sampdata_net_prev10 <- sampdata %>%
+  filter(SampleID %in% rownames(counts_raw_prev10)) %>%
+  arrange(match(SampleID, rownames(counts_raw_prev10)))
+
+counts_raw_prev10 <- counts_raw_prev10[sampdata_net_prev10$SampleID, , 
+                                       drop = FALSE]
+
+stopifnot(identical(rownames(counts_raw_prev10), sampdata_net_prev10$SampleID))
+
+counts_rel_prev10 <- counts_to_rel_abund(counts_raw_prev10)
+
+zero_repl_object <- compute_multrepl_clr(
+  rel_abund_mat = counts_rel_prev10,
+  frac = zero_replacement_fraction
+)
+
+counts_rel_multrepl_prev10 <- zero_repl_object$rel_abund_repl
+```
+
+
+```{r generate_net_single_prev10}
+path_net_single_prev10 <- path_target("net_single_prev10.rds")
+
+if (file.exists(path_net_single_prev10) && !refit_complete_network) {
+  net_single_prev10 <- readRDS(path_net_single_prev10)
+} else {
+  net_single_prev10 <- NetCoMi::netConstruct(
+    data = counts_rel_multrepl_prev10,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30, # Subsamples in StARS
+                                           thresh = 0.1), # StARS threshold
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_prev10, path_net_single_prev10)
+}
+```
+
+```{r}
+props_single_prev10 <- netAnalyze(net_single_prev10,
+                                  centrLCC = TRUE,
+                                  clustMethod = "cluster_fast_greedy",
+                                  hubPar = "eigenvector",
+                                  weightDeg = FALSE, 
+                                  normDeg = FALSE,
+                                  normBetw = FALSE,
+                                  normClose = FALSE,
+                                  normEigen = FALSE)
+```
+
+```{r single_net_plot_prev10, fig.width=8.5, fig.height=6, dpi=250}
+taxa_prev10_in_layout <- colnames(net_single_prev10$adjaMat1)[
+  colnames(net_single_prev10$adjaMat1) %in% rownames(layout)
+]
+layout_prev10 <- layout[taxa_prev10_in_layout, ]
+
+plot(props_single_prev10,
+     layout = layout_prev10,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+### Different zero replacement
+
+In this section, we construct the network with the following zero replacement 
+methods:
+
+* pseudo count added to all counts (as example for what is not recommended)
+* random pseudo counts below the detection limit
+* alrEM
+* Bayesian-multiplicative replacement
+
+For all four methods, zero replacement is applied externally via
+`compute_zero_repl_clr()` before passing the result to `netConstruct()` with
+`zeroMethod = "none"`. This ensures the stored `countMat1` in each network
+object reflects the actual zero-treated data, so that CLR-based node sizes are
+computed from the correct matrix (see analysis of node size behaviour above).
+
+**Minimum relative count and multRepl replacement value for reference**
+
+```{r}
+min(counts_rel[counts_rel > 0])
+min(counts_rel[counts_rel > 0]) * 0.65
+```
+
+We use 2e-5 as pseudo count to have a round number close to the multRepl
+replacement value.
+
+#### Prepare zero-replaced matrices
+
+```{r prepare_zero_repl_matrices, warning=FALSE}
+zero_repl_pseudo <- compute_zero_repl_clr(
+  counts_rel, method = "pseudo", pseudocount = 2e-5, zerosOnly = FALSE
+)
+counts_rel_pseudo <- zero_repl_pseudo$rel_abund_repl
+
+set.seed(network_seed)
+zero_repl_random <- compute_zero_repl_clr(
+  counts_rel, method = "pseudo", pseudocount = 2e-5, zerosOnly = TRUE, random = TRUE
+)
+counts_rel_random <- zero_repl_random$rel_abund_repl
+
+if (file.exists(path_target("counts_rel_alrEM.rds"))) {
+  counts_rel_alrEM <- readRDS(path_target("counts_rel_alrEM.rds"))
+} else {
+  zero_repl_alrEM <- compute_zero_repl_clr(
+    counts_rel, method = "alrEM", z.warning = 0.99, z.delete = FALSE, max.iter = 20
+  )
+  counts_rel_alrEM <- zero_repl_alrEM$rel_abund_repl
+  saveRDS(counts_rel_alrEM, file = path_target("counts_rel_alrEM.rds"))
+}
+
+zero_repl_bayesMult <- compute_zero_repl_clr(
+  counts_rel, method = "bayesMult", z.warning = 0.99, z.delete = FALSE
+)
+counts_rel_bayesMult <- zero_repl_bayesMult$rel_abund_repl
+```
+
+#### Additive pseudo count
+
+```{r generate_net_single_zero_pseudo}
+path_net_single_zero_pseudo <- path_target("net_single_zero_pseudo.rds")
+
+if (file.exists(path_net_single_zero_pseudo) && !refit_complete_network) {
+  net_single_zero_pseudo <- readRDS(path_net_single_zero_pseudo)
+} else {
+  net_single_zero_pseudo <- NetCoMi::netConstruct(
+    data = counts_rel_pseudo,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30,
+                                           thresh = 0.1),
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_zero_pseudo, path_net_single_zero_pseudo)
+}
+```
+
+```{r}
+props_single_zero_pseudo <- netAnalyze(net_single_zero_pseudo,
+                                       centrLCC = TRUE,
+                                       clustMethod = "cluster_fast_greedy",
+                                       hubPar = "eigenvector",
+                                       weightDeg = FALSE, 
+                                       normDeg = FALSE,
+                                       normBetw = FALSE,
+                                       normClose = FALSE,
+                                       normEigen = FALSE)
+```
+
+```{r single_net_plot_zero_pseudo, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_zero_pseudo,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+#### Random pseudo counts
+
+```{r generate_net_single_zero_random}
+path_net_single_zero_random <- path_target("net_single_zero_random.rds")
+
+if (file.exists(path_net_single_zero_random) && !refit_complete_network) {
+  net_single_zero_random <- readRDS(path_net_single_zero_random)
+} else {
+  net_single_zero_random <- NetCoMi::netConstruct(
+    data = counts_rel_random,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30,
+                                           thresh = 0.1),
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_zero_random, path_net_single_zero_random)
+}
+```
+
+```{r}
+props_single_zero_random <- netAnalyze(net_single_zero_random,
+                                       centrLCC = TRUE,
+                                       clustMethod = "cluster_fast_greedy",
+                                       hubPar = "eigenvector",
+                                       weightDeg = FALSE, 
+                                       normDeg = FALSE,
+                                       normBetw = FALSE,
+                                       normClose = FALSE,
+                                       normEigen = FALSE)
+```
+
+```{r single_net_plot_zero_random, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_zero_random,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+#### Modified EM ALR algorithm
+
+```{r generate_net_single_zero_alrEM}
+path_net_single_zero_alrEM <- path_target("net_single_zero_alrEM.rds")
+
+if (file.exists(path_net_single_zero_alrEM) && !refit_complete_network) {
+  net_single_zero_alrEM <- readRDS(path_net_single_zero_alrEM)
+} else {
+  net_single_zero_alrEM <- NetCoMi::netConstruct(
+    data = counts_rel_alrEM,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30,
+                                           thresh = 0.1),
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_zero_alrEM, path_net_single_zero_alrEM)
+}
+```
+
+```{r}
+props_single_zero_alrEM <- netAnalyze(net_single_zero_alrEM,
+                                       centrLCC = TRUE,
+                                       clustMethod = "cluster_fast_greedy",
+                                       hubPar = "eigenvector",
+                                       weightDeg = FALSE, 
+                                       normDeg = FALSE,
+                                       normBetw = FALSE,
+                                       normClose = FALSE,
+                                       normEigen = FALSE)
+```
+
+```{r single_net_plot_zero_alrEM, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_zero_alrEM,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+#### Bayesian-multiplicative replacement
+
+```{r generate_net_single_zero_bayesMult}
+path_net_single_zero_bayesMult <- path_target("net_single_zero_bayesMult.rds")
+
+if (file.exists(path_net_single_zero_bayesMult) && !refit_complete_network) {
+  net_single_zero_bayesMult <- readRDS(path_net_single_zero_bayesMult)
+} else {
+  net_single_zero_bayesMult <- NetCoMi::netConstruct(
+    data = counts_rel_bayesMult,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30,
+                                           thresh = 0.1),
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_zero_bayesMult, path_net_single_zero_bayesMult)
+}
+```
+
+```{r}
+props_single_zero_bayesMult <- netAnalyze(net_single_zero_bayesMult,
+                                       centrLCC = TRUE,
+                                       clustMethod = "cluster_fast_greedy",
+                                       hubPar = "eigenvector",
+                                       weightDeg = FALSE, 
+                                       normDeg = FALSE,
+                                       normBetw = FALSE,
+                                       normClose = FALSE,
+                                       normEigen = FALSE)
+```
+
+```{r single_net_plot_zero_bayesMult, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_zero_bayesMult,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
 
 ## Network comparison by EBF duration
 
@@ -933,6 +1547,8 @@ print(summary(comp_ebf_main_noBH,
         groupNames = c("EBF = 0", "EBF >= 2"),
         showCentr = c("degree", "between", "closeness"), 
         numbNodes = 5))
+
+summary(pvals_comp_main_noBH <- comp_ebf_main_noBH$pvalDiffCentrEmpirical$pvalDiffEigen)
 ```
 
 ```{r run_netcompare_BH}
@@ -969,7 +1585,8 @@ if (file.exists(path_comp_ebf_GPD_noConstr_noBH) && !refit_complete_network) {
 } else {
   
   gpd_ctrl <- permApprox::make_gpd_ctrl(
-    constraint = "none"
+    constraint = "none",
+    thresh_method = "ftr"
   )
   comp_ebf_GPD_noConstr_noBH <- 
     netCompare(props_ebf_main, 
@@ -988,6 +1605,9 @@ if (file.exists(path_comp_ebf_GPD_noConstr_noBH) && !refit_complete_network) {
   
   saveRDS(comp_ebf_GPD_noConstr_noBH, path_comp_ebf_GPD_noConstr_noBH)
 }
+
+tmp <- data.frame(emp = comp_ebf_GPD_noConstr_noBH$pvalDiffCentrEmpirical$pvalDiffDeg,
+                  pApp = comp_ebf_GPD_noConstr_noBH$pvalDiffCentrRefined$pvalDiffDeg)
 
 print(summary(comp_ebf_GPD_noConstr_noBH, 
         groupNames = c("EBF = 0", "EBF >= 2"),
@@ -1028,6 +1648,7 @@ print(summary(comp_ebf_GPD_noConstr_BH,
               showCentr = c("degree", "between", "closeness"), 
               numbNodes = 5))
 
+summary(comp_ebf_GPD_noConstr_BH <- comp_ebf_main_noBH$pvalDiffCentrEmpirical$pvalDiffEigen)
 ```
 
 #### permApprox refinement with constraint

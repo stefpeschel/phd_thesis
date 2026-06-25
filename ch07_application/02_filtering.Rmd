@@ -483,8 +483,43 @@ prevalence_filtering |>
   )
 ```
 
+### 1% filter
+
 ```{r}
 genus_prev_threshold <- 0.01
+
+phylo_genus_prev01 <- prune_taxa(
+  names(genus_prev)[genus_prev >= genus_prev_threshold],
+  phylo_genus
+)
+
+saveRDS(
+  phylo_genus_prev01,
+  path_target("bact_phylo_2m_genus_prev01.rds")
+)
+```
+
+### 5% filter
+
+```{r}
+genus_prev_threshold <- 0.05
+
+phylo_genus_prev05 <- prune_taxa(
+  names(genus_prev)[genus_prev >= genus_prev_threshold],
+  phylo_genus
+)
+
+saveRDS(
+  phylo_genus_prev05,
+  path_target("bact_phylo_2m_genus_prev05.rds")
+)
+```
+
+
+### 10% filter
+
+```{r}
+genus_prev_threshold <- 0.1
 
 phylo_genus_prev10 <- prune_taxa(
   names(genus_prev)[genus_prev >= genus_prev_threshold],
@@ -492,18 +527,21 @@ phylo_genus_prev10 <- prune_taxa(
 )
 
 saveRDS(
-  phylo_genus,
-  path_target("bact_phylo_2m_genus_unfiltered.rds")
-)
-
-saveRDS(
   phylo_genus_prev10,
-  path_target("bact_phylo_2m_genus_prev01.rds")
+  path_target("bact_phylo_2m_genus_prev10.rds")
 )
 ```
 
+```{r}
+saveRDS(
+  phylo_genus,
+  path_target("bact_phylo_2m_genus_unfiltered.rds")
+)
+```
+
+
 ```{r zero_fraction_plot, fig.width=7, fig.height=2.5, dpi = 200}
-count_mat <- get_sample_by_taxa(phylo_genus_prev10)
+count_mat <- get_sample_by_taxa(phylo_genus_prev01)
 
 tibble(
   genus = colnames(count_mat),
