@@ -1,6 +1,6 @@
 Network analysis
 ================
-Compiled at 2026-06-26 19:08:47 UTC
+Compiled at 2026-06-26 22:03:35 UTC
 
 ## Aim
 
@@ -288,16 +288,26 @@ replacement methods:
 
 - pseudo count added to all counts (as example for what is not
   recommended)
+- multiplicative replacement with sample-wise detection limits
 - random pseudo counts below the detection limit
 - alrEM
 - Bayesian-multiplicative replacement
 
-For all four methods, zero replacement is applied externally via
+For all methods, zero replacement is applied externally via
 `compute_zero_repl_clr()` before passing the result to `netConstruct()`
 with `zeroMethod = "none"`. This ensures the stored `countMat1` in each
 network object reflects the actual zero-treated data, so that CLR-based
 node sizes are computed from the correct matrix (see analysis of node
 size behaviour above).
+
+Unlike the baseline multiplicative replacement, which uses one global
+detection limit, the sample-wise variant defines the detection limit
+separately for each sample. This reflects that the smallest observable
+relative abundance depends on the sample’s sequencing depth. It may
+therefore be more realistic for sampling zeros, but it can also
+introduce library-size-dependent variation into the CLR-transformed
+data. We therefore consider it as a sensitivity analysis rather than
+replacing the baseline preprocessing.
 
 **Minimum relative count and multRepl replacement value for reference**
 
@@ -315,6 +325,18 @@ replacement value.
 ![](figures/10_network_analysis/net_single_net_plot_zero_pseudo-1.png)<!-- -->
 
 ![](figures/10_network_analysis/net_single_net_plot_zero_pseudo_nolabs-1.png)<!-- -->
+
+#### Multiplicative replacement with sample-wise detection limit
+
+    ## # A tibble: 2 × 2
+    ##   method                      n_edges
+    ##   <chr>                         <int>
+    ## 1 Global detection limit          124
+    ## 2 Sample-wise detection limit     188
+
+![](figures/10_network_analysis/net_single_net_plot_zero_multrepl_sample-1.png)<!-- -->
+
+![](figures/10_network_analysis/net_single_net_plot_zero_multrepl_sample_nolabs-1.png)<!-- -->
 
 #### Random pseudo counts
 
@@ -428,22 +450,327 @@ networks are included.
 
 ![](figures/10_network_analysis/net_edge_upset_association-1.png)<!-- -->
 
+## Persistent edges across selected networks
+
+The following summary uses a selected set of signed networks and
+identifies taxa-pairs that are connected in all of them.
+
+<table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
+
+<caption>
+
+Taxa-pairs connected in all selected signed networks.
+</caption>
+
+<thead>
+
+<tr>
+
+<th style="text-align:left;">
+
+Taxon 1
+</th>
+
+<th style="text-align:left;">
+
+Taxon 2
+</th>
+
+<th style="text-align:right;">
+
+Networks
+</th>
+
+<th style="text-align:right;">
+
+Mean association
+</th>
+
+<th style="text-align:right;">
+
+Minimum
+</th>
+
+<th style="text-align:right;">
+
+Maximum
+</th>
+
+<th style="text-align:right;">
+
+Mean absolute association
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+Bacteroides
+</td>
+
+<td style="text-align:left;">
+
+Parabacteroides
+</td>
+
+<td style="text-align:right;">
+
+8
+</td>
+
+<td style="text-align:right;">
+
+0.220
+</td>
+
+<td style="text-align:right;">
+
+0.163
+</td>
+
+<td style="text-align:right;">
+
+0.356
+</td>
+
+<td style="text-align:right;">
+
+0.220
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Rothia
+</td>
+
+<td style="text-align:left;">
+
+Streptococcus
+</td>
+
+<td style="text-align:right;">
+
+8
+</td>
+
+<td style="text-align:right;">
+
+0.142
+</td>
+
+<td style="text-align:right;">
+
+0.124
+</td>
+
+<td style="text-align:right;">
+
+0.176
+</td>
+
+<td style="text-align:right;">
+
+0.142
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Streptococcus
+</td>
+
+<td style="text-align:left;">
+
+Veillonella
+</td>
+
+<td style="text-align:right;">
+
+8
+</td>
+
+<td style="text-align:right;">
+
+0.108
+</td>
+
+<td style="text-align:right;">
+
+0.044
+</td>
+
+<td style="text-align:right;">
+
+0.158
+</td>
+
+<td style="text-align:right;">
+
+0.108
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Collinsella
+</td>
+
+<td style="text-align:left;">
+
+Senegalimassilia
+</td>
+
+<td style="text-align:right;">
+
+8
+</td>
+
+<td style="text-align:right;">
+
+0.103
+</td>
+
+<td style="text-align:right;">
+
+0.052
+</td>
+
+<td style="text-align:right;">
+
+0.187
+</td>
+
+<td style="text-align:right;">
+
+0.103
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Staphylococcus
+</td>
+
+<td style="text-align:left;">
+
+Streptococcus
+</td>
+
+<td style="text-align:right;">
+
+8
+</td>
+
+<td style="text-align:right;">
+
+0.102
+</td>
+
+<td style="text-align:right;">
+
+0.070
+</td>
+
+<td style="text-align:right;">
+
+0.147
+</td>
+
+<td style="text-align:right;">
+
+0.102
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+Gemella
+</td>
+
+<td style="text-align:left;">
+
+Streptococcus
+</td>
+
+<td style="text-align:right;">
+
+8
+</td>
+
+<td style="text-align:right;">
+
+0.049
+</td>
+
+<td style="text-align:right;">
+
+0.013
+</td>
+
+<td style="text-align:right;">
+
+0.097
+</td>
+
+<td style="text-align:right;">
+
+0.049
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+![](figures/10_network_analysis/net_persistent_edge_network_plot-1.png)<!-- -->
+
 ## Files written
 
 These files have been written to the target directory,
 `data/10_network_analysis`:
 
-    ## # A tibble: 40 × 4
-    ##    path                           type         size modification_time  
-    ##    <fs::path>                     <fct> <fs::bytes> <dttm>             
-    ##  1 assoPerm_ebf.bmat              file         209M 2026-06-24 16:30:32
-    ##  2 assoPerm_ebf.desc.txt          file           90 2026-06-24 16:30:29
-    ##  3 comp_ebf_GPD_constr_BH.rds     file         191K 2026-06-25 10:03:18
-    ##  4 comp_ebf_GPD_constr_noBH.rds   file         190K 2026-06-25 10:03:18
-    ##  5 comp_ebf_GPD_noConstr_BH.rds   file         182K 2026-06-25 10:03:18
-    ##  6 comp_ebf_GPD_noConstr_noBH.rds file         182K 2026-06-25 14:48:08
-    ##  7 comp_ebf_main.rds              file         181K 2026-06-25 10:03:18
-    ##  8 comp_ebf_main_BH.rds           file         181K 2026-06-25 14:33:14
-    ##  9 comp_ebf_main_noBH.rds         file         181K 2026-06-25 14:26:59
-    ## 10 counts_rel_alrEM.rds           file         518K 2026-06-25 20:43:46
-    ## # ℹ 30 more rows
+    ## # A tibble: 19 × 4
+    ##    path                                type         size modification_time  
+    ##    <fs::path>                          <fct> <fs::bytes> <dttm>             
+    ##  1 counts_rel_alrEM.rds                file      517.53K 2026-06-25 20:43:46
+    ##  2 counts_rel_bayesMult.rds            file      771.33K 2026-06-26 04:43:31
+    ##  3 net_single_main.rds                 file       11.16M 2026-06-26 09:25:25
+    ##  4 net_single_prev05.rds               file        4.34M 2026-06-25 18:29:13
+    ##  5 net_single_prev10.rds               file        3.01M 2026-06-25 18:37:05
+    ##  6 net_single_rhoshrink.rds            file      676.81K 2026-06-26 05:56:00
+    ##  7 net_single_slr.rds                  file       36.21M 2026-06-26 05:10:10
+    ##  8 net_single_slr_r2.rds               file       36.21M 2026-06-26 08:33:17
+    ##  9 net_single_slr_r3.rds               file       36.17M 2026-06-26 08:41:55
+    ## 10 net_single_slr_r4.rds               file        36.1M 2026-06-26 08:50:32
+    ## 11 net_single_slr_r5.rds               file       36.03M 2026-06-26 09:14:35
+    ## 12 net_single_slr_us.rds               file       36.21M 2026-06-26 15:51:26
+    ## 13 net_single_spring.rds               file        7.73M 2026-06-26 16:24:04
+    ## 14 net_single_spring_us.rds            file        7.73M 2026-06-26 16:35:10
+    ## 15 net_single_zero_alrEM.rds           file       14.65M 2026-06-25 20:58:35
+    ## 16 net_single_zero_bayesMult.rds       file        15.6M 2026-06-25 21:00:47
+    ## 17 net_single_zero_multrepl_sample.rds file       11.76M 2026-06-26 21:01:06
+    ## 18 net_single_zero_pseudo.rds          file       11.13M 2026-06-25 20:51:27
+    ## 19 net_single_zero_random.rds          file       16.82M 2026-06-25 20:56:23

@@ -7,6 +7,7 @@ output:
     toc: true
     toc_depth: 5
     toc_float: true
+always_allow_html: true
 params:
   name: "10_network_analysis" # change if you rename file
 ---
@@ -329,7 +330,7 @@ plot_shared_edges <- function(edge_presence, networks, n_edges = Inf, text_size 
     mutate(
       edge_label = stringr::str_trunc(
         format_edge_label(edge_id),
-        width = 34
+        width = 30
       ),
       association_label = sprintf(
         "%+.2f [%+.2f, %+.2f]",
@@ -349,9 +350,9 @@ plot_shared_edges <- function(edge_presence, networks, n_edges = Inf, text_size 
              label = "mean association [range]") +
     geom_text(aes(x = 0, y = y, label = edge_label),
               hjust = 0, size = text_size) +
-    geom_text(aes(x = 1, y = y, label = association_label),
+    geom_text(aes(x = 1.45, y = y, label = association_label),
               hjust = 1, size = text_size) +
-    coord_cartesian(xlim = c(0, 1), clip = "off") +
+    coord_cartesian(xlim = c(0, 1.45), clip = "off") +
     theme_void() +
     theme(plot.margin = margin(5.5, 5.5, 5.5, 0))
 }
@@ -1420,15 +1421,24 @@ In this section, we construct the network with the following zero replacement
 methods:
 
 * pseudo count added to all counts (as example for what is not recommended)
+* multiplicative replacement with sample-wise detection limits
 * random pseudo counts below the detection limit
 * alrEM
 * Bayesian-multiplicative replacement
 
-For all four methods, zero replacement is applied externally via
+For all methods, zero replacement is applied externally via
 `compute_zero_repl_clr()` before passing the result to `netConstruct()` with
 `zeroMethod = "none"`. This ensures the stored `countMat1` in each network
 object reflects the actual zero-treated data, so that CLR-based node sizes are
 computed from the correct matrix (see analysis of node size behaviour above).
+
+Unlike the baseline multiplicative replacement, which uses one global detection
+limit, the sample-wise variant defines the detection limit separately for each
+sample. This reflects that the smallest observable relative abundance depends on
+the sample's sequencing depth. It may therefore be more realistic for sampling
+zeros, but it can also introduce library-size-dependent variation into the
+CLR-transformed data. We therefore consider it as a sensitivity analysis rather
+than replacing the baseline preprocessing.
 
 **Minimum relative count and multRepl replacement value for reference**
 
@@ -1447,6 +1457,19 @@ zero_repl_pseudo <- compute_zero_repl_clr(
   counts_rel, method = "pseudo", pseudocount = 2e-5, zerosOnly = FALSE
 )
 counts_rel_pseudo <- zero_repl_pseudo$rel_abund_repl
+
+zero_repl_multrepl_sample <- compute_zero_repl_clr(
+  counts_rel, method = "multRepl", detection_limit = "sample",
+  frac = zero_replacement_fraction
+)
+counts_rel_multrepl_sample <- zero_repl_multrepl_sample$rel_abund_repl
+
+stopifnot(
+  identical(dim(counts_rel_multrepl_sample), dim(counts_rel)),
+  identical(dimnames(counts_rel_multrepl_sample), dimnames(counts_rel)),
+  !any(counts_rel_multrepl_sample == 0),
+  all(abs(rowSums(counts_rel_multrepl_sample) - 1) < 1e-8)
+)
 
 set.seed(network_seed)
 zero_repl_random <- compute_zero_repl_clr(
@@ -1589,6 +1612,142 @@ plot(props_single_zero_pseudo,
      negCol = "red3",
      showTitle = TRUE,
      title1 = "Additive pseudo count",
+     cexTitle = 1.8,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
+```
+
+#### Multiplicative replacement with sample-wise detection limit
+
+```{r generate_net_single_zero_multrepl_sample}
+path_net_single_zero_multrepl_sample <- 
+  path_target("net_single_zero_multrepl_sample.rds")
+
+if (file.exists(path_net_single_zero_multrepl_sample) && !refit_complete_network) {
+  net_single_zero_multrepl_sample <- 
+    readRDS(path_net_single_zero_multrepl_sample)
+} else {
+  net_single_zero_multrepl_sample <- NetCoMi::netConstruct(
+    data = counts_rel_multrepl_sample,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30,
+                                           thresh = 0.1),
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_zero_multrepl_sample, 
+          path_net_single_zero_multrepl_sample)
+}
+```
+
+```{r}
+props_single_zero_multrepl_sample <- netAnalyze(
+  net_single_zero_multrepl_sample,
+  centrLCC = TRUE,
+  clustMethod = "cluster_fast_greedy",
+  hubPar = "eigenvector",
+  weightDeg = FALSE, 
+  normDeg = FALSE,
+  normBetw = FALSE,
+  normClose = FALSE,
+  normEigen = FALSE
+)
+
+zero_multrepl_sample_plot_labels <- make_network_plot_labels(
+  props = props_single_zero_multrepl_sample,
+  top_abundant_taxa = top_abundant_taxa,
+  da_taxa = da_plot_taxa,
+  dd_taxa = dd_plot_taxa,
+  n_abundant = n_abundant_network_labels,
+  n_central = n_central_network_labels,
+  label_overrides = network_label_overrides
+)
+
+taxa_to_plot <- zero_multrepl_sample_plot_labels$taxa_to_plot
+network_labels <- zero_multrepl_sample_plot_labels$labels
+```
+
+```{r zero_multrepl_sample_edge_count}
+tibble(
+  method = c("Global detection limit", "Sample-wise detection limit"),
+  n_edges = c(
+    sum(net_single_main$adjaMat1[lower.tri(net_single_main$adjaMat1)] != 0),
+    sum(net_single_zero_multrepl_sample$adjaMat1[
+      lower.tri(net_single_zero_multrepl_sample$adjaMat1)
+    ] != 0)
+  )
+)
+```
+
+```{r single_net_plot_zero_multrepl_sample, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_zero_multrepl_sample,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r single_net_plot_zero_multrepl_sample_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_zero_multrepl_sample,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "multRepl: sample-wise detection",
      cexTitle = 1.8,
      cexLabels = 0,
      cexHubLabels = 0,
@@ -3003,9 +3162,10 @@ plot_edge_upset(
 ```{r edge_upset_zero_replacement, fig.width=10, fig.height=6, dpi=250}
 networks_zero_replacement <- list(
   "multiplicative" = net_single_main,
+  #"multiplicative sample-wise" = net_single_zero_multrepl_sample,
   "random pseudo count" = net_single_zero_random,
-  "alrEM" = net_single_zero_alrEM,
-  "BayesMult" = net_single_zero_bayesMult
+  "Modified EM alr" = net_single_zero_alrEM,
+  "Bayesian mult." = net_single_zero_bayesMult
 )
 
 edge_presence_zero_replacement <- make_edge_presence(networks_zero_replacement)
@@ -3047,9 +3207,10 @@ persistent_edge_networks <- list(
   "5% prevalence" = net_single_prev05,
   "10% prevalence" = net_single_prev10,
   #"pseudo count" = net_single_zero_pseudo,
+  #"multiplicative sample-wise" = net_single_zero_multrepl_sample,
   "random pseudo count" = net_single_zero_random,
-  "alrEM" = net_single_zero_alrEM,
-  "BayesMult" = net_single_zero_bayesMult,
+  "Modified EM alr" = net_single_zero_alrEM,
+  "Bayesian mult." = net_single_zero_bayesMult,
   "SPIEC-EASI slr" = net_single_slr,
   "SPRING" = net_single_spring
   #"rho shrinkage" = net_single_rhoshrink
@@ -3135,7 +3296,7 @@ persistent_layout <- layout[
 ]
 ```
 
-```{r persistent_edge_network_plot, fig.width=8.5, fig.height=6, dpi=250}
+```{r persistent_edge_network_plot, fig.width=5.9, fig.height=6, dpi=250}
 plot(
   props_single_persistent,
   layout = persistent_layout,
@@ -3157,23 +3318,11 @@ plot(
   showTitle = TRUE,
   title1 = "Persistent edges",
   cexTitle = 1.8,
-  cexLabels = 0.9,
+  cexLabels = 1,
+  hubLabelFont = 0.9,
   cexHubLabels = 0.9,
   hubBorderCol = "gray40",
-  mar = c(1, 7, 3, 3)
-)
-
-# Colors used in the legend should be equally transparent as in the plot
-phylcol_transp <- colToTransp(phylcol, 40)
-
-# xpd = NA allows drawing outside the plot region into the margins
-legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
-       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
-       xpd = NA) 
-
-legend(0.65, 1.1, cex = 1, title = "Estimated association:",
-       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
-       bty = "n", horiz = TRUE, xpd = NA)
+  mar = c(1, 1, 3, 2))
 ```
 
 

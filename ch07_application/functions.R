@@ -70,7 +70,8 @@ compute_multrepl_clr <- function(rel_abund_mat, frac = 0.65) {
 #   $z               – CLR-transformed version of rel_abund_repl
 #
 # Method-specific extra fields mirror the parameters used:
-#   multRepl   : $detection_limit, $replacement_value, $frac
+#   multRepl   : $detection_limit_type, $detection_limit, $replacement_value,
+#                $detection_limit_by_sample, $replacement_value_by_sample, $frac
 #   pseudo     : $pseudocount, $zerosOnly, $random
 #   alrEM      : $detection_limit, $max.iter
 #   bayesMult  : (none)
@@ -83,6 +84,7 @@ compute_zero_repl_clr <- function(
   rel_abund_mat,
   method      = c("multRepl", "pseudo", "alrEM", "bayesMult"),
   frac        = 0.65,    # multRepl: fraction of detection limit used as replacement
+  detection_limit = c("global", "sample"),
   pseudocount = 2e-5,    # pseudo: value added to zeros (or all entries)
   zerosOnly   = FALSE,   # pseudo: if FALSE adds pseudocount to ALL values
   random      = FALSE,   # pseudo: if TRUE and zerosOnly, uses Uniform(eps, pseudocount)
@@ -91,6 +93,7 @@ compute_zero_repl_clr <- function(
   z.delete    = FALSE
 ) {
   method <- match.arg(method)
+  detection_limit <- match.arg(detection_limit)
   
   positive_values <- rel_abund_mat[rel_abund_mat > 0]
   if (length(positive_values) == 0) {
@@ -98,10 +101,42 @@ compute_zero_repl_clr <- function(
   }
   
   if (method == "multRepl") {
-    detection_limit <- min(positive_values, na.rm = TRUE)
-    dl_mat <- matrix(detection_limit,
-                     nrow = nrow(rel_abund_mat), ncol = ncol(rel_abund_mat),
-                     dimnames = dimnames(rel_abund_mat))
+    if (detection_limit == "global") {
+      detection_limit_value <- min(positive_values, na.rm = TRUE)
+      dl_mat <- matrix(detection_limit_value,
+                       nrow = nrow(rel_abund_mat), ncol = ncol(rel_abund_mat),
+                       dimnames = dimnames(rel_abund_mat))
+      detection_limit_by_sample <- stats::setNames(
+        rep(detection_limit_value, nrow(rel_abund_mat)),
+        rownames(rel_abund_mat)
+      )
+      replacement_value_by_sample <- stats::setNames(
+        rep(frac * detection_limit_value, nrow(rel_abund_mat)),
+        rownames(rel_abund_mat)
+      )
+      extra <- list(detection_limit_type = detection_limit,
+                    detection_limit = detection_limit_value,
+                    replacement_value = frac * detection_limit_value,
+                    detection_limit_by_sample = detection_limit_by_sample,
+                    replacement_value_by_sample = replacement_value_by_sample,
+                    frac = frac)
+    } else {
+      detection_limit_by_sample <- apply(rel_abund_mat, 1, function(x) {
+        min(x[x > 0], na.rm = TRUE)
+      })
+      
+      if (any(!is.finite(detection_limit_by_sample))) {
+        stop("At least one sample has no positive relative abundances.")
+      }
+      
+      dl_mat <- matrix(detection_limit_by_sample,
+                       nrow = nrow(rel_abund_mat), ncol = ncol(rel_abund_mat),
+                       dimnames = dimnames(rel_abund_mat))
+      extra <- list(detection_limit_type = detection_limit,
+                    detection_limit_by_sample = detection_limit_by_sample,
+                    replacement_value_by_sample = frac * detection_limit_by_sample,
+                    frac = frac)
+    }
     
     rel_abund_repl <- as.matrix(zCompositions::multRepl(
       rel_abund_mat,
@@ -112,10 +147,6 @@ compute_zero_repl_clr <- function(
       z.delete  = z.delete
     ))
     dimnames(rel_abund_repl) <- dimnames(rel_abund_mat)
-    
-    extra <- list(detection_limit    = detection_limit,
-                  replacement_value  = frac * detection_limit,
-                  frac               = frac)
     
   } else if (method == "pseudo") {
     rel_abund_repl <- rel_abund_mat
