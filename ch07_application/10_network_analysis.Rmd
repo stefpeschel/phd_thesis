@@ -252,6 +252,21 @@ make_edge_presence <- function(networks) {
     )
 }
 
+format_taxon_label <- function(taxon, label_overrides = network_label_overrides) {
+  dplyr::coalesce(label_overrides[taxon], taxon) |>
+    unname()
+}
+
+format_edge_label <- function(edge_id, label_overrides = network_label_overrides,
+                              sep = " - ") {
+  edge_taxa <- stringr::str_split_fixed(edge_id, " -- ", 2)
+  paste(
+    format_taxon_label(edge_taxa[, 1], label_overrides),
+    format_taxon_label(edge_taxa[, 2], label_overrides),
+    sep = sep
+  )
+}
+
 extract_network_associations <- function(network, method) {
   adja <- network$adjaMat1
   diag(adja) <- 0
@@ -313,7 +328,7 @@ plot_shared_edges <- function(edge_presence, networks, n_edges = Inf, text_size 
     slice_head(n = n_edges) |>
     mutate(
       edge_label = stringr::str_trunc(
-        stringr::str_replace(edge_id, " -- ", " - "),
+        format_edge_label(edge_id),
         width = 34
       ),
       association_label = sprintf(
@@ -339,6 +354,68 @@ plot_shared_edges <- function(edge_presence, networks, n_edges = Inf, text_size 
     coord_cartesian(xlim = c(0, 1), clip = "off") +
     theme_void() +
     theme(plot.margin = margin(5.5, 5.5, 5.5, 0))
+}
+
+summarise_persistent_edges <- function(networks) {
+  edge_presence <- make_edge_presence(networks)
+  method_cols <- setdiff(colnames(edge_presence), "edge_id")
+  edge_membership <- edge_presence[, method_cols, drop = FALSE]
+  edge_membership[] <- lapply(edge_membership, as.logical)
+  
+  persistent_edge_ids <- edge_presence$edge_id[
+    rowSums(edge_membership, na.rm = TRUE) == length(method_cols)
+  ]
+  
+  purrr::imap_dfr(networks, extract_network_associations) |>
+    filter(edge_id %in% persistent_edge_ids) |>
+    tidyr::separate(edge_id, into = c("taxon1", "taxon2"), sep = " -- ", remove = FALSE) |>
+    group_by(edge_id, taxon1, taxon2) |>
+    filter(n_distinct(method) == length(method_cols)) |>
+    summarise(
+      n_methods = n_distinct(method),
+      mean_association = mean(association, na.rm = TRUE),
+      min_association = min(association, na.rm = TRUE),
+      max_association = max(association, na.rm = TRUE),
+      mean_abs_association = mean(abs(association), na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    mutate(
+      taxon1_label = format_taxon_label(taxon1),
+      taxon2_label = format_taxon_label(taxon2)
+    ) |>
+    arrange(desc(mean_abs_association), taxon1, taxon2)
+}
+
+make_persistent_edge_network <- function(network, persistent_edges) {
+  adja <- network$adjaMat1
+  asso <- network$assoMat1
+  diag(adja) <- 0
+  diag(asso) <- 0
+  
+  edge_index <- which(lower.tri(adja), arr.ind = TRUE)
+  taxon1 <- rownames(adja)[edge_index[, "row"]]
+  taxon2 <- colnames(adja)[edge_index[, "col"]]
+  edge_ids <- paste(
+    pmin(taxon1, taxon2),
+    pmax(taxon1, taxon2),
+    sep = " -- "
+  )
+  
+  keep_edge <- edge_ids %in% persistent_edges$edge_id
+  persistent_adja <- adja * 0
+  persistent_asso <- asso * 0
+  
+  persistent_adja[edge_index[keep_edge, , drop = FALSE]] <- 
+    adja[edge_index[keep_edge, , drop = FALSE]]
+  persistent_asso[edge_index[keep_edge, , drop = FALSE]] <- 
+    asso[edge_index[keep_edge, , drop = FALSE]]
+  
+  persistent_adja <- persistent_adja + t(persistent_adja)
+  persistent_asso <- persistent_asso + t(persistent_asso)
+  
+  network$adjaMat1 <- persistent_adja
+  network$assoMat1 <- persistent_asso
+  network
 }
 
 plot_edge_upset <- function(edge_presence, title, networks = NULL,
@@ -2957,6 +3034,146 @@ plot_edge_upset(
   title = "Shared edges across association measures",
   networks = networks_association
 )
+```
+
+## Persistent edges across selected networks
+
+The following summary uses a selected set of signed networks and identifies
+taxa-pairs that are connected in all of them.
+
+```{r select_persistent_edge_networks}
+persistent_edge_networks <- list(
+  "1% prevalence / multiplicative / SPIEC-EASI mb" = net_single_main,
+  "5% prevalence" = net_single_prev05,
+  "10% prevalence" = net_single_prev10,
+  #"pseudo count" = net_single_zero_pseudo,
+  "random pseudo count" = net_single_zero_random,
+  "alrEM" = net_single_zero_alrEM,
+  "BayesMult" = net_single_zero_bayesMult,
+  "SPIEC-EASI slr" = net_single_slr,
+  "SPRING" = net_single_spring
+  #"rho shrinkage" = net_single_rhoshrink
+)
+
+persistent_edges <- summarise_persistent_edges(persistent_edge_networks)
+```
+
+```{r persistent_edge_table}
+persistent_edges |>
+  mutate(
+    mean_association = round(mean_association, 3),
+    min_association = round(min_association, 3),
+    max_association = round(max_association, 3),
+    mean_abs_association = round(mean_abs_association, 3)
+  ) |>
+  select(
+    taxon1_label,
+    taxon2_label,
+    n_methods,
+    mean_association,
+    min_association,
+    max_association,
+    mean_abs_association
+  ) |>
+  kableExtra::kbl(
+    caption = "Taxa-pairs connected in all selected signed networks.",
+    col.names = c(
+      "Taxon 1",
+      "Taxon 2",
+      "Networks",
+      "Mean association",
+      "Minimum",
+      "Maximum",
+      "Mean absolute association"
+    )
+  ) |>
+  kableExtra::kable_styling(full_width = FALSE)
+```
+
+```{r persistent_edge_network_prepare}
+persistent_taxa <- persistent_edges |>
+  select(taxon1, taxon2) |>
+  unlist(use.names = FALSE) |>
+  unique()
+
+net_single_persistent <- make_persistent_edge_network(
+  network = net_single_main,
+  persistent_edges = persistent_edges
+)
+
+props_single_persistent <- netAnalyze(
+  net_single_persistent,
+  centrLCC = TRUE,
+  clustMethod = "cluster_fast_greedy",
+  hubPar = "eigenvector",
+  weightDeg = FALSE, 
+  normDeg = FALSE,
+  normBetw = FALSE,
+  normClose = FALSE,
+  normEigen = FALSE
+)
+
+persistent_network_labels <- setNames(
+  rep("", ncol(net_single_persistent$adjaMat1)),
+  colnames(net_single_persistent$adjaMat1)
+)
+
+persistent_label_taxa <- intersect(persistent_taxa, names(persistent_network_labels))
+persistent_network_labels[persistent_label_taxa] <- persistent_label_taxa
+
+label_override_taxa <- intersect(
+  names(network_label_overrides),
+  persistent_label_taxa
+)
+persistent_network_labels[label_override_taxa] <- 
+  network_label_overrides[label_override_taxa]
+
+persistent_layout <- layout[
+  intersect(rownames(layout), colnames(net_single_persistent$adjaMat1)),
+  ,
+  drop = FALSE
+]
+```
+
+```{r persistent_edge_network_plot, fig.width=8.5, fig.height=6, dpi=250}
+plot(
+  props_single_persistent,
+  layout = persistent_layout,
+  nodeFilter = "names",
+  nodeFilterPar = persistent_taxa,
+  labelScale = FALSE,
+  labels = persistent_network_labels,
+  repulsion = 0.899,
+  nodeColor = "feature", 
+  featVecCol = phyla, 
+  colorVec =  phylcol,
+  nodeSize = "clr",
+  nodeSizeSpread = 4,
+  cexNodes = 2,
+  nodeTransp = 40,
+  hubTransp = 40,
+  posCol = "gray50", 
+  negCol = "red3",
+  showTitle = TRUE,
+  title1 = "Persistent edges",
+  cexTitle = 1.8,
+  cexLabels = 0.9,
+  cexHubLabels = 0.9,
+  hubBorderCol = "gray40",
+  mar = c(1, 7, 3, 3)
+)
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
 ```
 
 
