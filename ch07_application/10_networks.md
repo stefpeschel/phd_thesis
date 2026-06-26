@@ -1,6 +1,6 @@
 Network analysis
 ================
-Compiled at 2026-06-26 06:00:25 UTC
+Compiled at 2026-06-26 09:48:45 UTC
 
 ## Aim
 
@@ -225,17 +225,21 @@ In the network plot, the following taxa are labelled:
 
 ![](figures/10_networks/net_single_net_plot_basic-1.png)<!-- -->
 
+We store this layout as main layout.
+
 #### Nodes colored by phyla
 
     ## phyla
-    ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria 
-    ##                19                 6                 1                75                 1                14 
-    ## Verrucomicrobiota 
-    ##                 1
+    ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria Verrucomicrobiota 
+    ##                19                 6                 1                75                 1                14                 1
 
 ![](figures/10_networks/net_single_net_plot_col_phyla-1.png)<!-- -->
 
-![](figures/10_networks/net_single_net_plot_col_phyla_nolabs-1.png)<!-- -->
+**Add labels or further highly abundant taxa and improve layout**
+
+![](figures/10_networks/net_single_net_plot_baseline-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_baseline_nolabs-1.png)<!-- -->
 
 ## Alternative preprocessing steps
 
@@ -324,6 +328,14 @@ following alternatives:
 
 #### Sparse + low-rank decomposition (SPIEC-EASI slr)
 
+    ##   r opt_ind    lambda edges      BIC
+    ## 1 2      10 0.2804681   175 62054.67
+    ## 3 4      10 0.2804681   130 62571.76
+    ## 2 3      10 0.2804681   174 62655.78
+    ## 4 5      10 0.2804681   101 62679.08
+
+    ## Optimal r: 2
+
 ![](figures/10_networks/net_single_net_plot_slr-1.png)<!-- -->
 
 ![](figures/10_networks/net_single_net_plot_slr_ownlay-1.png)<!-- -->
@@ -383,7 +395,7 @@ exclusive breastfeeding are excluded from this comparison.
 
 ### Network plot
 
-![](figures/10_networks/net_unnamed-chunk-26-1.png)<!-- -->
+![](figures/10_networks/net_unnamed-chunk-29-1.png)<!-- -->
 
 ### Generate permuted association matrices
 
@@ -1080,7 +1092,7 @@ The networks will be based on three different types of p-values:
 These files have been written to the target directory,
 `data/10_networks`:
 
-    ## # A tibble: 29 × 4
+    ## # A tibble: 33 × 4
     ##    path                           type         size modification_time  
     ##    <fs::path>                     <fct> <fs::bytes> <dttm>             
     ##  1 assoPerm_ebf.bmat              file         209M 2026-06-24 16:30:32
@@ -1093,4 +1105,4 @@ These files have been written to the target directory,
     ##  8 comp_ebf_main_BH.rds           file         181K 2026-06-25 14:33:14
     ##  9 comp_ebf_main_noBH.rds         file         181K 2026-06-25 14:26:59
     ## 10 counts_rel_alrEM.rds           file         518K 2026-06-25 20:43:46
-    ## # ℹ 19 more rows
+    ## # ℹ 23 more rows
