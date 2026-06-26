@@ -1,6 +1,6 @@
 Network analysis
 ================
-Compiled at 2026-06-25 21:00:52 UTC
+Compiled at 2026-06-26 06:00:25 UTC
 
 ## Aim
 
@@ -228,10 +228,14 @@ In the network plot, the following taxa are labelled:
 #### Nodes colored by phyla
 
     ## phyla
-    ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria Verrucomicrobiota 
-    ##                19                 6                 1                75                 1                14                 1
+    ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria 
+    ##                19                 6                 1                75                 1                14 
+    ## Verrucomicrobiota 
+    ##                 1
 
 ![](figures/10_networks/net_single_net_plot_col_phyla-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_col_phyla_nolabs-1.png)<!-- -->
 
 ## Alternative preprocessing steps
 
@@ -248,9 +252,13 @@ increase this to 5% and 10%. Everything else stays the same.
 
 ![](figures/10_networks/net_single_net_plot_prev05-1.png)<!-- -->
 
+![](figures/10_networks/net_single_net_plot_prev05_nolabs-1.png)<!-- -->
+
 #### 10% prevalence filter
 
 ![](figures/10_networks/net_single_net_plot_prev10-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_prev10_nolabs-1.png)<!-- -->
 
 ### Different zero replacement
 
@@ -285,17 +293,66 @@ replacement value.
 
 ![](figures/10_networks/net_single_net_plot_zero_pseudo-1.png)<!-- -->
 
+![](figures/10_networks/net_single_net_plot_zero_pseudo_nolabs-1.png)<!-- -->
+
 #### Random pseudo counts
 
 ![](figures/10_networks/net_single_net_plot_zero_random-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_zero_random_nolabs-1.png)<!-- -->
 
 #### Modified EM ALR algorithm
 
 ![](figures/10_networks/net_single_net_plot_zero_alrEM-1.png)<!-- -->
 
+![](figures/10_networks/net_single_net_plot_zero_alrEM_nolabs-1.png)<!-- -->
+
 #### Bayesian-multiplicative replacement
 
 ![](figures/10_networks/net_single_net_plot_zero_bayesMult-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_zero_bayesMult_nolabs-1.png)<!-- -->
+
+### Different association estimation method
+
+Finally, we will also investigate how the network would look like for
+different association estimation methods. Here, we consider the
+following alternatives:
+
+- Sparse + low-rank decomposition (SPIEC-EASI slr)
+- SPRING
+
+#### Sparse + low-rank decomposition (SPIEC-EASI slr)
+
+![](figures/10_networks/net_single_net_plot_slr-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_slr_ownlay-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_slr_nolabs-1.png)<!-- -->
+
+#### SPRING
+
+![](figures/10_networks/net_single_net_plot_spring-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_spring_ownlay-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_spring_nolabs-1.png)<!-- -->
+
+#### Shrinkage proportionality
+
+    ## Checking input arguments ... Done.
+    ## 117 taxa and 592 samples remaining.
+    ## 
+    ## Zero treatment:
+    ## Data contains no zeros.
+    ## 
+    ## Calculate 'rhoshrink' associations ... Done.
+
+![](figures/10_networks/net_single_rhoshrink_histrogram-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_rhoshrink-1.png)<!-- -->
+
+![](figures/10_networks/net_single_net_plot_rhoshrink_nolabs-1.png)<!-- -->
 
 ## Network comparison by EBF duration
 
@@ -326,7 +383,7 @@ exclusive breastfeeding are excluded from this comparison.
 
 ### Network plot
 
-![](figures/10_networks/net_unnamed-chunk-46-1.png)<!-- -->
+![](figures/10_networks/net_unnamed-chunk-26-1.png)<!-- -->
 
 ### Generate permuted association matrices
 
@@ -1023,7 +1080,7 @@ The networks will be based on three different types of p-values:
 These files have been written to the target directory,
 `data/10_networks`:
 
-    ## # A tibble: 25 × 4
+    ## # A tibble: 29 × 4
     ##    path                           type         size modification_time  
     ##    <fs::path>                     <fct> <fs::bytes> <dttm>             
     ##  1 assoPerm_ebf.bmat              file         209M 2026-06-24 16:30:32
@@ -1036,4 +1093,4 @@ These files have been written to the target directory,
     ##  8 comp_ebf_main_BH.rds           file         181K 2026-06-25 14:33:14
     ##  9 comp_ebf_main_noBH.rds         file         181K 2026-06-25 14:26:59
     ## 10 counts_rel_alrEM.rds           file         518K 2026-06-25 20:43:46
-    ## # ℹ 15 more rows
+    ## # ℹ 19 more rows

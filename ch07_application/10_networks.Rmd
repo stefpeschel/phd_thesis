@@ -27,6 +27,11 @@ knitr::opts_chunk$set(
 ```
 
 ```{r packages, message=FALSE, warning=FALSE}
+# SpiecEasi from latentcor branch needed
+if (as.character(utils::packageVersion("SpiecEasi")) != "2.0.1") {
+  remotes::install_github("zdk123/SpiecEasi", ref = "latentcor")
+}
+
 library(conflicted)
 library(phyloseq)
 library(tidyverse)
@@ -576,8 +581,8 @@ layout["Lachnospira", ] <- c(-0.34, -0.05)
 ```{r single_net_plot_col_phyla, fig.width=8.5, fig.height=6, dpi=250}
 plot(props_single_main,
      layout = layout,
-          nodeFilter = "names",
-          nodeFilterPar = taxa_to_plot,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
      labelScale = FALSE,
      labels = network_labels,
      repulsion = 0.8999999,
@@ -610,6 +615,34 @@ legend(0.65, 1.1, cex = 1, title = "Estimated association:",
        bty = "n", horiz = TRUE, xpd = NA)
 ```
 
+
+```{r single_net_plot_col_phyla_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_main,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "Baseline network",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
+```
+
 ## Alternative preprocessing steps
 
 In this section we analyze, how the network changes when alternative 
@@ -623,12 +656,10 @@ to 5% and 10%. Everything else stays the same.
 
 #### 5% prevalence filter
 
-```{r}
+```{r, warning=FALSE}
 phylo_genus_prev05 <- 
   readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev05.rds"))
-```
 
-```{r, warning=FALSE}
 counts_raw_prev05 <- get_sample_by_taxa(phylo_genus_prev05)
 
 sampdata_net_prev05 <- sampdata %>%
@@ -719,7 +750,7 @@ plot(props_single_prev05,
      posCol = "gray50", 
      negCol = "red3",
      showTitle = FALSE,
-     cexLabels = 0.9,
+     cexLabels = 1.1,
      cexHubLabels = 0.9,
      hubBorderCol = "gray40",
      mar = c(1, 7, 1, 3))
@@ -728,23 +759,44 @@ plot(props_single_prev05,
 phylcol_transp <- colToTransp(phylcol, 40)
 
 # xpd = NA allows drawing outside the plot region into the margins
-legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+legend(-1.7, 1.1, cex = 1.1, pt.cex = 2.5, title = "Phylum:", 
        legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
        xpd = NA) 
+```
 
-legend(0.65, 1.1, cex = 1, title = "Estimated association:",
-       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
-       bty = "n", horiz = TRUE, xpd = NA)
+```{r single_net_plot_prev05_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_prev05,
+     layout = layout_prev05,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "5% prevalence filter",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
 ```
 
 #### 10% prevalence filter
 
-```{r}
+```{r, warning=FALSE}
 phylo_genus_prev10 <- 
   readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev10.rds"))
-```
 
-```{r}
 counts_raw_prev10 <- get_sample_by_taxa(phylo_genus_prev10)
 
 sampdata_net_prev10 <- sampdata %>%
@@ -831,22 +883,41 @@ plot(props_single_prev10,
      posCol = "gray50", 
      negCol = "red3",
      showTitle = FALSE,
-     cexLabels = 0.9,
+     cexLabels = 1.1,
      cexHubLabels = 0.9,
      hubBorderCol = "gray40",
-     mar = c(1, 7, 1, 3))
+     mar = c(1, 3, 1, 7))
 
-# Colors used in the legend should be equally transparent as in the plot
-phylcol_transp <- colToTransp(phylcol, 40)
-
-# xpd = NA allows drawing outside the plot region into the margins
-legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
-       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
-       xpd = NA) 
-
-legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+legend(0.8, 1.1, cex = 1.2, title = "Estimated association:",
        legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
        bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r single_net_plot_prev10_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_prev10,
+     layout = layout_prev10,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "10% prevalence filter",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
 ```
 
 ### Different zero replacement
@@ -885,7 +956,8 @@ counts_rel_pseudo <- zero_repl_pseudo$rel_abund_repl
 
 set.seed(network_seed)
 zero_repl_random <- compute_zero_repl_clr(
-  counts_rel, method = "pseudo", pseudocount = 2e-5, zerosOnly = TRUE, random = TRUE
+  counts_rel, method = "pseudo", pseudocount = 2e-5, zerosOnly = TRUE, 
+  random = TRUE
 )
 counts_rel_random <- zero_repl_random$rel_abund_repl
 
@@ -893,16 +965,22 @@ if (file.exists(path_target("counts_rel_alrEM.rds"))) {
   counts_rel_alrEM <- readRDS(path_target("counts_rel_alrEM.rds"))
 } else {
   zero_repl_alrEM <- compute_zero_repl_clr(
-    counts_rel, method = "alrEM", z.warning = 0.99, z.delete = FALSE, max.iter = 20
+    counts_rel, method = "alrEM", z.warning = 0.99, z.delete = FALSE, 
+    max.iter = 20
   )
   counts_rel_alrEM <- zero_repl_alrEM$rel_abund_repl
   saveRDS(counts_rel_alrEM, file = path_target("counts_rel_alrEM.rds"))
 }
 
-zero_repl_bayesMult <- compute_zero_repl_clr(
-  counts_rel, method = "bayesMult", z.warning = 0.99, z.delete = FALSE
-)
-counts_rel_bayesMult <- zero_repl_bayesMult$rel_abund_repl
+if (file.exists(path_target("counts_rel_bayesMult.rds"))) {
+  zero_repl_bayesMult <- readRDS(path_target("counts_rel_bayesMult.rds"))
+} else {
+  zero_repl_bayesMult <- compute_zero_repl_clr(
+    counts_rel, method = "bayesMult", z.warning = 0.99, z.delete = FALSE
+  )
+  counts_rel_bayesMult <- zero_repl_bayesMult$rel_abund_repl
+  saveRDS(zero_repl_bayesMult, file = path_target("counts_rel_bayesMult.rds"))
+}
 ```
 
 #### Additive pseudo count
@@ -984,6 +1062,33 @@ legend(0.65, 1.1, cex = 1, title = "Estimated association:",
        bty = "n", horiz = TRUE, xpd = NA)
 ```
 
+```{r single_net_plot_zero_pseudo_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_zero_pseudo,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "Additive pseudo count",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
+```
+
 #### Random pseudo counts
 
 ```{r generate_net_single_zero_random}
@@ -1061,6 +1166,33 @@ legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:",
 legend(0.65, 1.1, cex = 1, title = "Estimated association:",
        legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
        bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r single_net_plot_zero_random_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_zero_random,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "Random pseudo counts (zeros only)",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
 ```
 
 #### Modified EM ALR algorithm
@@ -1142,6 +1274,33 @@ legend(0.65, 1.1, cex = 1, title = "Estimated association:",
        bty = "n", horiz = TRUE, xpd = NA)
 ```
 
+```{r single_net_plot_zero_alrEM_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_zero_alrEM,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "Modified EM alr-algorithm",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
+```
+
 #### Bayesian-multiplicative replacement
 
 ```{r generate_net_single_zero_bayesMult}
@@ -1219,6 +1378,478 @@ legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:",
 legend(0.65, 1.1, cex = 1, title = "Estimated association:",
        legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
        bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r single_net_plot_zero_bayesMult_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_zero_bayesMult,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "Bayesian-multiplicative replacement",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
+```
+
+### Different association estimation method
+
+Finally, we will also investigate how the network would look like for different
+association estimation methods. Here, we consider the following alternatives:
+
+* Sparse + low-rank decomposition (SPIEC-EASI slr)
+* SPRING
+
+#### Sparse + low-rank decomposition (SPIEC-EASI slr)
+
+```{r generate_net_single_slr}
+path_net_single_slr <- path_target("net_single_slr.rds")
+
+if (file.exists(path_net_single_slr) && !refit_complete_network) {
+  net_single_slr <- readRDS(path_net_single_slr)
+} else {
+  net_single_slr <- NetCoMi::netConstruct(
+    data = counts_rel_multrepl,
+    measure = "spieceasi",
+    measurePar = list(method = "slr",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30, # Subsamples in StARS
+                                           thresh = 0.1), # StARS threshold
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_slr, path_net_single_slr)
+}
+```
+
+```{r}
+props_single_slr <- netAnalyze(net_single_slr,
+                               centrLCC = TRUE,
+                               clustMethod = "cluster_fast_greedy",
+                               hubPar = "eigenvector",
+                               weightDeg = FALSE, 
+                               normDeg = FALSE,
+                               normBetw = FALSE,
+                               normClose = FALSE,
+                               normEigen = FALSE)
+```
+
+```{r single_net_plot_slr, fig.width=8.5, fig.height=6, dpi=250}
+p <- plot(props_single_slr,
+     #layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.73,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r}
+layout_slr <- p$layout$layout1
+layout_slr["Streptococcus", ] <- c(-0.1, 0.58)
+layout_slr["Escherichia-Shigella", ] <- c(-0.1, -0.05)
+layout_slr["Lachnospiraceae_ND3007_group", ] <- c(0.82, -0.28)
+```
+
+
+```{r single_net_plot_slr_ownlay, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_slr,
+     layout = layout_slr,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.73,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r single_net_plot_slr_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_slr,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "SPIEC-EASI slr",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
+
+```
+
+#### SPRING
+
+```{r generate_net_single_spring}
+path_net_single_spring <- path_target("net_single_spring.rds")
+
+if (file.exists(path_net_single_spring) && !refit_complete_network) {
+  net_single_spring <- readRDS(path_net_single_spring)
+} else {
+  net_single_spring <- NetCoMi::netConstruct(
+    data = counts_raw,
+    measure = "spring",
+    measurePar = list(nlambda = 10, 
+                      rep.num = 10,
+                      thresh  = 0.1,
+                      Rmethod = "approx"),
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = 42
+  )
+  
+  saveRDS(net_single_spring, path_net_single_spring)
+}
+```
+
+```{r}
+props_single_spring <- netAnalyze(net_single_spring,
+                                       centrLCC = TRUE,
+                                       clustMethod = "cluster_fast_greedy",
+                                       hubPar = "eigenvector",
+                                       weightDeg = FALSE, 
+                                       normDeg = FALSE,
+                                       normBetw = FALSE,
+                                       normClose = FALSE,
+                                       normEigen = FALSE)
+```
+
+```{r single_net_plot_spring, fig.width=8.5, fig.height=6, dpi=250}
+p <- plot(props_single_spring,
+     #layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.899,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r}
+layout_spring <- p$layout$layout1
+layout_spring["Clostridium_sensu_strict1", ] <- c(-0.5, 0.58)
+layout_spring["Terrisporobacter", ] <- c(0.43, -0.26)
+layout_spring["Stenotrophomonas", ] <- c(-0.15, -0.45)
+layout_spring["Streptococcus", ] <- c(0.51, -0.75)
+```
+
+
+```{r single_net_plot_spring_ownlay, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_spring,
+     layout = layout_spring,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.899,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r single_net_plot_spring_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_spring,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "SPRING",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
+```
+
+#### Shrinkage proportionality
+
+```{r generate_net_single_rhoshrink_nothresh}
+net_single_rhoshrink_nothresh <- NetCoMi::netConstruct(
+  data = counts_rel_multrepl,
+  measure = "rhoshrink",
+  filtTax = "none",
+  filtSamp = "none",
+  normMethod = "none",
+  zeroMethod = "pseudo",
+  zeroPar = list(pseudocount = 0),
+  sparsMethod = "none",
+  seed = 42
+)
+
+assomat_single_rhoshrink <- net_single_rhoshrink_nothresh$assoMat1
+adjamat_single_rhoshrink <- net_single_rhoshrink_nothresh$adjaMat1
+```
+
+```{r single_rhoshrink_histrogram, fig.width=8, fig.height=2}
+n_zero_asso <- 
+  sum(assomat_single_rhoshrink[lower.tri(assomat_single_rhoshrink)] == 0)
+
+data.frame(correlation = assomat_single_rhoshrink[lower.tri(assomat_single_rhoshrink)]) |>
+  ggplot(aes(x = correlation)) +
+  geom_histogram(binwidth = 0.005) +
+  labs(x = "Estimated correlation",
+       y = "Count",
+       #title = "Estimated correlations after sparsification"
+       ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+  )
+```
+
+```{r generate_net_single_rhoshrink}
+path_net_single_rhoshrink <- path_target("net_single_rhoshrink.rds")
+
+if (file.exists(path_net_single_rhoshrink) && !refit_complete_network) {
+  net_single_rhoshrink <- readRDS(path_net_single_rhoshrink)
+} else {
+  net_single_rhoshrink <- NetCoMi::netConstruct(
+    data = counts_rel_multrepl,
+    measure = "rhoshrink",
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "pseudo",
+    zeroPar = list(pseudocount = 0),
+    sparsMethod = "threshold",
+    thresh = 0.2,
+    seed = 42
+  )
+  
+  saveRDS(net_single_rhoshrink, path_net_single_rhoshrink)
+}
+```
+
+```{r}
+props_single_rhoshrink <- netAnalyze(net_single_rhoshrink,
+                                       centrLCC = TRUE,
+                                       clustMethod = "cluster_fast_greedy",
+                                       hubPar = "eigenvector",
+                                       weightDeg = FALSE, 
+                                       normDeg = FALSE,
+                                       normBetw = FALSE,
+                                       normClose = FALSE,
+                                       normEigen = FALSE)
+```
+
+```{r single_net_plot_rhoshrink, fig.width=8.5, fig.height=6, dpi=250}
+p <- plot(props_single_rhoshrink,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.899,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
+
+```{r single_net_plot_rhoshrink_nolabs, fig.width=5.8, fig.height=6, dpi=250}
+plot(props_single_rhoshrink,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.8999999,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = TRUE,
+     title1 = "Shrinkage proportionality",
+     cexTitle = 1.5,
+     cexLabels = 0,
+     cexHubLabels = 0,
+     hubBorderCol = "gray40",
+     mar = c(1, 1, 3, 1))
 ```
 
 ## Network comparison by EBF duration
