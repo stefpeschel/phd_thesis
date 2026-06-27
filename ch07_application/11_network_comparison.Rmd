@@ -15,11 +15,22 @@ params:
 here::i_am(paste0(params$name, ".Rmd"), uuid = "2e531120-aad0-4546-bf2a-05d6465091a5")
 ```
 
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(
+  dev = c("png", "cairo_pdf"),
+  fig.ext = c("png", "pdf"),
+  fig.width = 8, 
+  fig.height = 5, 
+  dpi = 250,
+  fig.path = paste0('figures/', params$name, "/net_"),
+  echo = FALSE)
+```
+
 This document compares genus-level microbial association networks between
 infants without exclusive breastfeeding and infants with at least two months of
 exclusive breastfeeding. The first part contrasts several network construction
 approaches descriptively. The second part conducts permutation-based network
-comparison for the baseline network only.
+comparison for one selected descriptive network.
 
 ```{r packages, message=FALSE, warning=FALSE}
 # SpiecEasi from latentcor branch needed
@@ -53,6 +64,7 @@ conflicts_prefer(dplyr::rename)
 conflicts_prefer(dplyr::mutate)
 conflicts_prefer(dplyr::arrange)
 conflicts_prefer(dplyr::count)
+conflicts_prefer(base::union)
 
 application_path <- rprojroot::find_root(rprojroot::has_file("README.md"))
 source(file.path(application_path, "functions.R"))
@@ -75,9 +87,8 @@ permutation_seed <- 42
 n_perm_network_comparison <- 999
 cores <- 10
 
-n_abundant_network_labels <- 15
-n_central_network_labels <- 10
 slr_rank <- 2
+selected_permutation_method <- "corshrink_bayesMult"
 
 refit_network_comparison <- FALSE
 refit_permutation_matrices <- FALSE
@@ -128,11 +139,11 @@ stopifnot(identical(rownames(counts_ebf_raw), metadata_ebf$SampleID))
 counts_ebf_rel <- counts_to_rel_abund(counts_ebf_raw)
 ebf_group <- metadata_ebf$ebf_group
 
-zero_repl_multrepl <- compute_multrepl_clr(
+zero_repl_multRepl <- compute_multrepl_clr(
   rel_abund_mat = counts_ebf_rel,
   frac = zero_replacement_fraction
 )
-counts_ebf_rel_multrepl <- zero_repl_multrepl$rel_abund_repl
+counts_ebf_rel_multRepl <- zero_repl_multRepl$rel_abund_repl
 
 path_counts_ebf_rel_bayesMult <- path_target("counts_ebf_rel_bayesMult.rds")
 
@@ -212,30 +223,44 @@ make_network_plot_labels <- function(
     extra_taxa = NULL,
     label_overrides = network_label_overrides) {
 
-  adja <- props$input$adjaMat1
-  diag(adja) <- 0
-  network_taxa <- colnames(adja)
+  adja1 <- props$input$adjaMat1
+  adja2 <- props$input$adjaMat2
+  diag(adja1) <- 0
+  diag(adja2) <- 0
+  network_taxa <- union(colnames(adja1), colnames(adja2))
 
-  non_singleton_taxa <- names(which(
-    rowSums(adja != 0) > 0 |
-      colSums(adja != 0) > 0
+  non_singleton_taxa1 <- names(which(
+    rowSums(adja1 != 0) > 0 |
+      colSums(adja1 != 0) > 0
   ))
+  non_singleton_taxa2 <- names(which(
+    rowSums(adja2 != 0) > 0 |
+      colSums(adja2 != 0) > 0
+  ))
+  non_singleton_taxa <- union(non_singleton_taxa1, non_singleton_taxa2)
 
   abundant_taxa <- top_abundant_taxa[seq_len(
     min(max(n_abundant, 0), length(top_abundant_taxa))
   )]
 
-  centrality <- props$centralities$eigenv1
-  if (is.null(centrality) || n_central <= 0) {
-    central_taxa <- character(0)
-  } else {
+  get_central_taxa <- function(centrality) {
+    if (is.null(centrality) || n_central <= 0) {
+      return(character(0))
+    }
     centrality <- centrality[is.finite(centrality)]
     central_taxa <- centrality %>%
       sort(decreasing = TRUE) %>%
       head(n_central) %>%
       names()
     names(central_taxa) <- central_taxa
+    central_taxa
   }
+
+  central_taxa <- c(
+    get_central_taxa(props$centralities$eigenv1),
+    get_central_taxa(props$centralities$eigenv2)
+  )
+  central_taxa <- central_taxa[!duplicated(names(central_taxa))]
 
   taxa_to_label <- c(abundant_taxa, central_taxa, extra_taxa)
   taxa_to_label <- taxa_to_label[!duplicated(names(taxa_to_label))]
@@ -285,7 +310,8 @@ analyze_group_network <- function(net) {
     weightDeg = FALSE,
     normDeg = FALSE,
     normBetw = FALSE,
-    normClose = FALSE
+    normClose = FALSE,
+    normEigen = FALSE
   )
 }
 
@@ -358,12 +384,18 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
                                asso_legend_x   = -0.15,
                                asso_legend_y   = 1.2,
                                doPlot = TRUE,
-                               layout = NULL) {
+                               layout = NULL, 
+                               highlightHubs = TRUE,
+                               legends = TRUE,
+                               mar = c(1,3,3,3)) {
+  
+  rmSinglesArg <- ifelse(same_layout, "inboth", TRUE)
+  
   plot_args <- list(
     x = props,
     layout = layout,
     sameLayout = same_layout,
-    rmSingles = TRUE,
+    rmSingles = rmSinglesArg,
     title1 = title1,
     title2 = title2,
     labelScale = labelScale,
@@ -380,11 +412,12 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
     posCol = "gray50",
     negCol = "red3",
     showTitle = TRUE,
-    highlightHubs = FALSE,
+    highlightHubs = highlightHubs,
     cexLabels = cexLabels,
     cexHubLabels = cexLabels,
+    cexTitle = 1.4,
     hubBorderCol = "gray40",
-    mar = c(1, 3, 3, 3),
+    mar = mar,
     doPlot = doPlot
   )
   if (same_layout) {
@@ -393,14 +426,14 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
   
   p <- do.call(plot, plot_args)
   
-  if (doPlot) {
+  if (doPlot && legends) {
     phylcol_transp <- colToTransp(phylcol, 40)
     
     legend(phylum_legend_x, phylum_legend_y, cex = 1, pt.cex = 2.5, title = NULL,
            legend = levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
            xpd = NA)
     
-    legend(asso_legend_x, asso_legend_y, cex = 1, title = "Estimated association:",
+    legend(asso_legend_x, asso_legend_y, cex = 1.1, title = "Estimated association:",
            legend = c("+", "-"), lty = 1, lwd = 3, col = c("gray50", "red3"),
            bty = "n", horiz = TRUE, xpd = NA)
   }
@@ -408,14 +441,46 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
   invisible(p)
 }
 
-build_plot_labels <- function(props) {
+build_plot_labels <- function(props, n_abundant = 15, n_central = 10) {
   make_network_plot_labels(
     props = props,
     top_abundant_taxa = top_abundant_taxa,
-    n_abundant = n_abundant_network_labels,
-    n_central = n_central_network_labels,
+    n_abundant = n_abundant,
+    n_central = n_central,
     label_overrides = network_label_overrides
   )$labels
+}
+
+blank_plot_labels <- function(labels) {
+  out <- rep("", length(labels))
+  names(out) <- names(labels)
+  out
+}
+
+extract_global_network_properties <- function(props, method) {
+  tibble(
+    method = method,
+    group = c("EBF = 0", "EBF >= 2"),
+    relative_lcc_size = c(
+      props$globalPropsLCC$lccSizeRel1,
+      props$globalPropsLCC$lccSizeRel2
+    ),
+    density = c(
+      props$globalProps$density1,
+      props$globalProps$density2
+    ),
+    natural_connectivity = c(
+      props$globalProps$natConnect1,
+      props$globalProps$natConnect2
+    )
+  )
+}
+
+make_global_property_table <- function(global_properties, property) {
+  global_properties %>%
+    select(group, method, value = all_of(property)) %>%
+    mutate(value = round(value, 3)) %>%
+    pivot_wider(names_from = method, values_from = value)
 }
 ```
 
@@ -423,6 +488,227 @@ build_plot_labels <- function(props) {
 
 The following sections construct and describe EBF-group-specific networks
 without permutation testing.
+
+
+### SPIEC-EASI MB with multRepl
+
+```{r generate_net_ebf_spieceasi_multRepl}
+path_net_ebf_spieceasi_multRepl <- path_target("net_ebf_spieceasi_multRepl.rds")
+
+if (file.exists(path_net_ebf_spieceasi_multRepl) && !refit_network_comparison) {
+  net_ebf_spieceasi_multRepl <- readRDS(path_net_ebf_spieceasi_multRepl)
+} else {
+  net_ebf_spieceasi_multRepl <- NetCoMi::netConstruct(
+    data = counts_ebf_rel_multRepl,
+    group = ebf_group,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30,
+                                           thresh = 0.1),
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    jointPrepro = FALSE,
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = network_seed
+  )
+
+  saveRDS(net_ebf_spieceasi_multRepl, path_net_ebf_spieceasi_multRepl)
+}
+
+objects_ebf_spieceasi_multRepl <- extract_group_network_objects(
+  net_ebf_spieceasi_multRepl
+)
+props_ebf_spieceasi_multRepl <- analyze_group_network(
+  net_ebf_spieceasi_multRepl
+)
+labels_ebf_spieceasi_multRepl <- build_plot_labels(
+  props_ebf_spieceasi_multRepl
+)
+```
+
+#### netAnalyze summary
+
+```{r ebf_spieceasi_multRepl_netAnalyze_summary}
+print(summary(props_ebf_spieceasi_multRepl,
+              groupNames = c("EBF = 0", "EBF >= 2")))
+```
+
+
+#### Association Histogram
+
+```{r ebf_spieceasi_multRepl_association_histogram, fig.width=8, fig.height=4}
+plot_group_association_histograms(objects_ebf_spieceasi_multRepl)
+```
+
+#### Degree Distribution
+
+```{r ebf_spieceasi_multRepl_degree_distribution, fig.width=8, fig.height=4, dpi=200}
+plot_group_degree_distribution(objects_ebf_spieceasi_multRepl)
+```
+
+#### Graphlet Correlation Matrix
+
+```{r ebf_spieceasi_multRepl_gcm, fig.width=10, fig.height=9, dpi=200}
+plotGCM(props_ebf_spieceasi_multRepl,
+        legendCex = 1.2,
+        titleCex = 1.5,
+        labCex = 1.2,
+        sigTextCex = 1.3)
+```
+
+#### Network Plot
+
+```{r ebf_spieceasi_multRepl_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spieceasi_multRepl,
+  same_layout = FALSE,
+  labels = labels_ebf_spieceasi_multRepl,
+  repulsion = 0.8
+)
+```
+
+```{r ebf_spieceasi_multRepl_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spieceasi_multRepl,
+  same_layout = TRUE,
+  labels = labels_ebf_spieceasi_multRepl,
+  repulsion = 0.79999
+)
+```
+
+```{r ebf_spieceasi_multRepl_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spieceasi_multRepl,
+  same_layout = TRUE,
+  labels = blank_plot_labels(labels_ebf_spieceasi_multRepl),
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+### SPIEC-EASI MB with BayesMult replacement
+
+```{r generate_net_ebf_spieceasi_bayesMult}
+path_net_ebf_spieceasi_bayesMult <- path_target("net_ebf_spieceasi_bayesMult.rds")
+
+if (file.exists(path_net_ebf_spieceasi_bayesMult) && !refit_network_comparison) {
+  net_ebf_spieceasi_bayesMult <- readRDS(path_net_ebf_spieceasi_bayesMult)
+} else {
+  net_ebf_spieceasi_bayesMult <- NetCoMi::netConstruct(
+    data = counts_ebf_rel_bayesMult,
+    group = ebf_group,
+    measure = "spieceasi",
+    measurePar = list(method = "mb",
+                      nlambda = 30,
+                      pulsar.params = list(rep.num = 30,
+                                           thresh = 0.1),
+                      norm.params = list(method = "clr",
+                                         types = "tru_counts"),
+                      symBetaMode = "ave"),
+    jointPrepro = FALSE,
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "none",
+    zeroMethod = "none",
+    sparsMethod = "none",
+    seed = network_seed
+  )
+
+  saveRDS(net_ebf_spieceasi_bayesMult, path_net_ebf_spieceasi_bayesMult)
+}
+
+objects_ebf_spieceasi_bayesMult <- extract_group_network_objects(
+  net_ebf_spieceasi_bayesMult
+)
+props_ebf_spieceasi_bayesMult <- analyze_group_network(
+  net_ebf_spieceasi_bayesMult
+)
+labels_ebf_spieceasi_bayesMult <- build_plot_labels(
+  props_ebf_spieceasi_bayesMult
+)
+```
+
+#### netAnalyze summary
+
+```{r ebf_spieceasi_bayesMult_netAnalyze_summary}
+print(summary(props_ebf_spieceasi_bayesMult,
+              groupNames = c("EBF = 0", "EBF >= 2")))
+```
+
+```{r ebf_spieceasi_bayesMult_global_property_extract}
+# Relative LCC size
+props_ebf_spieceasi_bayesMult$globalPropsLCC$lccSizeRel1
+props_ebf_spieceasi_bayesMult$globalPropsLCC$lccSizeRel2
+
+# Natural connectivity
+props_ebf_spieceasi_bayesMult$globalProps$natConnect1
+props_ebf_spieceasi_bayesMult$globalProps$natConnect2
+
+# Density
+props_ebf_spieceasi_bayesMult$globalProps$density1
+props_ebf_spieceasi_bayesMult$globalProps$density2
+```
+
+
+#### Association Histogram
+
+```{r ebf_spieceasi_bayesMult_association_histogram, fig.width=8, fig.height=4}
+plot_group_association_histograms(objects_ebf_spieceasi_bayesMult)
+```
+
+#### Degree Distribution
+
+```{r ebf_spieceasi_bayesMult_degree_distribution, fig.width=8, fig.height=4, dpi=200}
+plot_group_degree_distribution(objects_ebf_spieceasi_bayesMult)
+```
+
+#### Graphlet Correlation Matrix
+
+```{r ebf_spieceasi_bayesMult_gcm, fig.width=10, fig.height=9, dpi=200}
+plotGCM(props_ebf_spieceasi_bayesMult,
+        legendCex = 1.2,
+        titleCex = 1.5,
+        labCex = 1.2,
+        sigTextCex = 1.3)
+```
+
+#### Network Plot
+
+```{r ebf_spieceasi_bayesMult_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spieceasi_bayesMult,
+  same_layout = FALSE,
+  labels = labels_ebf_spieceasi_bayesMult,
+  repulsion = 0.699
+)
+```
+
+```{r ebf_spieceasi_bayesMult_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spieceasi_bayesMult,
+  same_layout = TRUE,
+  labels = labels_ebf_spieceasi_bayesMult,
+  repulsion = 0.79999
+)
+```
+
+```{r ebf_spieceasi_bayesMult_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spieceasi_bayesMult,
+  same_layout = TRUE,
+  labels = blank_plot_labels(labels_ebf_spieceasi_bayesMult),
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+
 
 ### SPIEC-EASI SLR
 
@@ -433,7 +719,7 @@ if (file.exists(path_net_ebf_slr) && !refit_network_comparison) {
   net_ebf_slr <- readRDS(path_net_ebf_slr)
 } else {
   net_ebf_slr <- NetCoMi::netConstruct(
-    data = counts_ebf_rel_multrepl,
+    data = counts_ebf_rel_multRepl,
     group = ebf_group,
     measure = "spieceasi",
     measurePar = list(method = "slr",
@@ -459,6 +745,13 @@ if (file.exists(path_net_ebf_slr) && !refit_network_comparison) {
 objects_ebf_slr <- extract_group_network_objects(net_ebf_slr)
 props_ebf_slr <- analyze_group_network(net_ebf_slr)
 labels_ebf_slr <- build_plot_labels(props_ebf_slr)
+```
+
+#### netAnalyze summary
+
+```{r ebf_slr_netAnalyze_summary}
+print(summary(props_ebf_slr,
+              groupNames = c("EBF = 0", "EBF >= 2")))
 ```
 
 #### Low-Rank Heatmaps
@@ -626,6 +919,16 @@ plot_group_network(props_ebf_slr,
                    cexLabels = 4)
 ```
 
+```{r ebf_slr_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_slr,
+  same_layout = TRUE,
+  labels = blank_plot_labels(labels_ebf_slr),
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
 ### SPRING
 
 ```{r generate_net_ebf_spring}
@@ -658,6 +961,13 @@ if (file.exists(path_net_ebf_spring) && !refit_network_comparison) {
 objects_ebf_spring <- extract_group_network_objects(net_ebf_spring)
 props_ebf_spring <- analyze_group_network(net_ebf_spring)
 labels_ebf_spring <- build_plot_labels(props_ebf_spring)
+```
+
+#### netAnalyze summary
+
+```{r ebf_spring_netAnalyze_summary}
+print(summary(props_ebf_spring,
+              groupNames = c("EBF = 0", "EBF >= 2")))
 ```
 
 ```{r}
@@ -724,64 +1034,70 @@ plot_group_network(props_ebf_spring, same_layout = TRUE,
                    labels = labels_ebf_spring, layout = layout)
 ```
 
-### SPIEC-EASI MB With BayesMult Zero Replacement
+```{r ebf_spring_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spring, 
+  same_layout = TRUE, 
+  labels = blank_plot_labels(labels_ebf_spring),
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
 
-```{r generate_net_ebf_spieceasi_bayesMult}
-path_net_ebf_spieceasi_bayesMult <- path_target("net_ebf_spieceasi_bayesMult.rds")
 
-if (file.exists(path_net_ebf_spieceasi_bayesMult) && !refit_network_comparison) {
-  net_ebf_spieceasi_bayesMult <- readRDS(path_net_ebf_spieceasi_bayesMult)
+### rhoshrink with multRepl
+
+```{r generate_net_ebf_rhoshrink_multRepl}
+path_net_ebf_rhoshrink_multRepl <- path_target("net_ebf_rhoshrink_multRepl.rds")
+
+if (file.exists(path_net_ebf_rhoshrink_multRepl) && !refit_network_comparison) {
+  net_ebf_rhoshrink_multRepl <- readRDS(path_net_ebf_rhoshrink_multRepl)
 } else {
-  net_ebf_spieceasi_bayesMult <- NetCoMi::netConstruct(
-    data = counts_ebf_rel_bayesMult,
+  net_ebf_rhoshrink_multRepl <- NetCoMi::netConstruct(
+    data = counts_ebf_rel_multRepl,
     group = ebf_group,
-    measure = "spieceasi",
-    measurePar = list(method = "mb",
-                      nlambda = 30,
-                      pulsar.params = list(rep.num = 30,
-                                           thresh = 0.1),
-                      norm.params = list(method = "clr",
-                                         types = "tru_counts"),
-                      symBetaMode = "ave"),
+    measure = "rhoshrink",
     jointPrepro = FALSE,
     filtTax = "none",
     filtSamp = "none",
     normMethod = "none",
     zeroMethod = "none",
-    sparsMethod = "none",
+    sparsMethod = "threshold",
+    thresh = 0.3,
     seed = network_seed
   )
 
-  saveRDS(net_ebf_spieceasi_bayesMult, path_net_ebf_spieceasi_bayesMult)
+  saveRDS(net_ebf_rhoshrink_multRepl, path_net_ebf_rhoshrink_multRepl)
 }
 
-objects_ebf_spieceasi_bayesMult <- extract_group_network_objects(
-  net_ebf_spieceasi_bayesMult
-)
-props_ebf_spieceasi_bayesMult <- analyze_group_network(
-  net_ebf_spieceasi_bayesMult
-)
-labels_ebf_spieceasi_bayesMult <- build_plot_labels(
-  props_ebf_spieceasi_bayesMult
-)
+objects_ebf_rhoshrink_multRepl <- extract_group_network_objects(net_ebf_rhoshrink_multRepl)
+props_ebf_rhoshrink_multRepl <- analyze_group_network(net_ebf_rhoshrink_multRepl)
+labels_ebf_rhoshrink_multRepl <- build_plot_labels(props_ebf_rhoshrink_multRepl)
+```
+
+#### netAnalyze summary
+
+```{r ebf_rhoshrink_multRepl_netAnalyze_summary}
+print(summary(props_ebf_rhoshrink_multRepl,
+              groupNames = c("EBF = 0", "EBF >= 2")))
 ```
 
 #### Association Histogram
 
-```{r ebf_spieceasi_bayesMult_association_histogram, fig.width=8, fig.height=4}
-plot_group_association_histograms(objects_ebf_spieceasi_bayesMult)
+```{r ebf_rhoshrink_multRepl_association_histogram, fig.width=8, fig.height=4}
+plot_group_association_histograms(objects_ebf_rhoshrink_multRepl)
 ```
 
 #### Degree Distribution
 
-```{r ebf_spieceasi_bayesMult_degree_distribution, fig.width=8, fig.height=4, dpi=200}
-plot_group_degree_distribution(objects_ebf_spieceasi_bayesMult)
+```{r ebf_rhoshrink_multRepl_degree_distribution, fig.width=8, fig.height=4, dpi=200}
+plot_group_degree_distribution(objects_ebf_rhoshrink_multRepl)
 ```
 
 #### Graphlet Correlation Matrix
 
-```{r ebf_spieceasi_bayesMult_gcm, fig.width=10, fig.height=9, dpi=200}
-plotGCM(props_ebf_spieceasi_bayesMult,
+```{r ebf_rhoshrink_multRepl_gcm, fig.width=10, fig.height=9, dpi=200}
+plotGCM(props_ebf_rhoshrink_multRepl,
         legendCex = 1.2,
         titleCex = 1.5,
         labCex = 1.2,
@@ -790,33 +1106,50 @@ plotGCM(props_ebf_spieceasi_bayesMult,
 
 #### Network Plot
 
-```{r ebf_spieceasi_bayesMult_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_spieceasi_bayesMult,
-  same_layout = FALSE,
-  labels = labels_ebf_spieceasi_bayesMult,
-  repulsion = 0.699
-)
+```{r ebf_rhoshrink_multRepl_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_rhoshrink_multRepl, same_layout = FALSE, 
+                        labels = labels_ebf_rhoshrink_multRepl, repulsion = 0.89999, 
+                        doPlot = FALSE)
+layout1 <- p$layout$layout1
+layout2 <- p$layout$layout2
+
+plot_group_network(props_ebf_rhoshrink_multRepl, same_layout = FALSE, 
+                   labels = labels_ebf_rhoshrink_multRepl, layout = list(layout1, layout2))
 ```
 
-```{r ebf_spieceasi_bayesMult_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+```{r ebf_rhoshrink_multRepl_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_rhoshrink_multRepl, same_layout = TRUE, 
+                        labels = labels_ebf_rhoshrink_multRepl,
+                        doPlot = FALSE)
+layout <- p$layout$layout1
+
+plot_group_network(props_ebf_rhoshrink_multRepl, same_layout = TRUE, 
+                   labels = labels_ebf_rhoshrink_multRepl, layout = layout,
+                   phylum_legend_x = -0.18,
+                   phylum_legend_y = 1.35,
+                   asso_legend_x   = -0.15,
+                   asso_legend_y   = -0.8)
+```
+
+```{r ebf_rhoshrink_multRepl_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
 plot_group_network(
-  props_ebf_spieceasi_bayesMult,
+  props_ebf_rhoshrink_multRepl,
   same_layout = TRUE,
-  labels = labels_ebf_spieceasi_bayesMult,
-  repulsion = 0.79999
+  labels = blank_plot_labels(labels_ebf_rhoshrink_multRepl),
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
 )
 ```
 
-### rhoshrink
+### rhoshrink with bayesMult replacement
 
-```{r generate_net_ebf_rhoshrink}
-path_net_ebf_rhoshrink <- path_target("net_ebf_rhoshrink.rds")
+```{r generate_net_ebf_rhoshrink_bayesMult}
+path_net_ebf_rhoshrink_bayesMult <- path_target("net_ebf_rhoshrink_bayesMult.rds")
 
-if (file.exists(path_net_ebf_rhoshrink) && !refit_network_comparison) {
-  net_ebf_rhoshrink <- readRDS(path_net_ebf_rhoshrink)
+if (file.exists(path_net_ebf_rhoshrink_bayesMult) && !refit_network_comparison) {
+  net_ebf_rhoshrink_bayesMult <- readRDS(path_net_ebf_rhoshrink_bayesMult)
 } else {
-  net_ebf_rhoshrink <- NetCoMi::netConstruct(
+  net_ebf_rhoshrink_bayesMult <- NetCoMi::netConstruct(
     data = counts_ebf_rel_bayesMult,
     group = ebf_group,
     measure = "rhoshrink",
@@ -830,30 +1163,37 @@ if (file.exists(path_net_ebf_rhoshrink) && !refit_network_comparison) {
     seed = network_seed
   )
 
-  saveRDS(net_ebf_rhoshrink, path_net_ebf_rhoshrink)
+  saveRDS(net_ebf_rhoshrink_bayesMult, path_net_ebf_rhoshrink_bayesMult)
 }
 
-objects_ebf_rhoshrink <- extract_group_network_objects(net_ebf_rhoshrink)
-props_ebf_rhoshrink <- analyze_group_network(net_ebf_rhoshrink)
-labels_ebf_rhoshrink <- build_plot_labels(props_ebf_rhoshrink)
+objects_ebf_rhoshrink_bayesMult <- extract_group_network_objects(net_ebf_rhoshrink_bayesMult)
+props_ebf_rhoshrink_bayesMult <- analyze_group_network(net_ebf_rhoshrink_bayesMult)
+labels_ebf_rhoshrink_bayesMult <- build_plot_labels(props_ebf_rhoshrink_bayesMult)
+```
+
+#### netAnalyze summary
+
+```{r ebf_rhoshrink_bayesMult_netAnalyze_summary}
+print(summary(props_ebf_rhoshrink_bayesMult,
+              groupNames = c("EBF = 0", "EBF >= 2")))
 ```
 
 #### Association Histogram
 
-```{r ebf_rhoshrink_association_histogram, fig.width=8, fig.height=4}
-plot_group_association_histograms(objects_ebf_rhoshrink)
+```{r ebf_rhoshrink_bayesMult_association_histogram, fig.width=8, fig.height=4}
+plot_group_association_histograms(objects_ebf_rhoshrink_bayesMult)
 ```
 
 #### Degree Distribution
 
-```{r ebf_rhoshrink_degree_distribution, fig.width=8, fig.height=4, dpi=200}
-plot_group_degree_distribution(objects_ebf_rhoshrink)
+```{r ebf_rhoshrink_bayesMult_degree_distribution, fig.width=8, fig.height=4, dpi=200}
+plot_group_degree_distribution(objects_ebf_rhoshrink_bayesMult)
 ```
 
 #### Graphlet Correlation Matrix
 
-```{r ebf_rhoshrink_gcm, fig.width=10, fig.height=9, dpi=200}
-plotGCM(props_ebf_rhoshrink,
+```{r ebf_rhoshrink_bayesMult_gcm, fig.width=10, fig.height=9, dpi=200}
+plotGCM(props_ebf_rhoshrink_bayesMult,
         legendCex = 1.2,
         titleCex = 1.5,
         labCex = 1.2,
@@ -862,9 +1202,9 @@ plotGCM(props_ebf_rhoshrink,
 
 #### Network Plot
 
-```{r ebf_rhoshrink_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
-p <- plot_group_network(props_ebf_rhoshrink, same_layout = FALSE, 
-                        labels = labels_ebf_rhoshrink, repulsion = 0.899999, 
+```{r ebf_rhoshrink_bayesMult_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_rhoshrink_bayesMult, same_layout = FALSE, 
+                        labels = labels_ebf_rhoshrink_bayesMult, repulsion = 0.899999, 
                         doPlot = FALSE)
 layout1 <- p$layout$layout1
 layout2 <- p$layout$layout2
@@ -872,37 +1212,147 @@ layout2 <- p$layout$layout2
 layout2["Bifidobacterium", 2] <- 0.96
 layout1["Ruminococcus", 2] <- 0.82
 
-plot_group_network(props_ebf_rhoshrink, same_layout = FALSE, 
-                   labels = labels_ebf_rhoshrink, layout = list(layout1, layout2))
+plot_group_network(props_ebf_rhoshrink_bayesMult, same_layout = FALSE, 
+                   labels = labels_ebf_rhoshrink_bayesMult, layout = list(layout1, layout2))
 ```
 
-```{r ebf_rhoshrink_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
-p <- plot_group_network(props_ebf_rhoshrink, same_layout = TRUE, 
-                        labels = labels_ebf_rhoshrink,
+```{r ebf_rhoshrink_bayesMult_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_rhoshrink_bayesMult, same_layout = TRUE, 
+                        labels = labels_ebf_rhoshrink_bayesMult,
                         doPlot = FALSE)
 layout <- p$layout$layout1
 
 layout["Escherichia-Shigella",  2] <- -0.54
 layout["[Ruminococcus]_gauvreauii_group", 2] <- -0.34
 
-plot_group_network(props_ebf_rhoshrink, same_layout = TRUE, 
-                   labels = labels_ebf_rhoshrink, layout = layout,
+plot_group_network(props_ebf_rhoshrink_bayesMult, same_layout = TRUE, 
+                   labels = labels_ebf_rhoshrink_bayesMult, layout = layout,
                    phylum_legend_x = -0.18,
                    phylum_legend_y = 1.35,
                    asso_legend_x   = -0.15,
                    asso_legend_y   = -0.8)
 ```
 
+```{r ebf_rhoshrink_bayesMult_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_rhoshrink_bayesMult,
+  same_layout = TRUE,
+  labels = blank_plot_labels(labels_ebf_rhoshrink_bayesMult),
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
 
-### corshrink
 
-```{r generate_net_ebf_corshrink}
-path_net_ebf_corshrink <- path_target("net_ebf_corshrink.rds")
 
-if (file.exists(path_net_ebf_corshrink) && !refit_network_comparison) {
-  net_ebf_corshrink <- readRDS(path_net_ebf_corshrink)
+### corshrink with multiplicative replacement
+
+```{r generate_net_ebf_corshrink_multRepl}
+path_net_ebf_corshrink_multRepl <- path_target("net_ebf_corshrink_multRepl.rds")
+
+if (file.exists(path_net_ebf_corshrink_multRepl) && !refit_network_comparison) {
+  net_ebf_corshrink_multRepl <- readRDS(path_net_ebf_corshrink_multRepl)
 } else {
-  net_ebf_corshrink <- NetCoMi::netConstruct(
+  net_ebf_corshrink_multRepl <- NetCoMi::netConstruct(
+    data = counts_ebf_rel_multRepl,
+    group = ebf_group,
+    measure = "corshrink",
+    jointPrepro = FALSE,
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "clr",
+    zeroMethod = "none",
+    sparsMethod = "threshold",
+    thresh = 0.3,
+    seed = network_seed
+  )
+
+  saveRDS(net_ebf_corshrink_multRepl, path_net_ebf_corshrink_multRepl)
+}
+
+objects_ebf_corshrink_multRepl <- extract_group_network_objects(net_ebf_corshrink_multRepl)
+props_ebf_corshrink_multRepl <- analyze_group_network(net_ebf_corshrink_multRepl)
+labels_ebf_corshrink_multRepl <- build_plot_labels(props_ebf_corshrink_multRepl)
+```
+
+#### netAnalyze summary
+
+```{r ebf_corshrink_multRepl_netAnalyze_summary}
+print(summary(props_ebf_corshrink_multRepl,
+              groupNames = c("EBF = 0", "EBF >= 2")))
+```
+
+#### Association Histogram
+
+```{r ebf_corshrink_multRepl_association_histogram, fig.width=8, fig.height=4}
+plot_group_association_histograms(objects_ebf_corshrink_multRepl)
+```
+
+#### Degree Distribution
+
+```{r ebf_corshrink_multRepl_degree_distribution, fig.width=8, fig.height=4, dpi=200}
+plot_group_degree_distribution(objects_ebf_corshrink_multRepl)
+```
+
+#### Graphlet Correlation Matrix
+
+```{r ebf_corshrink_multRepl_gcm, fig.width=10, fig.height=9, dpi=200}
+plotGCM(props_ebf_corshrink_multRepl,
+        legendCex = 1.2,
+        titleCex = 1.5,
+        labCex = 1.2,
+        sigTextCex = 1.3)
+```
+
+#### Network Plot
+
+```{r ebf_corshrink_multRepl_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_corshrink_multRepl, same_layout = FALSE, 
+                        labels = labels_ebf_corshrink_multRepl, repulsion = 0.8, 
+                        doPlot = FALSE)
+layout1 <- p$layout$layout1
+layout2 <- p$layout$layout2
+
+plot_group_network(props_ebf_corshrink_multRepl, same_layout = FALSE, 
+                   labels = labels_ebf_corshrink_multRepl, layout = list(layout1, layout2))
+```
+
+
+```{r ebf_corshrink_multRepl_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_corshrink_multRepl, same_layout = TRUE, 
+                        labels = labels_ebf_corshrink_multRepl,
+                        doPlot = FALSE)
+
+layout <- p$layout$layout1
+
+plot_group_network(props_ebf_corshrink_multRepl, same_layout = TRUE, 
+                   labels = labels_ebf_corshrink_multRepl, layout = layout,
+                   phylum_legend_x = -0.18,
+                   phylum_legend_y = 1.35,
+                   asso_legend_x   = -0.15,
+                   asso_legend_y   = -0.8)
+```
+
+```{r ebf_corshrink_multRepl_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_corshrink_multRepl,
+  same_layout = TRUE,
+  labels = blank_plot_labels(labels_ebf_corshrink_multRepl),
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+
+### corshrink with bayesMult replacement
+
+```{r generate_net_ebf_corshrink_bayesMult}
+path_net_ebf_corshrink_bayesMult <- path_target("net_ebf_corshrink_bayesMult.rds")
+
+if (file.exists(path_net_ebf_corshrink_bayesMult) && !refit_network_comparison) {
+  net_ebf_corshrink_bayesMult <- readRDS(path_net_ebf_corshrink_bayesMult)
+} else {
+  net_ebf_corshrink_bayesMult <- NetCoMi::netConstruct(
     data = counts_ebf_rel_bayesMult,
     group = ebf_group,
     measure = "corshrink",
@@ -916,30 +1366,37 @@ if (file.exists(path_net_ebf_corshrink) && !refit_network_comparison) {
     seed = network_seed
   )
 
-  saveRDS(net_ebf_corshrink, path_net_ebf_corshrink)
+  saveRDS(net_ebf_corshrink_bayesMult, path_net_ebf_corshrink_bayesMult)
 }
 
-objects_ebf_corshrink <- extract_group_network_objects(net_ebf_corshrink)
-props_ebf_corshrink <- analyze_group_network(net_ebf_corshrink)
-labels_ebf_corshrink <- build_plot_labels(props_ebf_corshrink)
+objects_ebf_corshrink_bayesMult <- extract_group_network_objects(net_ebf_corshrink_bayesMult)
+props_ebf_corshrink_bayesMult <- analyze_group_network(net_ebf_corshrink_bayesMult)
+labels_ebf_corshrink_bayesMult <- build_plot_labels(props_ebf_corshrink_bayesMult)
+```
+
+#### netAnalyze summary
+
+```{r ebf_corshrink_bayesMult_netAnalyze_summary}
+print(summary(props_ebf_corshrink_bayesMult,
+              groupNames = c("EBF = 0", "EBF >= 2")))
 ```
 
 #### Association Histogram
 
-```{r ebf_corshrink_association_histogram, fig.width=8, fig.height=4}
-plot_group_association_histograms(objects_ebf_corshrink)
+```{r ebf_corshrink_bayesMult_association_histogram, fig.width=8, fig.height=4}
+plot_group_association_histograms(objects_ebf_corshrink_bayesMult)
 ```
 
 #### Degree Distribution
 
-```{r ebf_corshrink_degree_distribution, fig.width=8, fig.height=4, dpi=200}
-plot_group_degree_distribution(objects_ebf_corshrink)
+```{r ebf_corshrink_bayesMult_degree_distribution, fig.width=8, fig.height=4, dpi=200}
+plot_group_degree_distribution(objects_ebf_corshrink_bayesMult)
 ```
 
 #### Graphlet Correlation Matrix
 
-```{r ebf_corshrink_gcm, fig.width=10, fig.height=9, dpi=200}
-plotGCM(props_ebf_corshrink,
+```{r ebf_corshrink_bayesMult_gcm, fig.width=10, fig.height=9, dpi=200}
+plotGCM(props_ebf_corshrink_bayesMult,
         legendCex = 1.2,
         titleCex = 1.5,
         labCex = 1.2,
@@ -948,9 +1405,9 @@ plotGCM(props_ebf_corshrink,
 
 #### Network Plot
 
-```{r ebf_corshrink_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
-p <- plot_group_network(props_ebf_corshrink, same_layout = FALSE, 
-                        labels = labels_ebf_corshrink, repulsion = 0.899, 
+```{r ebf_corshrink_bayesMult_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_corshrink_bayesMult, same_layout = FALSE, 
+                        labels = labels_ebf_corshrink_bayesMult, repulsion = 0.899, 
                         doPlot = FALSE)
 layout1 <- p$layout$layout1
 layout2 <- p$layout$layout2
@@ -958,106 +1415,193 @@ layout2 <- p$layout$layout2
 layout2["Bacteroides", 2] <- 0.43
 layout2["Bifidobacterium", 2] <- -0.46
 
-plot_group_network(props_ebf_corshrink, same_layout = FALSE, 
-                   labels = labels_ebf_corshrink, layout = list(layout1, layout2))
+plot_group_network(props_ebf_corshrink_bayesMult, same_layout = FALSE, 
+                   labels = labels_ebf_corshrink_bayesMult, layout = list(layout1, layout2))
 ```
 
 
-```{r ebf_corshrink_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
-p <- plot_group_network(props_ebf_corshrink, same_layout = TRUE, 
-                        labels = labels_ebf_corshrink,
+```{r ebf_corshrink_bayesMult_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_corshrink_bayesMult, same_layout = TRUE, 
+                        labels = labels_ebf_corshrink_bayesMult,
                         doPlot = FALSE)
 layout <- p$layout$layout1
 layout["Phascolarctobacterium", 2] <- -0.58
 layout["Clostridium_sensu_strict1", 2] <- -0.75
 layout["Escherichia-Shigella", 2] <- -0.68
 
-plot_group_network(props_ebf_corshrink, same_layout = TRUE, 
-                   labels = labels_ebf_corshrink, layout = layout,
+plot_group_network(props_ebf_corshrink_bayesMult, same_layout = TRUE, 
+                   labels = labels_ebf_corshrink_bayesMult, layout = layout,
                    phylum_legend_x = -0.18,
                    phylum_legend_y = 1.35,
                    asso_legend_x   = -0.15,
                    asso_legend_y   = -0.8)
 ```
 
-## Baseline Network For Permutation Testing
+```{r ebf_corshrink_bayesMult_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_corshrink_bayesMult,
+  same_layout = TRUE,
+  labels = blank_plot_labels(labels_ebf_corshrink_bayesMult),
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
 
-Permutation testing is restricted to the baseline network from
-`10_network_analysis`: SPIEC-EASI with the MB method, using multiplicative zero
-replacement before `netConstruct()`. The descriptive methods above are not used
-for permutation testing because preliminary runs failed under the extreme
-sparsity of the data.
+## Comparison Of Global Network Properties
 
-```{r generate_net_ebf_main}
-path_net_ebf_main <- path_target("net_ebf_main.rds")
+The following tables summarize three global network properties for the
+construction methods shown in the thesis.
 
-if (file.exists(path_net_ebf_main) && !refit_network_comparison) {
-  net_ebf_main <- readRDS(path_net_ebf_main)
-} else {
-  net_ebf_main <- NetCoMi::netConstruct(
-    data = counts_ebf_rel_multrepl,
-    group = ebf_group,
-    measure = "spieceasi",
-    measurePar = list(method = "mb",
-                      nlambda = 30,
-                      pulsar.params = list(rep.num = 30,
-                                           thresh = 0.1),
-                      norm.params = list(method = "clr",
-                                         types = "tru_counts"),
-                      symBetaMode = "ave"),
-    jointPrepro = FALSE,
-    filtTax = "none",
-    filtSamp = "none",
-    normMethod = "none",
-    zeroMethod = "none",
-    sparsMethod = "none",
-    seed = network_seed
+```{r descriptive_global_network_properties}
+descriptive_global_properties <- bind_rows(
+  extract_global_network_properties(
+    props_ebf_spieceasi_bayesMult,
+    method = "SPIEC-EASI MB bayesMult"
+  ),
+  extract_global_network_properties(
+    props_ebf_slr,
+    method = "SPIEC-EASI SLR"
+  ),
+  extract_global_network_properties(
+    props_ebf_spring,
+    method = "SPRING"
+  ),
+  extract_global_network_properties(
+    props_ebf_corshrink_multRepl,
+    method = "corshrink multRepl"
+  ),
+  extract_global_network_properties(
+    props_ebf_corshrink_bayesMult,
+    method = "corshrink bayesMult"
+  ),
+  extract_global_network_properties(
+    props_ebf_rhoshrink_multRepl,
+    method = "rhoshrink multRepl"
+  ),
+  extract_global_network_properties(
+    props_ebf_rhoshrink_bayesMult,
+    method = "rhoshrink bayesMult"
   )
+)
+```
 
-  saveRDS(net_ebf_main, path_net_ebf_main)
+### Relative LCC Size
+
+```{r descriptive_relative_lcc_size_table}
+make_global_property_table(
+  descriptive_global_properties,
+  property = "relative_lcc_size"
+)
+```
+
+### Density
+
+```{r descriptive_density_table}
+make_global_property_table(
+  descriptive_global_properties,
+  property = "density"
+)
+```
+
+### Natural Connectivity
+
+```{r descriptive_natural_connectivity_table}
+make_global_property_table(
+  descriptive_global_properties,
+  property = "natural_connectivity"
+)
+```
+
+
+## Select Network For Permutation Testing
+
+The permutation-testing part can be run for any network constructed in the
+descriptive comparison above. Change `selected_permutation_method` in the
+parameter chunk to switch the network and the folder used for all
+permutation-related files.
+
+```{r select_permutation_network}
+permutation_networks <- list(
+  spieceasi_multRepl = list(
+    label = "SPIEC-EASI MB with multRepl",
+    net = net_ebf_spieceasi_multRepl,
+    props = props_ebf_spieceasi_multRepl
+  ),
+  spieceasi_bayesMult = list(
+    label = "SPIEC-EASI MB with bayesMult",
+    net = net_ebf_spieceasi_bayesMult,
+    props = props_ebf_spieceasi_bayesMult
+  ),
+  spieceasi_slr = list(
+    label = paste0("SPIEC-EASI SLR, rank ", slr_rank),
+    net = net_ebf_slr,
+    props = props_ebf_slr
+  ),
+  spring = list(
+    label = "SPRING",
+    net = net_ebf_spring,
+    props = props_ebf_spring
+  ),
+  rhoshrink_multRepl = list(
+    label = "rhoshrink with multRepl",
+    net = net_ebf_rhoshrink_multRepl,
+    props = props_ebf_rhoshrink_multRepl
+  ),
+  rhoshrink_bayesMult = list(
+    label = "rhoshrink with bayesMult",
+    net = net_ebf_rhoshrink_bayesMult,
+    props = props_ebf_rhoshrink_bayesMult
+  ),
+  corshrink_multRepl = list(
+    label = "corshrink with multRepl",
+    net = net_ebf_corshrink_multRepl,
+    props = props_ebf_corshrink_multRepl
+  ),
+  corshrink_bayesMult = list(
+    label = "corshrink with bayesMult",
+    net = net_ebf_corshrink_bayesMult,
+    props = props_ebf_corshrink_bayesMult
+  )
+)
+
+if (!selected_permutation_method %in% names(permutation_networks)) {
+  stop(
+    "Unknown selected_permutation_method. Choose one of: ",
+    paste(names(permutation_networks), collapse = ", ")
+  )
 }
 
-objects_ebf_main <- extract_group_network_objects(net_ebf_main)
-props_ebf_main <- analyze_group_network(net_ebf_main)
-labels_ebf_main <- build_plot_labels(props_ebf_main)
-```
+selected_permutation_network <- permutation_networks[[selected_permutation_method]]
+net_ebf_perm <- selected_permutation_network$net
+props_ebf_perm <- selected_permutation_network$props
 
-### Baseline Network Diagnostics
+permutation_output_dir <- path_target(
+  file.path("permutation_tests", selected_permutation_method)
+)
+dir.create(permutation_output_dir, recursive = TRUE, showWarnings = FALSE)
 
-```{r ebf_main_association_histogram, fig.width=8, fig.height=4}
-plot_group_association_histograms(objects_ebf_main)
-```
+path_perm <- function(...) {
+  file.path(permutation_output_dir, ...)
+}
 
-```{r ebf_main_degree_distribution, fig.width=8, fig.height=4, dpi=200}
-plot_group_degree_distribution(objects_ebf_main)
-```
-
-```{r ebf_main_gcm, fig.width=10, fig.height=9, dpi=200}
-plotGCM(props_ebf_main,
-        legendCex = 1.2,
-        titleCex = 1.5,
-        labCex = 1.2,
-        sigTextCex = 1.3)
-```
-
-```{r ebf_main_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(props_ebf_main, same_layout = FALSE, 
-                   labels = labels_ebf_main, repulsion = 0.799)
-```
-
-```{r ebf_main_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(props_ebf_main, same_layout = TRUE, labels = labels_ebf_main)
+tibble(
+  selected_method = selected_permutation_method,
+  selected_label = selected_permutation_network$label,
+  n_taxa_group1 = ncol(props_ebf_perm$input$adjaMat1),
+  n_taxa_group2 = ncol(props_ebf_perm$input$adjaMat2),
+  output_dir = permutation_output_dir
+)
 ```
 
 ## Generate Or Reuse Permuted Association Matrices
 
 The following chunks are kept for reproducibility and are not evaluated during
-normal rendering. The final filematrix at `path_target("assoPerm_ebf")` is used
+normal rendering. The final filematrix at `path_perm("assoPerm_ebf")` is used
 by both `netCompare()` and `diffnet()`.
 
 ```{r generate_permuted_association_matrices, eval=FALSE}
 permGroupMat <- createAssoPerm(
-  props_ebf_main,
+  props_ebf_perm,
   nPerm = 1000,
   computeAsso = FALSE,
   seed = permutation_seed
@@ -1066,7 +1610,8 @@ permGroupMat <- createAssoPerm(
 nPerm_all <- 1000
 blocksize <- 20
 repetitions <- nPerm_all / blocksize
-perm_asso_dir <- file.path("data", "10_networks", "perm_asso_matrices")
+perm_asso_dir <- path_perm("perm_asso_matrices")
+dir.create(perm_asso_dir, recursive = TRUE, showWarnings = FALSE)
 
 cores_perm <- 8
 
@@ -1084,7 +1629,7 @@ with_progress({
     if (!file.exists(bmat_file) || refit_permutation_matrices) {
       set.seed(permutation_seed + i)
       NetCoMi::createAssoPerm(
-        props_ebf_main,
+        props_ebf_perm,
         nPerm = blocksize,
         permGroupMat = permGroupMat[(i - 1) * blocksize + 1:blocksize, ],
         computeAsso = TRUE,
@@ -1101,7 +1646,7 @@ plan(sequential)
 
 ```{r combine_permuted_association_matrices, eval=FALSE}
 assoPerm_all <- NULL
-perm_asso_dir <- file.path("data", "10_networks", "perm_asso_matrices")
+perm_asso_dir <- path_perm("perm_asso_matrices")
 
 for (i in 1:repetitions) {
   file_base <- file.path(perm_asso_dir, paste0("assoPerm_ebf", i))
@@ -1113,7 +1658,7 @@ for (i in 1:repetitions) {
 dim(assoPerm_all)
 
 n_perm_netcompare <- n_perm_network_comparison
-n_taxa_netcompare <- nrow(props_ebf_main$input$adjaMat1)
+n_taxa_netcompare <- nrow(props_ebf_perm$input$adjaMat1)
 n_rows_netcompare <- n_perm_netcompare * n_taxa_netcompare
 
 stopifnot(nrow(assoPerm_all) >= n_rows_netcompare)
@@ -1123,17 +1668,17 @@ assoPerm_netcompare <- assoPerm_all[seq_len(n_rows_netcompare), , drop = FALSE]
 dim(assoPerm_netcompare)
 
 fm.create.from.matrix(
-  filenamebase = path_target("assoPerm_ebf"),
+  filenamebase = path_perm("assoPerm_ebf"),
   mat = assoPerm_netcompare
 )
 ```
 
 ```{r check_permuted_association_matrices}
-asso_perm_base <- path_target("assoPerm_ebf")
+asso_perm_base <- path_perm("assoPerm_ebf")
 
 if (!file.exists(paste0(asso_perm_base, ".bmat"))) {
   warning(
-    "Permutation association filematrix not found at path_target('assoPerm_ebf'). ",
+    "Permutation association filematrix not found at path_perm('assoPerm_ebf'). ",
     "Run the unevaluated permutation-generation chunks before refitting ",
     "permutation tests."
   )
@@ -1148,8 +1693,8 @@ if (!file.exists(paste0(asso_perm_base, ".bmat"))) {
             conditionMessage(assoPerm_check))
   } else {
     expected_rows <- n_perm_network_comparison *
-      nrow(props_ebf_main$input$adjaMat1)
-    expected_cols <- 2 * ncol(props_ebf_main$input$adjaMat1)
+      nrow(props_ebf_perm$input$adjaMat1)
+    expected_cols <- 2 * ncol(props_ebf_perm$input$adjaMat1)
 
     stopifnot(nrow(assoPerm_check) == expected_rows)
     stopifnot(ncol(assoPerm_check) == expected_cols)
@@ -1166,53 +1711,53 @@ and constrained `permApprox` refinement.
 
 ### Empirical P-Values
 
-```{r run_netcompare_noBH}
-path_comp_ebf_main_noBH <- path_target("comp_ebf_main_noBH.rds")
+```{r run_netcompare_emp_noBH}
+path_comp_ebf_emp_noBH <- path_perm("comp_ebf_emp_noBH.rds")
 
-if (file.exists(path_comp_ebf_main_noBH) && !refit_permutation_tests) {
-  comp_ebf_main_noBH <- readRDS(path_comp_ebf_main_noBH)
+if (file.exists(path_comp_ebf_emp_noBH) && !refit_permutation_tests) {
+  comp_ebf_emp_noBH <- readRDS(path_comp_ebf_emp_noBH)
 } else {
-  comp_ebf_main_noBH <- netCompare(
-    props_ebf_main,
+  comp_ebf_emp_noBH <- netCompare(
+    props_ebf_perm,
     permTest = TRUE,
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     adjust = "none",
     cores = cores,
     verbose = TRUE,
     seed = permutation_seed
   )
 
-  saveRDS(comp_ebf_main_noBH, path_comp_ebf_main_noBH)
+  saveRDS(comp_ebf_emp_noBH, path_comp_ebf_emp_noBH)
 }
 
-print(summary(comp_ebf_main_noBH,
+print(summary(comp_ebf_emp_noBH,
               groupNames = c("EBF = 0", "EBF >= 2"),
               showCentr = c("degree", "between", "closeness"),
               numbNodes = 5))
 ```
 
-```{r run_netcompare_BH}
-path_comp_ebf_main_BH <- path_target("comp_ebf_main_BH.rds")
+```{r run_netcompare_emp_BH}
+path_comp_ebf_emp_BH <- path_perm("comp_ebf_emp_BH.rds")
 
-if (file.exists(path_comp_ebf_main_BH) && !refit_permutation_tests) {
-  comp_ebf_main_BH <- readRDS(path_comp_ebf_main_BH)
+if (file.exists(path_comp_ebf_emp_BH) && !refit_permutation_tests) {
+  comp_ebf_emp_BH <- readRDS(path_comp_ebf_emp_BH)
 } else {
-  comp_ebf_main_BH <- netCompare(
-    props_ebf_main,
+  comp_ebf_emp_BH <- netCompare(
+    props_ebf_perm,
     permTest = TRUE,
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     adjust = "BH",
     cores = cores,
     verbose = TRUE,
     seed = permutation_seed
   )
 
-  saveRDS(comp_ebf_main_BH, path_comp_ebf_main_BH)
+  saveRDS(comp_ebf_emp_BH, path_comp_ebf_emp_BH)
 }
 
-print(summary(comp_ebf_main_BH,
+print(summary(comp_ebf_emp_BH,
               groupNames = c("EBF = 0", "EBF >= 2"),
               showCentr = c("degree", "between", "closeness"),
               numbNodes = 5))
@@ -1221,7 +1766,7 @@ print(summary(comp_ebf_main_BH,
 ### permApprox Refinement Without Constraint
 
 ```{r run_netcompare_GPD_noConstr_noBH}
-path_comp_ebf_GPD_noConstr_noBH <- path_target("comp_ebf_GPD_noConstr_noBH.rds")
+path_comp_ebf_GPD_noConstr_noBH <- path_perm("comp_ebf_GPD_noConstr_noBH.rds")
 
 if (file.exists(path_comp_ebf_GPD_noConstr_noBH) && !refit_permutation_tests) {
   comp_ebf_GPD_noConstr_noBH <- readRDS(path_comp_ebf_GPD_noConstr_noBH)
@@ -1232,10 +1777,10 @@ if (file.exists(path_comp_ebf_GPD_noConstr_noBH) && !refit_permutation_tests) {
   )
 
   comp_ebf_GPD_noConstr_noBH <- netCompare(
-    props_ebf_main,
+    props_ebf_perm,
     permTest = TRUE,
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     refinePermPvals = TRUE,
     permApproxParams = list(
       method = "gpd",
@@ -1257,7 +1802,7 @@ print(summary(comp_ebf_GPD_noConstr_noBH,
 ```
 
 ```{r run_netcompare_GPD_noConstr_BH}
-path_comp_ebf_GPD_noConstr_BH <- path_target("comp_ebf_GPD_noConstr_BH.rds")
+path_comp_ebf_GPD_noConstr_BH <- path_perm("comp_ebf_GPD_noConstr_BH.rds")
 
 if (file.exists(path_comp_ebf_GPD_noConstr_BH) && !refit_permutation_tests) {
   comp_ebf_GPD_noConstr_BH <- readRDS(path_comp_ebf_GPD_noConstr_BH)
@@ -1268,10 +1813,10 @@ if (file.exists(path_comp_ebf_GPD_noConstr_BH) && !refit_permutation_tests) {
   )
 
   comp_ebf_GPD_noConstr_BH <- netCompare(
-    props_ebf_main,
+    props_ebf_perm,
     permTest = TRUE,
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     refinePermPvals = TRUE,
     permApproxParams = list(
       method = "gpd",
@@ -1295,7 +1840,7 @@ print(summary(comp_ebf_GPD_noConstr_BH,
 ### permApprox Refinement With Constraint
 
 ```{r run_netcompare_GPD_constr_noBH}
-path_comp_ebf_GPD_constr_noBH <- path_target("comp_ebf_GPD_constr_noBH.rds")
+path_comp_ebf_GPD_constr_noBH <- path_perm("comp_ebf_GPD_constr_noBH.rds")
 
 if (file.exists(path_comp_ebf_GPD_constr_noBH) && !refit_permutation_tests) {
   comp_ebf_GPD_constr_noBH <- readRDS(path_comp_ebf_GPD_constr_noBH)
@@ -1307,10 +1852,10 @@ if (file.exists(path_comp_ebf_GPD_constr_noBH) && !refit_permutation_tests) {
   )
 
   comp_ebf_GPD_constr_noBH <- netCompare(
-    props_ebf_main,
+    props_ebf_perm,
     permTest = TRUE,
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     refinePermPvals = TRUE,
     permApproxParams = list(
       method = "gpd",
@@ -1332,7 +1877,7 @@ print(summary(comp_ebf_GPD_constr_noBH,
 ```
 
 ```{r run_netcompare_GPD_constr_BH}
-path_comp_ebf_GPD_constr_BH <- path_target("comp_ebf_GPD_constr_BH.rds")
+path_comp_ebf_GPD_constr_BH <- path_perm("comp_ebf_GPD_constr_BH.rds")
 
 if (file.exists(path_comp_ebf_GPD_constr_BH) && !refit_permutation_tests) {
   comp_ebf_GPD_constr_BH <- readRDS(path_comp_ebf_GPD_constr_BH)
@@ -1344,10 +1889,10 @@ if (file.exists(path_comp_ebf_GPD_constr_BH) && !refit_permutation_tests) {
   )
 
   comp_ebf_GPD_constr_BH <- netCompare(
-    props_ebf_main,
+    props_ebf_perm,
     permTest = TRUE,
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     refinePermPvals = TRUE,
     permApproxParams = list(
       method = "gpd",
@@ -1368,63 +1913,462 @@ print(summary(comp_ebf_GPD_constr_BH,
               numbNodes = 5))
 ```
 
+### Combined netCompare Summary
+
+```{r netcompare_combined_summary_helpers}
+normalise_result_name <- function(x) {
+  stringr::str_replace_all(tolower(x), "[^a-z0-9]", "")
+}
+
+find_numeric_field <- function(x, candidates) {
+  candidate_keys <- normalise_result_name(candidates)
+
+  search_one <- function(obj) {
+    if (is.null(obj)) {
+      return(NULL)
+    }
+
+    obj_names <- names(obj)
+    if (!is.null(obj_names)) {
+      obj_keys <- normalise_result_name(obj_names)
+      hit <- which(obj_keys %in% candidate_keys)
+      if (length(hit) > 0) {
+        value <- obj[[hit[1]]]
+        if (is.numeric(value) && length(value) >= 1) {
+          return(as.numeric(value[1]))
+        }
+      }
+    }
+
+    if (is.list(obj)) {
+      for (i in seq_along(obj)) {
+        value <- search_one(obj[[i]])
+        if (!is.null(value)) {
+          return(value)
+        }
+      }
+    }
+
+    NULL
+  }
+
+  value <- search_one(x)
+  if (is.null(value)) {
+    NA_real_
+  } else {
+    value
+  }
+}
+
+get_global_pvalue <- function(comp, candidates, refined = FALSE, lcc = FALSE) {
+  containers <- if (lcc) {
+    if (refined) {
+      list(comp$pvalDiffGlobalLCCRefined, comp$pvalDiffGlobalLCCEmpirical)
+    } else {
+      list(comp$pvalDiffGlobalLCCEmpirical)
+    }
+  } else {
+    if (refined) {
+      list(comp$pvalDiffGlobalRefined, comp$pvalDiffGlobalEmpirical)
+    } else {
+      list(comp$pvalDiffGlobalEmpirical)
+    }
+  }
+
+  for (container in containers) {
+    p_value <- find_numeric_field(container, candidates)
+    if (is.finite(p_value)) {
+      return(p_value)
+    }
+  }
+
+  NA_real_
+}
+
+get_prop_value <- function(props, containers, candidates, group) {
+  containers <- unlist(containers, recursive = FALSE)
+  candidates <- unlist(candidates)
+  suffix <- if (identical(group, 1L)) "1" else "2"
+  candidates <- unique(c(
+    paste0(candidates, suffix),
+    candidates
+  ))
+
+  for (container_name in containers) {
+    value <- find_numeric_field(props[[container_name]], candidates)
+    if (is.finite(value)) {
+      return(value)
+    }
+  }
+
+  NA_real_
+}
+
+make_global_summary_rows <- function(rows, lcc = FALSE) {
+  purrr::pmap_dfr(rows, function(label, containers, fields, p_fields, ...) {
+    p_fields <- unlist(p_fields)
+    value1 <- get_prop_value(props_ebf_perm, containers, fields, group = 1L)
+    value2 <- get_prop_value(props_ebf_perm, containers, fields, group = 2L)
+
+    tibble(
+      measure = label,
+      group_ebf_0 = value1,
+      group_ebf_ge2 = value2,
+      abs_difference = abs(value1 - value2),
+      p_empirical = get_global_pvalue(
+        comp_ebf_emp_noBH,
+        p_fields,
+        refined = FALSE,
+        lcc = lcc
+      ),
+      p_unconstrained = get_global_pvalue(
+        comp_ebf_GPD_noConstr_noBH,
+        p_fields,
+        refined = TRUE,
+        lcc = lcc
+      ),
+      p_constrained = get_global_pvalue(
+        comp_ebf_GPD_constr_noBH,
+        p_fields,
+        refined = TRUE,
+        lcc = lcc
+      )
+    )
+  })
+}
+
+format_netcompare_table <- function(df, title, name_width = 30) {
+  cat(title, "\n")
+  cat(strrep("~", nchar(title)), "\n\n")
+  cat(sprintf(
+    paste0("%-", name_width, "s %10s %10s %10s %10s %10s %10s\n"),
+    "",
+    "EBF = 0",
+    "EBF >= 2",
+    "abs.diff.",
+    "p.emp",
+    "p.uncon.",
+    "p.constr."
+  ))
+
+  purrr::pwalk(df, function(measure, group_ebf_0, group_ebf_ge2,
+                            abs_difference, p_empirical, p_unconstrained,
+                            p_constrained, ...) {
+    cat(sprintf(
+      paste0("%-", name_width, "s %10.3f %10.3f %10.3f %10.6f %10.6f %10.6f\n"),
+      stringr::str_trunc(measure, name_width, ellipsis = ""),
+      group_ebf_0,
+      group_ebf_ge2,
+      abs_difference,
+      p_empirical,
+      p_unconstrained,
+      p_constrained
+    ))
+  })
+
+  cat("\n")
+}
+
+get_centrality_pvalues_wide <- function(comp_emp, comp_unconstr, comp_constr) {
+  centrality_fields <- list(
+    degree = c("pvalDiffDeg", "pvalDiffDegree"),
+    betweenness = c("pvalDiffBetw", "pvalDiffBetween", "pvalDiffBetweenness"),
+    closeness = c("pvalDiffClose", "pvalDiffCloseness"),
+    eigenvector = c("pvalDiffEigen", "pvalDiffEigenv", "pvalDiffEigenvector")
+  )
+
+  get_pvector <- function(x, fields) {
+    for (field in fields) {
+      if (!is.null(x[[field]])) {
+        return(x[[field]])
+      }
+    }
+    NULL
+  }
+
+  pvalues <- purrr::imap_dfr(centrality_fields, function(fields, centrality_measure) {
+    p_emp <- get_pvector(comp_emp$pvalDiffCentrEmpirical, fields)
+    p_unconstr <- get_pvector(comp_unconstr$pvalDiffCentrRefined, fields)
+    p_constr <- get_pvector(comp_constr$pvalDiffCentrRefined, fields)
+
+    if (is.null(p_emp) || is.null(p_unconstr) || is.null(p_constr)) {
+      return(tibble())
+    }
+
+    genus <- names(p_emp)
+    if (is.null(genus)) {
+      genus <- as.character(seq_along(p_emp))
+    }
+
+    tibble(
+      centrality_measure = centrality_measure,
+      genus = genus,
+      p_empirical = as.numeric(p_emp),
+      p_unconstrained = as.numeric(p_unconstr),
+      p_constrained = as.numeric(p_constr)
+    )
+  })
+
+  if (nrow(pvalues) == 0) {
+    return(tibble(
+      centrality_measure = character(),
+      genus = character(),
+      p_empirical = numeric(),
+      p_unconstrained = numeric(),
+      p_constrained = numeric()
+    ))
+  }
+
+  pvalues
+}
+
+get_centrality_values_long <- function(props) {
+  centrality_fields <- list(
+    degree = list(group1 = c("degree1", "deg1"),
+                  group2 = c("degree2", "deg2")),
+    betweenness = list(group1 = c("between1", "betweenness1", "betw1"),
+                       group2 = c("between2", "betweenness2", "betw2")),
+    closeness = list(group1 = c("closeness1", "close1"),
+                     group2 = c("closeness2", "close2")),
+    eigenvector = list(group1 = c("eigenv1", "eigenvector1"),
+                       group2 = c("eigenv2", "eigenvector2"))
+  )
+
+  get_vector <- function(fields) {
+    for (field in fields) {
+      if (!is.null(props$centralities[[field]])) {
+        return(props$centralities[[field]])
+      }
+    }
+    NULL
+  }
+
+  centrality_values <- purrr::imap_dfr(centrality_fields, function(fields, centrality_measure) {
+    value1 <- get_vector(fields$group1)
+    value2 <- get_vector(fields$group2)
+
+    if (is.null(value1) || is.null(value2)) {
+      return(tibble())
+    }
+
+    genera <- union(names(value1), names(value2))
+
+    tibble(
+      centrality_measure = centrality_measure,
+      genus = genera,
+      group_ebf_0 = as.numeric(value1[genera]),
+      group_ebf_ge2 = as.numeric(value2[genera])
+    )
+  })
+
+  if (nrow(centrality_values) == 0) {
+    return(tibble(
+      centrality_measure = character(),
+      genus = character(),
+      group_ebf_0 = numeric(),
+      group_ebf_ge2 = numeric()
+    ))
+  }
+
+  centrality_values
+}
+
+format_centrality_summary <- function(df, top_n = 5, name_width = 30) {
+  centrality_labels <- c(
+    degree = "Degree centrality",
+    betweenness = "Betweenness centrality",
+    closeness = "Closeness centrality",
+    eigenvector = "Eigenvector centrality"
+  )
+
+  for (measure_id in unique(df$centrality_measure)) {
+    title <- unname(centrality_labels[measure_id])
+    if (is.na(title)) {
+      title <- measure_id
+    }
+    cat(title, "\n")
+    cat(strrep("~", nchar(title)), "\n\n")
+    cat(sprintf(
+      paste0("%-", name_width, "s %10s %10s %10s %10s %10s %10s\n"),
+      "Genus",
+      "EBF = 0",
+      "EBF >= 2",
+      "abs.diff.",
+      "p.emp",
+      "p.uncon.",
+      "p.constr."
+    ))
+
+    df %>%
+      filter(centrality_measure == measure_id) %>%
+      arrange(min_raw_p) %>%
+      slice_head(n = top_n) %>%
+      purrr::pwalk(function(centrality_measure, genus, group_ebf_0,
+                            group_ebf_ge2, abs_difference, p_empirical,
+                            p_unconstrained, p_constrained, min_raw_p, ...) {
+        cat(sprintf(
+          paste0("%-", name_width, "s %10.3f %10.3f %10.3f %10.6f %10.6f %10.6f\n"),
+          stringr::str_trunc(genus, name_width, ellipsis = ""),
+          group_ebf_0,
+          group_ebf_ge2,
+          abs_difference,
+          p_empirical,
+          p_unconstrained,
+          p_constrained
+        ))
+      })
+
+    cat("\n")
+  }
+}
+```
+
+```{r netcompare_combined_summary_print}
+lcc_global_rows <- tibble::tribble(
+  ~label, ~containers, ~fields, ~p_fields,
+  "Relative LCC size", list(c("globalPropsLCC")), list(c("lccSizeRel", "relLCCSize", "LCCSizeRel")),
+  list(c("pvallccSizeRel", "pvallccsize")),
+  "Clustering coefficient", list(c("globalPropsLCC")), list(c("clustCoef", "clusteringCoefficient")),
+  list(c("pvalClustCoef")),
+  "Modularity", list(c("globalPropsLCC")), list(c("modularity")),
+  list(c("pvalModul")),
+  "Positive edge percentage", list(c("globalPropsLCC")), list(c("pep", "posEdgePerc", "posEdgePercentage")),
+  list(c("pvalPEP")),
+  "Edge density", list(c("globalPropsLCC")), list(c("density", "edgeDensity")),
+  list(c("pvalDensity")),
+  "Natural connectivity", list(c("globalPropsLCC", "globalProps")), list(c("natConnect", "naturalConnectivity")),
+  list(c("pvalNatConnect")),
+  "Vertex connectivity", list(c("globalPropsLCC")), list(c("vertConnect", "vertexConnect", "vertexConnectivity")),
+  list(c("pvalVertConnect")),
+  "Edge connectivity", list(c("globalPropsLCC")), list(c("edgeConnect", "edgeConnectivity")),
+  list(c("pvalEdgeConnect")),
+  "Average dissimilarity*", list(c("globalPropsLCC")), list(c("avDiss", "avgDiss", "averageDissimilarity")),
+  list(c("pvalavDiss")),
+  "Average path length**", list(c("globalPropsLCC")), list(c("avPath", "avPathLength", "avgPathLength", "averagePathLength")),
+  list(c("pvalavPath"))
+)
+
+whole_network_rows <- tibble::tribble(
+  ~label, ~containers, ~fields, ~p_fields,
+  "Number of components", list(c("globalProps")), list(c("nComp", "nComponents", "numberOfComponents")),
+  list(c("pvalnComp")),
+  "Clustering coefficient", list(c("globalProps")), list(c("clustCoef", "clusteringCoefficient")),
+  list(c("pvalClustCoef")),
+  "Modularity", list(c("globalProps")), list(c("modularity")),
+  list(c("pvalModul")),
+  "Positive edge percentage", list(c("globalProps")), list(c("pep", "posEdgePerc", "posEdgePercentage")),
+  list(c("pvalPEP")),
+  "Edge density", list(c("globalProps")), list(c("density", "edgeDensity")),
+  list(c("pvalDensity")),
+  "Natural connectivity", list(c("globalProps")), list(c("natConnect", "naturalConnectivity")),
+  list(c("pvalNatConnect"))
+)
+
+netcompare_lcc_global_summary <- make_global_summary_rows(lcc_global_rows, lcc = TRUE)
+netcompare_whole_global_summary <- make_global_summary_rows(whole_network_rows, lcc = FALSE)
+
+netcompare_centrality_summary <- get_centrality_pvalues_wide(
+  comp_emp = comp_ebf_emp_noBH,
+  comp_unconstr = comp_ebf_GPD_noConstr_noBH,
+  comp_constr = comp_ebf_GPD_constr_noBH
+) %>%
+  left_join(
+    get_centrality_values_long(props_ebf_perm),
+    by = c("centrality_measure", "genus")
+  ) %>%
+  mutate(
+    abs_difference = abs(group_ebf_0 - group_ebf_ge2),
+    min_raw_p = pmin(
+      p_empirical,
+      p_unconstrained,
+      p_constrained,
+      na.rm = TRUE
+    ),
+    min_raw_p = if_else(is.infinite(min_raw_p), NA_real_, min_raw_p)
+  )
+
+cat("Global network properties\n")
+cat("=========================\n\n")
+format_netcompare_table(
+  netcompare_lcc_global_summary,
+  title = "Largest connected component (LCC):"
+)
+format_netcompare_table(
+  netcompare_whole_global_summary,
+  title = "Whole network:"
+)
+
+cat("Centrality measures\n")
+cat("===================\n\n")
+format_centrality_summary(netcompare_centrality_summary, top_n = 5)
+
+cat("p-values: one-tailed test with null hypothesis diff=0\n")
+cat("  *: Dissimilarity = 1 - edge weight\n")
+cat(" **: Path length = Units with average dissimilarity\n")
+```
+
 ## Permutation-Based Differential Association Analysis
 
-Differential association analysis is performed with `diffnet()` on the same
-baseline network and the same stored permutation association matrices.
+Differential association analysis is performed with `diffnet()` on the selected
+network and the same stored permutation association matrices.
 
 ### Empirical P-Values
 
 ```{r run_diffnet_noBH}
-path_diff_ebf_main_noBH <- path_target("diff_ebf_main_noBH.rds")
+path_diff_ebf_emp_noBH <- path_perm("diff_ebf_emp_noBH.rds")
 
-if (file.exists(path_diff_ebf_main_noBH) && !refit_permutation_tests) {
-  diff_ebf_main_noBH <- readRDS(path_diff_ebf_main_noBH)
+if (file.exists(path_diff_ebf_emp_noBH) && !refit_permutation_tests) {
+  diff_ebf_emp_noBH <- readRDS(path_diff_ebf_emp_noBH)
 } else {
-  diff_ebf_main_noBH <- diffnet(
-    net_ebf_main,
+  diff_ebf_emp_noBH <- diffnet(
+    net_ebf_perm,
     diffMethod = "permute",
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     adjust = "none",
     cores = cores,
     verbose = TRUE,
     seed = permutation_seed
   )
 
-  saveRDS(diff_ebf_main_noBH, path_diff_ebf_main_noBH)
+  saveRDS(diff_ebf_emp_noBH, path_diff_ebf_emp_noBH)
 }
 
-summary(diff_ebf_main_noBH$pvalsVec)
+summary(diff_ebf_emp_noBH$pvalsVec)
 ```
 
 ```{r run_diffnet_BH}
-path_diff_ebf_main_BH <- path_target("diff_ebf_main_BH.rds")
+path_diff_ebf_emp_BH <- path_perm("diff_ebf_emp_BH.rds")
 
-if (file.exists(path_diff_ebf_main_BH) && !refit_permutation_tests) {
-  diff_ebf_main_BH <- readRDS(path_diff_ebf_main_BH)
+if (file.exists(path_diff_ebf_emp_BH) && !refit_permutation_tests) {
+  diff_ebf_emp_BH <- readRDS(path_diff_ebf_emp_BH)
 } else {
-  diff_ebf_main_BH <- diffnet(
-    net_ebf_main,
+  diff_ebf_emp_BH <- diffnet(
+    net_ebf_perm,
     diffMethod = "permute",
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     adjust = "BH",
+    adjustNonzeroOnly = TRUE,
     cores = cores,
     verbose = TRUE,
     seed = permutation_seed
   )
 
-  saveRDS(diff_ebf_main_BH, path_diff_ebf_main_BH)
+  saveRDS(diff_ebf_emp_BH, path_diff_ebf_emp_BH)
 }
 
-summary(diff_ebf_main_BH$pAdjustVec)
+summary(diff_ebf_emp_BH$pAdjustVec)
+```
+
+```{r}
+plot(diff_ebf_emp_BH)
 ```
 
 ### permApprox Refinement Without Constraint
 
 ```{r run_diffnet_noConstr_noBH}
-path_diff_ebf_noConstr_noBH <- path_target("diff_ebf_noConstr_noBH.rds")
+path_diff_ebf_noConstr_noBH <- path_perm("diff_ebf_noConstr_noBH.rds")
 
 if (file.exists(path_diff_ebf_noConstr_noBH) && !refit_permutation_tests) {
   diff_ebf_noConstr_noBH <- readRDS(path_diff_ebf_noConstr_noBH)
@@ -1435,10 +2379,10 @@ if (file.exists(path_diff_ebf_noConstr_noBH) && !refit_permutation_tests) {
   )
 
   diff_ebf_noConstr_noBH <- diffnet(
-    net_ebf_main,
+    net_ebf_perm,
     diffMethod = "permute",
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     refinePermPvals = TRUE,
     permApproxParams = list(
       method = "gpd",
@@ -1457,7 +2401,7 @@ summary(diff_ebf_noConstr_noBH$pvalsVec)
 ```
 
 ```{r run_diffnet_noConstr_BH}
-path_diff_ebf_noConstr_BH <- path_target("diff_ebf_noConstr_BH.rds")
+path_diff_ebf_noConstr_BH <- path_perm("diff_ebf_noConstr_BH.rds")
 
 if (file.exists(path_diff_ebf_noConstr_BH) && !refit_permutation_tests) {
   diff_ebf_noConstr_BH <- readRDS(path_diff_ebf_noConstr_BH)
@@ -1468,16 +2412,17 @@ if (file.exists(path_diff_ebf_noConstr_BH) && !refit_permutation_tests) {
   )
 
   diff_ebf_noConstr_BH <- diffnet(
-    net_ebf_main,
+    net_ebf_perm,
     diffMethod = "permute",
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     refinePermPvals = TRUE,
     permApproxParams = list(
       method = "gpd",
       gpd_ctrl = gpd_ctrl
     ),
     adjust = "BH",
+    adjustNonzeroOnly = TRUE,
     cores = cores,
     verbose = TRUE,
     seed = permutation_seed
@@ -1489,10 +2434,17 @@ if (file.exists(path_diff_ebf_noConstr_BH) && !refit_permutation_tests) {
 summary(diff_ebf_noConstr_BH$pAdjustVec)
 ```
 
+
+```{r plot_diffnet_main_BH, fig.width=10, fig.height=7}
+plot(diff_ebf_noConstr_BH, 
+     edgeTransp = 0)
+```
+
+
 ### permApprox Refinement With Constraint
 
 ```{r run_diffnet_constr_noBH}
-path_diff_ebf_constr_noBH <- path_target("diff_ebf_constr_noBH.rds")
+path_diff_ebf_constr_noBH <- path_perm("diff_ebf_constr_noBH.rds")
 
 if (file.exists(path_diff_ebf_constr_noBH) && !refit_permutation_tests) {
   diff_ebf_constr_noBH <- readRDS(path_diff_ebf_constr_noBH)
@@ -1504,10 +2456,10 @@ if (file.exists(path_diff_ebf_constr_noBH) && !refit_permutation_tests) {
   )
 
   diff_ebf_constr_noBH <- diffnet(
-    net_ebf_main,
+    net_ebf_perm,
     diffMethod = "permute",
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     refinePermPvals = TRUE,
     permApproxParams = list(
       method = "gpd",
@@ -1526,7 +2478,7 @@ summary(diff_ebf_constr_noBH$pvalsVec)
 ```
 
 ```{r run_diffnet_constr_BH}
-path_diff_ebf_constr_BH <- path_target("diff_ebf_constr_BH.rds")
+path_diff_ebf_constr_BH <- path_perm("diff_ebf_constr_BH.rds")
 
 if (file.exists(path_diff_ebf_constr_BH) && !refit_permutation_tests) {
   diff_ebf_constr_BH <- readRDS(path_diff_ebf_constr_BH)
@@ -1538,10 +2490,10 @@ if (file.exists(path_diff_ebf_constr_BH) && !refit_permutation_tests) {
   )
 
   diff_ebf_constr_BH <- diffnet(
-    net_ebf_main,
+    net_ebf_perm,
     diffMethod = "permute",
     nPerm = n_perm_network_comparison,
-    fileLoadAssoPerm = path_target("assoPerm_ebf"),
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     refinePermPvals = TRUE,
     permApproxParams = list(
       method = "gpd",
@@ -1559,6 +2511,75 @@ if (file.exists(path_diff_ebf_constr_BH) && !refit_permutation_tests) {
 summary(diff_ebf_constr_BH$pAdjustVec)
 ```
 
+### Fisher's Z-Test
+
+```{r run_diffnet_fisher_BH}
+path_diff_ebf_fisher_BH <- path_perm("diff_ebf_fisher_BH.rds")
+
+if (file.exists(path_diff_ebf_fisher_BH) && !refit_permutation_tests) {
+  diff_ebf_fisher_BH <- readRDS(path_diff_ebf_fisher_BH)
+} else {
+  diff_ebf_fisher_BH <- diffnet(
+    net_ebf_perm,
+    diffMethod = "fisherTest",
+    adjust = "BH",
+    adjustNonzeroOnly = TRUE,
+    verbose = TRUE
+  )
+
+  saveRDS(diff_ebf_fisher_BH, path_diff_ebf_fisher_BH)
+}
+
+summary(diff_ebf_fisher_BH$pvalsVec)
+summary(diff_ebf_fisher_BH$pAdjustVec)
+```
+
+```{r diffnet_plot_helper}
+plot_diffnet_with_adjust <- function(diff_obj, adjust = c("none", "BH"), ...) {
+  adjust <- match.arg(adjust)
+  plot_try <- tryCatch(
+    plot(diff_obj, adjust = adjust, ...),
+    error = function(e) e
+  )
+
+  if (!inherits(plot_try, "error")) {
+    return(invisible(plot_try))
+  }
+
+  p_adjust_try <- tryCatch(
+    plot(diff_obj, pAdjust = adjust, ...),
+    error = function(e) e
+  )
+
+  if (!inherits(p_adjust_try, "error")) {
+    return(invisible(p_adjust_try))
+  }
+
+  warning(
+    "Could not pass an adjustment selector to plot.diffnet(); ",
+    "falling back to the default plot method. First error: ",
+    conditionMessage(plot_try)
+  )
+  plot(diff_obj, ...)
+}
+```
+
+```{r plot_diffnet_fisher_raw, fig.width=10, fig.height=7}
+plot_diffnet_with_adjust(
+  diff_ebf_fisher_BH,
+  adjust = "none",
+  edgeTransp = 0
+)
+```
+
+```{r plot_diffnet_fisher_BH, fig.width=10, fig.height=7}
+plot_diffnet_with_adjust(
+  diff_ebf_fisher_BH,
+  adjust = "BH",
+  edgeTransp = 0
+)
+```
+
 ## Raw P-Value Comparison
 
 This section compares unadjusted p-values from empirical permutation testing,
@@ -1574,8 +2595,8 @@ safe_pvec <- function(x) {
 
 extract_diffnet_pvalues <- function() {
   tibble(
-    test_id = seq_along(diff_ebf_main_noBH$pvalsVec),
-    empirical = safe_pvec(diff_ebf_main_noBH$pvalsVec),
+    test_id = seq_along(diff_ebf_emp_noBH$pvalsVec),
+    empirical = safe_pvec(diff_ebf_emp_noBH$pvalsVec),
     unconstrained = safe_pvec(diff_ebf_noConstr_noBH$pvalsVec),
     constrained = safe_pvec(diff_ebf_constr_noBH$pvalsVec)
   ) %>%
@@ -1706,7 +2727,7 @@ plot_pvalue_pairs(diffnet_pvalues_long, id_cols = "test_id")
 
 ```{r netcompare_centrality_raw_pvalue_comparison, fig.width=10, fig.height=6, dpi=250}
 netcompare_centrality_pvalues_long <- extract_centrality_pvalues(
-  comp_emp = comp_ebf_main_noBH,
+  comp_emp = comp_ebf_emp_noBH,
   comp_unconstr = comp_ebf_GPD_noConstr_noBH,
   comp_constr = comp_ebf_GPD_constr_noBH
 )

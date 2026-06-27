@@ -147,4 +147,5 @@ render_rmd("ch07_application/07_exploration.Rmd")
 render_rmd("ch07_application/08_diff_abundance.Rmd")
 render_rmd("ch07_application/09_diff_distribution.Rmd")
 render_rmd("ch07_application/10_network_analysis.Rmd")
+render_rmd("ch07_application/11_network_comparison.Rmd")
 

@@ -1,0 +1,6 @@
+# Information file for R filematrix object
+nrow=116883
+ncol=234
+type=double
+size=8
+
