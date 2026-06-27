@@ -178,10 +178,8 @@ top_abundant_taxa <- colMeans(genus_rel_mat, na.rm = TRUE) %>%
 names(top_abundant_taxa) <- top_abundant_taxa
 
 network_label_overrides <- c(
-  "Bifidobacterium" = "Bifidobacterium",
-  "Bacteroides" = "Bacteroides",
-  "Staphylococcus" = "Staphylococcus",
-  "Haemophilus" = "Haemophilus"
+  "8_Comamonadaceae(F)" = "Comamonadaceae(F)",
+  "24_Enterobacteriaceae(F)" = "Enterobacteriaceae(F)"
 )
 ```
 
@@ -251,6 +249,12 @@ make_network_plot_labels <- function(
     label_override_taxa <- intersect(names(label_overrides), names(network_labels))
     network_labels[label_override_taxa] <- label_overrides[label_override_taxa]
   }
+
+  network_labels <- stringr::str_replace(
+    network_labels,
+    "^\\d+_([^_]+\\(F\\))$",
+    "\\1"
+  )
 
   list(
     labels = network_labels,
@@ -350,7 +354,7 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
                                title2 = "EBF duration >= 2",
                                labelScale = FALSE, cexLabels = 0.9,
                                phylum_legend_x = -0.15,
-                               phylum_legend_y = -0.1,
+                               phylum_legend_y = -0.25,
                                asso_legend_x   = -0.15,
                                asso_legend_y   = 1.2,
                                doPlot = TRUE,
@@ -376,6 +380,7 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
     posCol = "gray50",
     negCol = "red3",
     showTitle = TRUE,
+    highlightHubs = FALSE,
     cexLabels = cexLabels,
     cexHubLabels = cexLabels,
     hubBorderCol = "gray40",
@@ -391,7 +396,7 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
   if (doPlot) {
     phylcol_transp <- colToTransp(phylcol, 40)
     
-    legend(phylum_legend_x, phylum_legend_y, cex = 1, pt.cex = 2.5, title = "Phylum:",
+    legend(phylum_legend_x, phylum_legend_y, cex = 1, pt.cex = 2.5, title = NULL,
            legend = levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
            xpd = NA)
     
@@ -408,7 +413,8 @@ build_plot_labels <- function(props) {
     props = props,
     top_abundant_taxa = top_abundant_taxa,
     n_abundant = n_abundant_network_labels,
-    n_central = n_central_network_labels
+    n_central = n_central_network_labels,
+    label_overrides = network_label_overrides
   )$labels
 }
 ```
@@ -687,12 +693,14 @@ plotGCM(props_ebf_spring,
 
 ```{r ebf_spring_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
 p <- plot_group_network(props_ebf_spring, same_layout = FALSE, 
-                   labels = labels_ebf_spring, repulsion = 0.8599, doPlot = FALSE)
+                        labels = labels_ebf_spring, repulsion = 0.8599, 
+                        doPlot = FALSE)
 layout1 <- p$layout$layout1
 layout2 <- p$layout$layout2
 
 layout1["Anaerostipes", ] <- c(0.31, 0.33)
 layout1["Enterococcus", ] <- c(1, -0.23)
+layout1["24_Enterobacteriaceae(F)", ] <- c(0.97, 0.19)
 
 layout2["Bacteroides", ] <- c(0.14, 0.94)
 
@@ -701,7 +709,19 @@ plot_group_network(props_ebf_spring, same_layout = FALSE,
 ```
 
 ```{r ebf_spring_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(props_ebf_spring, same_layout = TRUE, labels = labels_ebf_spring)
+p <- plot_group_network(props_ebf_spring, same_layout = TRUE, 
+                        labels = labels_ebf_spring, repulsion = 0.89999999,
+                        doPlot = FALSE)
+layout <- p$layout$layout1
+
+layout["Blautia",  2] <- 0.53
+layout["Bifidobacterium", 2] <- 0.24
+layout["Fusicatenibacter", 2] <- 0.16
+layout["Bacteroides", ] <- c(-0.75, -0.85)
+layout["Clostridium_sensu_strict1", 1] <- 0.65
+
+plot_group_network(props_ebf_spring, same_layout = TRUE, 
+                   labels = labels_ebf_spring, layout = layout)
 ```
 
 ### SPIEC-EASI MB With BayesMult Zero Replacement
@@ -774,7 +794,8 @@ plotGCM(props_ebf_spieceasi_bayesMult,
 plot_group_network(
   props_ebf_spieceasi_bayesMult,
   same_layout = FALSE,
-  labels = labels_ebf_spieceasi_bayesMult
+  labels = labels_ebf_spieceasi_bayesMult,
+  repulsion = 0.699
 )
 ```
 
@@ -782,7 +803,8 @@ plot_group_network(
 plot_group_network(
   props_ebf_spieceasi_bayesMult,
   same_layout = TRUE,
-  labels = labels_ebf_spieceasi_bayesMult
+  labels = labels_ebf_spieceasi_bayesMult,
+  repulsion = 0.79999
 )
 ```
 
@@ -804,7 +826,7 @@ if (file.exists(path_net_ebf_rhoshrink) && !refit_network_comparison) {
     normMethod = "none",
     zeroMethod = "none",
     sparsMethod = "threshold",
-    thresh = 0.25,
+    thresh = 0.15,
     seed = network_seed
   )
 
@@ -841,19 +863,121 @@ plotGCM(props_ebf_rhoshrink,
 #### Network Plot
 
 ```{r ebf_rhoshrink_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_rhoshrink,
-  same_layout = FALSE,
-  labels = labels_ebf_rhoshrink
-)
+p <- plot_group_network(props_ebf_rhoshrink, same_layout = FALSE, 
+                        labels = labels_ebf_rhoshrink, repulsion = 0.899999, 
+                        doPlot = FALSE)
+layout1 <- p$layout$layout1
+layout2 <- p$layout$layout2
+
+layout2["Bifidobacterium", 2] <- 0.96
+layout1["Ruminococcus", 2] <- 0.82
+
+plot_group_network(props_ebf_rhoshrink, same_layout = FALSE, 
+                   labels = labels_ebf_rhoshrink, layout = list(layout1, layout2))
 ```
 
 ```{r ebf_rhoshrink_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_rhoshrink,
-  same_layout = TRUE,
-  labels = labels_ebf_rhoshrink
-)
+p <- plot_group_network(props_ebf_rhoshrink, same_layout = TRUE, 
+                        labels = labels_ebf_rhoshrink,
+                        doPlot = FALSE)
+layout <- p$layout$layout1
+
+layout["Escherichia-Shigella",  2] <- -0.54
+layout["[Ruminococcus]_gauvreauii_group", 2] <- -0.34
+
+plot_group_network(props_ebf_rhoshrink, same_layout = TRUE, 
+                   labels = labels_ebf_rhoshrink, layout = layout,
+                   phylum_legend_x = -0.18,
+                   phylum_legend_y = 1.35,
+                   asso_legend_x   = -0.15,
+                   asso_legend_y   = -0.8)
+```
+
+
+### corshrink
+
+```{r generate_net_ebf_corshrink}
+path_net_ebf_corshrink <- path_target("net_ebf_corshrink.rds")
+
+if (file.exists(path_net_ebf_corshrink) && !refit_network_comparison) {
+  net_ebf_corshrink <- readRDS(path_net_ebf_corshrink)
+} else {
+  net_ebf_corshrink <- NetCoMi::netConstruct(
+    data = counts_ebf_rel_bayesMult,
+    group = ebf_group,
+    measure = "corshrink",
+    jointPrepro = FALSE,
+    filtTax = "none",
+    filtSamp = "none",
+    normMethod = "clr",
+    zeroMethod = "none",
+    sparsMethod = "threshold",
+    thresh = 0.15,
+    seed = network_seed
+  )
+
+  saveRDS(net_ebf_corshrink, path_net_ebf_corshrink)
+}
+
+objects_ebf_corshrink <- extract_group_network_objects(net_ebf_corshrink)
+props_ebf_corshrink <- analyze_group_network(net_ebf_corshrink)
+labels_ebf_corshrink <- build_plot_labels(props_ebf_corshrink)
+```
+
+#### Association Histogram
+
+```{r ebf_corshrink_association_histogram, fig.width=8, fig.height=4}
+plot_group_association_histograms(objects_ebf_corshrink)
+```
+
+#### Degree Distribution
+
+```{r ebf_corshrink_degree_distribution, fig.width=8, fig.height=4, dpi=200}
+plot_group_degree_distribution(objects_ebf_corshrink)
+```
+
+#### Graphlet Correlation Matrix
+
+```{r ebf_corshrink_gcm, fig.width=10, fig.height=9, dpi=200}
+plotGCM(props_ebf_corshrink,
+        legendCex = 1.2,
+        titleCex = 1.5,
+        labCex = 1.2,
+        sigTextCex = 1.3)
+```
+
+#### Network Plot
+
+```{r ebf_corshrink_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_corshrink, same_layout = FALSE, 
+                        labels = labels_ebf_corshrink, repulsion = 0.899, 
+                        doPlot = FALSE)
+layout1 <- p$layout$layout1
+layout2 <- p$layout$layout2
+
+layout2["Bacteroides", 2] <- 0.43
+layout2["Bifidobacterium", 2] <- -0.46
+
+plot_group_network(props_ebf_corshrink, same_layout = FALSE, 
+                   labels = labels_ebf_corshrink, layout = list(layout1, layout2))
+```
+
+
+```{r ebf_corshrink_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+p <- plot_group_network(props_ebf_corshrink, same_layout = TRUE, 
+                        labels = labels_ebf_corshrink,
+                        doPlot = FALSE)
+layout <- p$layout$layout1
+layout["Phascolarctobacterium", 2] <- -0.58
+layout["Clostridium_sensu_strict1", 2] <- -0.75
+layout["Escherichia-Shigella", 2] <- -0.68
+
+plot_group_network(props_ebf_corshrink, same_layout = TRUE, 
+                   labels = labels_ebf_corshrink, layout = layout,
+                   phylum_legend_x = -0.18,
+                   phylum_legend_y = 1.35,
+                   asso_legend_x   = -0.15,
+                   asso_legend_y   = -0.8)
 ```
 
 ## Baseline Network For Permutation Testing
@@ -917,7 +1041,8 @@ plotGCM(props_ebf_main,
 ```
 
 ```{r ebf_main_network_plot_different_layouts, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(props_ebf_main, same_layout = FALSE, labels = labels_ebf_main)
+plot_group_network(props_ebf_main, same_layout = FALSE, 
+                   labels = labels_ebf_main, repulsion = 0.799)
 ```
 
 ```{r ebf_main_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
