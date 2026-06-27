@@ -188,10 +188,10 @@ make_network_plot_labels <- function(
     central_taxa <- character(0)
   } else {
     centrality <- centrality[is.finite(centrality)]
-    central_taxa <- centrality |>
-      sort(decreasing = TRUE) |>
-      head(n_central) |>
-      names() |>
+    central_taxa <- centrality %>%
+      sort(decreasing = TRUE) %>%
+      head(n_central) %>%
+      names() %>%
       (\(x) setNames(x, x))()
   }
   
@@ -236,16 +236,16 @@ extract_network_edges <- function(network, method) {
     edge_id = edge_ids,
     method = method,
     present = adja[edge_index] != 0
-  ) |>
-    filter(present) |>
+  ) %>%
+    filter(present) %>%
     select(edge_id, method)
 }
 
 make_edge_presence <- function(networks) {
   edge_long <- purrr::imap_dfr(networks, extract_network_edges)
   
-  edge_long |>
-    mutate(present = TRUE) |>
+  edge_long %>%
+    mutate(present = TRUE) %>%
     tidyr::pivot_wider(
       names_from = method,
       values_from = present,
@@ -254,7 +254,7 @@ make_edge_presence <- function(networks) {
 }
 
 format_taxon_label <- function(taxon, label_overrides = network_label_overrides) {
-  dplyr::coalesce(label_overrides[taxon], taxon) |>
+  dplyr::coalesce(label_overrides[taxon], taxon) %>%
     unname()
 }
 
@@ -289,12 +289,13 @@ extract_network_associations <- function(network, method) {
     method = method,
     present = adja[edge_index] != 0,
     association = asso[edge_index]
-  ) |>
-    filter(present) |>
+  ) %>%
+    filter(present) %>%
     select(edge_id, method, association)
 }
 
-plot_shared_edges <- function(edge_presence, networks, n_edges = Inf, text_size = 3.4) {
+plot_shared_edges <- function(edge_presence, networks, n_edges = Inf, 
+                              text_size = 3.4) {
   method_cols <- setdiff(colnames(edge_presence), "edge_id")
   edge_membership <- edge_presence[, method_cols, drop = FALSE]
   edge_membership[] <- lapply(edge_membership, as.logical)
@@ -314,19 +315,20 @@ plot_shared_edges <- function(edge_presence, networks, n_edges = Inf, text_size 
     )
   }
   
-  shared_edge_summary <- purrr::imap_dfr(networks, extract_network_associations) |>
-    filter(edge_id %in% shared_edges) |>
-    group_by(edge_id) |>
-    filter(n_distinct(method) == length(method_cols)) |>
+  shared_edge_summary <- purrr::imap_dfr(networks, 
+                                         extract_network_associations) %>%
+    filter(edge_id %in% shared_edges) %>%
+    group_by(edge_id) %>%
+    filter(n_distinct(method) == length(method_cols)) %>%
     summarise(
       mean_association = mean(association, na.rm = TRUE),
       min_association = min(association, na.rm = TRUE),
       max_association = max(association, na.rm = TRUE),
       mean_abs_association = mean(abs(association), na.rm = TRUE),
       .groups = "drop"
-    ) |>
-    arrange(desc(mean_abs_association)) |>
-    slice_head(n = n_edges) |>
+    ) %>%
+    arrange(desc(mean_abs_association)) %>%
+    slice_head(n = n_edges) %>%
     mutate(
       edge_label = stringr::str_trunc(
         format_edge_label(edge_id),
@@ -341,10 +343,16 @@ plot_shared_edges <- function(edge_presence, networks, n_edges = Inf, text_size 
       y = rev(row_number()) * 0.68
     )
   
+  title_text <- ifelse(length(shared_edges) == n_edges, 
+                       paste0("Shared by all (n = ", length(shared_edges), ")"),
+                       paste0("Shared by all (n = ", length(shared_edges),
+                              "; shown = ", n_edges, ")")
+                       )
+  
   ggplot(shared_edge_summary) +
     annotate("text", x = 0, y = max(shared_edge_summary$y) + 0.85,
              hjust = 0, fontface = "bold", size = text_size + 0.4,
-             label = paste0("Shared by all (n = ", length(shared_edges), ")")) +
+             label = title_text) +
     annotate("text", x = 0, y = max(shared_edge_summary$y) + 0.42,
              hjust = 0, size = text_size - 0.4,
              label = "mean association [range]") +
@@ -367,11 +375,12 @@ summarise_persistent_edges <- function(networks) {
     rowSums(edge_membership, na.rm = TRUE) == length(method_cols)
   ]
   
-  purrr::imap_dfr(networks, extract_network_associations) |>
-    filter(edge_id %in% persistent_edge_ids) |>
-    tidyr::separate(edge_id, into = c("taxon1", "taxon2"), sep = " -- ", remove = FALSE) |>
-    group_by(edge_id, taxon1, taxon2) |>
-    filter(n_distinct(method) == length(method_cols)) |>
+  purrr::imap_dfr(networks, extract_network_associations) %>%
+    filter(edge_id %in% persistent_edge_ids) %>%
+    tidyr::separate(edge_id, into = c("taxon1", "taxon2"), 
+                    sep = " -- ", remove = FALSE) %>%
+    group_by(edge_id, taxon1, taxon2) %>%
+    filter(n_distinct(method) == length(method_cols)) %>%
     summarise(
       n_methods = n_distinct(method),
       mean_association = mean(association, na.rm = TRUE),
@@ -379,11 +388,11 @@ summarise_persistent_edges <- function(networks) {
       max_association = max(association, na.rm = TRUE),
       mean_abs_association = mean(abs(association), na.rm = TRUE),
       .groups = "drop"
-    ) |>
+    ) %>%
     mutate(
       taxon1_label = format_taxon_label(taxon1),
       taxon2_label = format_taxon_label(taxon2)
-    ) |>
+    ) %>%
     arrange(desc(mean_abs_association), taxon1, taxon2)
 }
 
@@ -420,65 +429,68 @@ make_persistent_edge_network <- function(network, persistent_edges) {
 }
 
 plot_edge_upset <- function(edge_presence, title, networks = NULL,
-                            n_intersections = 20, n_shared_edges = Inf) {
+                            n_intersections = 20, n_shared_edges = Inf,
+                            shared_text_size = 3.4) {
   method_cols <- setdiff(colnames(edge_presence), "edge_id")
   
-  edge_patterns <- edge_presence |>
+  edge_patterns <- edge_presence %>%
     mutate(
       intersection = apply(
         across(all_of(method_cols)),
         1,
         \(x) paste(method_cols[as.logical(x)], collapse = " & ")
       )
-    ) |>
-    filter(intersection != "") |>
-    count(intersection, name = "n_edges", sort = TRUE) |>
-    slice_head(n = n_intersections) |>
+    ) %>%
+    filter(intersection != "") %>%
+    count(intersection, name = "n_edges", sort = TRUE) %>%
+    slice_head(n = n_intersections) %>%
     mutate(
       intersection_id = row_number(),
       intersection_id = factor(intersection_id, levels = intersection_id)
     )
   
-  matrix_data <- edge_patterns |>
-    select(intersection, intersection_id) |>
-    tidyr::separate_longer_delim(intersection, delim = " & ") |>
-    rename(method = intersection) |>
-    mutate(active = TRUE) |>
+  matrix_data <- edge_patterns %>%
+    select(intersection, intersection_id) %>%
+    tidyr::separate_longer_delim(intersection, delim = " & ") %>%
+    rename(method = intersection) %>%
+    mutate(active = TRUE) %>%
     tidyr::complete(
       intersection_id,
       method = method_cols,
       fill = list(active = FALSE)
-    ) |>
+    ) %>%
     mutate(method = factor(method, levels = rev(method_cols)))
   
-  set_sizes <- edge_presence |>
-    summarise(across(all_of(method_cols), sum)) |>
+  set_sizes <- edge_presence %>%
+    summarise(across(all_of(method_cols), sum)) %>%
     tidyr::pivot_longer(
       cols = everything(),
       names_to = "method",
       values_to = "n_edges"
     )
 
-  active_line_data <- matrix_data |>
-    filter(active) |>
-    add_count(intersection_id) |>
+  active_line_data <- matrix_data %>%
+    filter(active) %>%
+    add_count(intersection_id) %>%
     filter(n > 1)
   
-  intersection_plot <- ggplot(edge_patterns, aes(x = intersection_id, y = n_edges)) +
+  intersection_plot <- ggplot(edge_patterns, aes(x = intersection_id, 
+                                                 y = n_edges)) +
     geom_col(width = 0.75, fill = "gray25") +
     geom_text(
       aes(label = n_edges),
       vjust = -0.35,
-      size = 3.2
+      size = 4
     ) +
     labs(title = title, x = NULL, y = "Edges") +
     expand_limits(y = max(edge_patterns$n_edges) * 1.08) +
     theme_bw() +
     theme(
-      axis.title.y = element_text(margin = margin(r = -35)),
+      axis.title.y = element_text(margin = margin(r = -35), size = 14),
       axis.text.x = element_blank(),
+      axis.text.y = element_text(size = 12),
       axis.ticks.x = element_blank(),
-      plot.title = element_text(face = "bold")
+      plot.title = element_text(face = "bold", size = 14)
     )
   
   matrix_plot <- ggplot(matrix_data, aes(x = intersection_id, y = method)) +
@@ -503,25 +515,30 @@ plot_edge_upset <- function(edge_presence, title, networks = NULL,
     theme_bw() +
     theme(
       axis.text.x = element_blank(),
+      axis.text.y = element_text(size = 12),
+      axis.title.x = element_text(size = 14),
       axis.ticks.x = element_blank(),
       panel.grid.major.x = element_blank(),
       panel.grid.minor = element_blank()
     )
   
-  set_size_plot <- ggplot(set_sizes, aes(x = n_edges, 
-                                         y = factor(method, 
-                                                    levels = rev(method_cols)))) +
+  set_size_plot <- ggplot(set_sizes,
+                          aes(x = n_edges, 
+                              y = factor(method, 
+                                         levels = rev(method_cols)))) +
     geom_col(width = 0.7, fill = "gray25") +
     geom_text(
       aes(label = n_edges),
       hjust = -0.25,
-      size = 3.2
+      size = 4
     ) +
     labs(x = "Total edges", y = NULL) +
     expand_limits(x = max(set_sizes$n_edges) * 1.12) +
     theme_bw() +
     theme(
+      axis.text.x = element_text(size = 12),
       axis.text.y = element_blank(),
+      axis.title.x = element_text(size = 14),
       axis.ticks.y = element_blank(),
       panel.grid.major.y = element_blank(),
       panel.grid.minor = element_blank()
@@ -533,7 +550,8 @@ plot_edge_upset <- function(edge_presence, title, networks = NULL,
     plot_shared_edges(
       edge_presence = edge_presence,
       networks = networks,
-      n_edges = n_shared_edges
+      n_edges = n_shared_edges,
+      text_size = shared_text_size
     )
   }
   
@@ -618,12 +636,12 @@ genus_mat <- as(t(otu_table(phylo_genus)), "matrix")
 
 genus_rel_mat <- genus_mat / rowSums(genus_mat)
 
-genus_tax <- tax_table(phylo_genus) |> 
-  as("matrix") |> 
-  as.data.frame() |> 
+genus_tax <- tax_table(phylo_genus) %>% 
+  as("matrix") %>% 
+  as.data.frame() %>% 
   rownames_to_column("taxon_id")
 
-genus_labels <- genus_tax |>
+genus_labels <- genus_tax %>%
   transmute(
     taxon_id,
     genus = if_else(
@@ -637,8 +655,8 @@ top_genera_all <- tibble(
   taxon_id = colnames(genus_mat),
   mean_rel_abundance = colMeans(genus_rel_mat, na.rm = TRUE) * 100,
   prevalence = colMeans(genus_mat > 0) * 100
-) |>
-  left_join(genus_labels, by = "taxon_id") |>
+) %>%
+  left_join(genus_labels, by = "taxon_id") %>%
   arrange(desc(mean_rel_abundance))
 
 top_abundant_taxa <- top_genera_all$genus
@@ -815,7 +833,7 @@ plotHeat(
 ```{r single_association_histrogram, fig.width=8, fig.height=2}
 n_zero_asso <- sum(assomat_single_main[lower.tri(assomat_single_main)] == 0)
 
-data.frame(correlation = assomat_single_main[lower.tri(assomat_single_main)]) |>
+data.frame(correlation = assomat_single_main[lower.tri(assomat_single_main)]) %>%
   ggplot(aes(x = correlation)) +
   geom_histogram(binwidth = 0.005) +
   annotate("text", x = 0.01, y = Inf, vjust = 1.5, hjust = 0,
@@ -1011,9 +1029,9 @@ legend(0.65, 1.1, cex = 1, title = "Estimated association:",
 
 ```{r}
 # Taxa negatively correlated with Bifidobacterium
-bif_neg_taxa <- assomat_single_main["Bifidobacterium", ] |>
-  (\(x) x[x < 0])() |>
-  names() |>
+bif_neg_taxa <- assomat_single_main["Bifidobacterium", ] %>%
+  (\(x) x[x < 0])() %>%
+  names() %>%
   (\(x) setNames(x, x))()
 
 single_main_plot_labels <- make_network_plot_labels(
@@ -2781,7 +2799,7 @@ plot(props_single_spring,
      nodeColor = "feature", 
      featVecCol = phyla, 
      colorVec =  phylcol,
-     nodeSize = "clr",
+     nodeSize = "mclr",
      nodeSizeSpread = 4,
      cexNodes = 2,
      nodeTransp = 40,
@@ -3007,7 +3025,7 @@ adjamat_single_rhoshrink <- net_single_rhoshrink_nothresh$adjaMat1
 n_zero_asso <- 
   sum(assomat_single_rhoshrink[lower.tri(assomat_single_rhoshrink)] == 0)
 
-data.frame(correlation = assomat_single_rhoshrink[lower.tri(assomat_single_rhoshrink)]) |>
+data.frame(correlation = assomat_single_rhoshrink[lower.tri(assomat_single_rhoshrink)]) %>%
   ggplot(aes(x = correlation)) +
   geom_histogram(binwidth = 0.005) +
   labs(x = "Estimated correlation",
@@ -3141,7 +3159,7 @@ this summary, only the signed versions of the networks are included.
 
 ### Prevalence filtering
 
-```{r edge_upset_prevalence, fig.width=9, fig.height=5.5, dpi=250}
+```{r edge_upset_prevalence, fig.width=10, fig.height=6, dpi=250}
 networks_prevalence <- list(
   "1% prevalence" = net_single_main,
   "5% prevalence" = net_single_prev05,
@@ -3153,7 +3171,26 @@ edge_presence_prevalence <- make_edge_presence(networks_prevalence)
 plot_edge_upset(
   edge_presence_prevalence,
   title = "Shared edges across prevalence filters",
-  networks = networks_prevalence
+  networks = networks_prevalence,
+  shared_text_size = 4
+)
+```
+
+```{r edge_upset_prevalence8, fig.width=10, fig.height=5, dpi=250}
+networks_prevalence <- list(
+  "1% prevalence" = net_single_main,
+  "5% prevalence" = net_single_prev05,
+  "10% prevalence" = net_single_prev10
+)
+
+edge_presence_prevalence <- make_edge_presence(networks_prevalence)
+
+plot_edge_upset(
+  edge_presence_prevalence,
+  title = "Shared edges across prevalence filters",
+  networks = networks_prevalence,
+  shared_text_size = 4,
+  n_shared_edges = 8
 )
 ```
 
@@ -3173,7 +3210,28 @@ edge_presence_zero_replacement <- make_edge_presence(networks_zero_replacement)
 plot_edge_upset(
   edge_presence_zero_replacement,
   title = "Shared edges across zero-replacement methods",
-  networks = networks_zero_replacement
+  networks = networks_zero_replacement,
+  shared_text_size = 4
+)
+```
+
+```{r edge_upset_zero_replacement8, fig.width=10, fig.height=5, dpi=250}
+networks_zero_replacement <- list(
+  "multiplicative" = net_single_main,
+  #"multiplicative sample-wise" = net_single_zero_multrepl_sample,
+  "random pseudo count" = net_single_zero_random,
+  "Modified EM alr" = net_single_zero_alrEM,
+  "Bayesian mult." = net_single_zero_bayesMult
+)
+
+edge_presence_zero_replacement <- make_edge_presence(networks_zero_replacement)
+
+plot_edge_upset(
+  edge_presence_zero_replacement,
+  title = "Shared edges across zero-replacement methods",
+  networks = networks_zero_replacement,
+  shared_text_size = 4,
+  n_shared_edges = 8
 )
 ```
 
@@ -3181,8 +3239,8 @@ plot_edge_upset(
 
 ```{r edge_upset_association, fig.width=10, fig.height=6, dpi=250}
 networks_association <- list(
-  "SPIEC-EASI mb" = net_single_main,
-  "SPIEC-EASI slr" = net_single_slr,
+  "SPIEC-EASI MB" = net_single_main,
+  "SPIEC-EASI SLR" = net_single_slr,
   "SPRING" = net_single_spring
   #"rho shrinkage" = net_single_rhoshrink
 )
@@ -3192,7 +3250,27 @@ edge_presence_association <- make_edge_presence(networks_association)
 plot_edge_upset(
   edge_presence_association,
   title = "Shared edges across association measures",
-  networks = networks_association
+  networks = networks_association,
+  shared_text_size = 4
+)
+```
+
+```{r edge_upset_association8, fig.width=10, fig.height=5, dpi=250}
+networks_association <- list(
+  "SPIEC-EASI MB" = net_single_main,
+  "SPIEC-EASI SLR" = net_single_slr,
+  "SPRING" = net_single_spring
+  #"rho shrinkage" = net_single_rhoshrink
+)
+
+edge_presence_association <- make_edge_presence(networks_association)
+
+plot_edge_upset(
+  edge_presence_association,
+  title = "Shared edges across association measures",
+  networks = networks_association,
+  shared_text_size = 4,
+  n_shared_edges = 8
 )
 ```
 
@@ -3220,13 +3298,13 @@ persistent_edges <- summarise_persistent_edges(persistent_edge_networks)
 ```
 
 ```{r persistent_edge_table}
-persistent_edges |>
+persistent_edges %>%
   mutate(
     mean_association = round(mean_association, 3),
     min_association = round(min_association, 3),
     max_association = round(max_association, 3),
     mean_abs_association = round(mean_abs_association, 3)
-  ) |>
+  ) %>%
   select(
     taxon1_label,
     taxon2_label,
@@ -3235,7 +3313,7 @@ persistent_edges |>
     min_association,
     max_association,
     mean_abs_association
-  ) |>
+  ) %>%
   kableExtra::kbl(
     caption = "Taxa-pairs connected in all selected signed networks.",
     col.names = c(
@@ -3247,14 +3325,14 @@ persistent_edges |>
       "Maximum",
       "Mean absolute association"
     )
-  ) |>
+  ) %>%
   kableExtra::kable_styling(full_width = FALSE)
 ```
 
 ```{r persistent_edge_network_prepare}
-persistent_taxa <- persistent_edges |>
-  select(taxon1, taxon2) |>
-  unlist(use.names = FALSE) |>
+persistent_taxa <- persistent_edges %>%
+  select(taxon1, taxon2) %>%
+  unlist(use.names = FALSE) %>%
   unique()
 
 net_single_persistent <- make_persistent_edge_network(

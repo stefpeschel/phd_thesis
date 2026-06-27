@@ -1,6 +1,6 @@
 Network analysis
 ================
-Compiled at 2026-06-26 22:03:35 UTC
+Compiled at 2026-06-27 05:40:58 UTC
 
 ## Aim
 
@@ -243,8 +243,10 @@ We store this layout as main layout.
 #### Nodes colored by phyla
 
     ## phyla
-    ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria Verrucomicrobiota 
-    ##                19                 6                 1                75                 1                14                 1
+    ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria 
+    ##                19                 6                 1                75                 1                14 
+    ## Verrucomicrobiota 
+    ##                 1
 
 ![](figures/10_network_analysis/net_single_net_plot_col_phyla-1.png)<!-- -->
 
@@ -442,13 +444,19 @@ networks are included.
 
 ![](figures/10_network_analysis/net_edge_upset_prevalence-1.png)<!-- -->
 
+![](figures/10_network_analysis/net_edge_upset_prevalence8-1.png)<!-- -->
+
 ### Zero replacement
 
 ![](figures/10_network_analysis/net_edge_upset_zero_replacement-1.png)<!-- -->
 
+![](figures/10_network_analysis/net_edge_upset_zero_replacement8-1.png)<!-- -->
+
 ### Association measure
 
 ![](figures/10_network_analysis/net_edge_upset_association-1.png)<!-- -->
+
+![](figures/10_network_analysis/net_edge_upset_association8-1.png)<!-- -->
 
 ## Persistent edges across selected networks
 
