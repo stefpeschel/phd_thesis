@@ -2593,18 +2593,119 @@ safe_pvec <- function(x) {
   as.numeric(x)
 }
 
-extract_diffnet_pvalues <- function() {
+make_ranked_palette <- function(n, palette = "Spectral") {
+  if (is.function(palette)) {
+    return(palette(n))
+  }
+
+  if (length(palette) > 1) {
+    return(grDevices::colorRampPalette(palette)(n))
+  }
+
+  if (requireNamespace("RColorBrewer", quietly = TRUE) &&
+      palette %in% rownames(RColorBrewer::brewer.pal.info)) {
+    max_colors <- RColorBrewer::brewer.pal.info[palette, "maxcolors"]
+    base_colors <- RColorBrewer::brewer.pal(max(3, max_colors), palette)
+    return(grDevices::colorRampPalette(base_colors)(n))
+  }
+
+  grDevices::colorRampPalette(grDevices::hcl.colors(11, palette = palette))(n)
+}
+
+extract_association_differences <- function(net, absolute = FALSE) {
+  asso1 <- as.matrix(net$assoEst1)
+  asso2 <- as.matrix(net$assoEst2)
+
+  if (!identical(dim(asso1), dim(asso2))) {
+    stop("Association matrices must have identical dimensions.")
+  }
+
+  taxa <- colnames(asso1)
+  if (is.null(taxa)) {
+    taxa <- as.character(seq_len(ncol(asso1)))
+  }
+
+  upper_tri <- upper.tri(asso1)
+  association_difference <- asso2[upper_tri] - asso1[upper_tri]
+
+  if (absolute) {
+    association_difference <- abs(association_difference)
+  }
+
+  taxa_pairs <- which(upper_tri, arr.ind = TRUE)
+
   tibble(
-    test_id = seq_along(diff_ebf_emp_noBH$pvalsVec),
-    empirical = safe_pvec(diff_ebf_emp_noBH$pvalsVec),
-    unconstrained = safe_pvec(diff_ebf_noConstr_noBH$pvalsVec),
-    constrained = safe_pvec(diff_ebf_constr_noBH$pvalsVec)
-  ) %>%
-    pivot_longer(
-      cols = c(empirical, unconstrained, constrained),
-      names_to = "method",
-      values_to = "p_value"
+    test_id = seq_along(association_difference),
+    taxon1 = taxa[taxa_pairs[, "row"]],
+    taxon2 = taxa[taxa_pairs[, "col"]],
+    association_difference = as.numeric(association_difference)
+  )
+}
+
+extract_diffnet_method_pvalues <- function(method, diff_obj) {
+  p_value <- safe_pvec(diff_obj$pvalsVec)
+  p_adjust <- safe_pvec(diff_obj$pAdjustVec)
+
+  if (length(p_adjust) == 0) {
+    p_adjust <- rep(NA_real_, length(p_value))
+  }
+
+  if (length(p_adjust) != length(p_value)) {
+    stop(
+      "Raw and BH-adjusted p-value vectors have different lengths for method ",
+      method,
+      "."
     )
+  }
+
+  tibble(
+    test_id = seq_along(p_value),
+    method = method,
+    p_value = p_value,
+    p_adjust = p_adjust
+  )
+}
+
+extract_diffnet_pvalues <- function(absolute = FALSE, palette = "Spectral") {
+  pvalues_long <- bind_rows(
+    extract_diffnet_method_pvalues(
+      method = "empirical",
+      diff_obj = diff_ebf_emp_BH
+    ),
+    extract_diffnet_method_pvalues(
+      method = "unconstrained",
+      diff_obj = diff_ebf_noConstr_BH
+    ),
+    extract_diffnet_method_pvalues(
+      method = "constrained",
+      diff_obj = diff_ebf_constr_BH
+    ),
+    extract_diffnet_method_pvalues(
+      method = "fisher",
+      diff_obj = diff_ebf_fisher_BH
+    )
+  )
+
+  association_differences <- extract_association_differences(net_ebf_perm,
+                                                             absolute = absolute)
+
+  if (any(table(pvalues_long$method) != nrow(association_differences))) {
+    stop(
+      "The number of association differences does not match the number of ",
+      "diffnet p-values."
+    )
+  }
+
+  association_colors <- association_differences %>%
+    arrange(abs(association_difference), test_id) %>%
+    mutate(
+      association_color = make_ranked_palette(n(), palette = palette)
+    ) %>%
+    select(test_id, association_color)
+
+  pvalues_long %>%
+    left_join(association_differences, by = "test_id") %>%
+    left_join(association_colors, by = "test_id")
 }
 
 get_named_pvalues <- function(x, field_candidates) {
@@ -2669,48 +2770,172 @@ extract_centrality_pvalues <- function(comp_emp, comp_unconstr, comp_constr) {
     )
 }
 
-plot_pvalue_pairs <- function(pval_long, id_cols) {
+plot_pvalue_pairs <- function(pval_long, id_cols, method_order = NULL) {
+  if (is.null(method_order)) {
+    method_order <- unique(pval_long$method)
+  }
+
   pval_wide <- pval_long %>%
+    mutate(method = factor(method, levels = method_order)) %>%
     pivot_wider(names_from = method, values_from = p_value)
 
-  pair_df <- bind_rows(
-    pval_wide %>%
-      transmute(across(all_of(id_cols)),
-                comparison = "Empirical vs unconstrained",
-                x = empirical,
-                y = unconstrained),
-    pval_wide %>%
-      transmute(across(all_of(id_cols)),
-                comparison = "Empirical vs constrained",
-                x = empirical,
-                y = constrained),
-    pval_wide %>%
-      transmute(across(all_of(id_cols)),
-                comparison = "Unconstrained vs constrained",
-                x = unconstrained,
-                y = constrained)
-  )
+  pair_df <- combn(method_order, 2, simplify = FALSE) %>%
+    purrr::map_dfr(function(method_pair) {
+      pval_wide %>%
+        transmute(
+          across(all_of(id_cols)),
+          comparison = paste(method_pair, collapse = " vs "),
+          x = .data[[method_pair[1]]],
+          y = .data[[method_pair[2]]]
+        )
+    }) %>%
+    filter(is.finite(x), is.finite(y), x > 0, y > 0)
 
-  ggplot(pair_df, aes(x = -log10(x), y = -log10(y))) +
+  if (nrow(pair_df) == 0) {
+    stop("No positive finite p-value pairs available for log-scaled plotting.")
+  }
+
+  pvalue_limits <- range(c(pair_df$x, pair_df$y), na.rm = TRUE)
+
+  ggplot(pair_df, aes(x = x, y = y)) +
     geom_abline(slope = 1, intercept = 0, color = "gray60") +
     geom_point(alpha = 0.7, size = 1.5) +
-    facet_wrap(~ comparison, scales = "free") +
-    labs(x = "-log10 p-value, method 1",
-         y = "-log10 p-value, method 2") +
+    facet_wrap(~ comparison) +
+    scale_x_log10(limits = pvalue_limits) +
+    scale_y_log10(limits = pvalue_limits) +
+    coord_equal() +
+    labs(x = "p-value, method 1",
+         y = "p-value, method 2") +
+    theme_bw()
+}
+
+plot_diffnet_pvalues_by_association_difference <- function(
+    pval_long,
+    method_order = c("empirical", "unconstrained", "constrained", "fisher")) {
+  method_labels <- c(
+    empirical = "Empirical",
+    unconstrained = "GPD unconstrained",
+    constrained = "GPD constrained",
+    fisher = "Fisher test"
+  )
+
+  zero_counts <- pval_long %>%
+    group_by(method) %>%
+    summarise(
+      n_zero = sum(p_value == 0, na.rm = TRUE),
+      n_total = sum(!is.na(p_value)),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      method = factor(method, levels = method_order),
+      method_label = paste0(
+        method_labels[as.character(method)],
+        "\n(zeros: ", n_zero, " / ", n_total, ")"
+      )
+    ) %>%
+    arrange(method) %>%
+    mutate(method = as.character(method))
+
+  plot_df <- pval_long %>%
+    left_join(zero_counts %>% select(method, method_label), by = "method") %>%
+    mutate(
+      method = factor(method, levels = method_order),
+      method_label = factor(method_label, levels = zero_counts$method_label),
+      significant_BH = !is.na(p_adjust) & p_adjust < 0.05,
+      point_color = if_else(
+        significant_BH,
+        association_color,
+        "gray65"
+      )
+    ) %>%
+    filter(
+      is.finite(association_difference),
+      is.finite(p_value),
+      p_value >= 0
+    )
+
+  if (nrow(plot_df) == 0) {
+    stop("No finite non-negative p-values available for log-scaled plotting.")
+  }
+
+  positive_pvalues <- plot_df$p_value[plot_df$p_value > 0]
+  if (length(positive_pvalues) == 0) {
+    stop("At least one positive p-value is needed to define the log scale.")
+  }
+  
+  min_positive_pvalue <- min(positive_pvalues, na.rm = TRUE)
+  max_positive_pvalue <- max(positive_pvalues, na.rm = TRUE)
+  zero_pvalue_position <- min_positive_pvalue / 10
+  y_lower_limit <- zero_pvalue_position / 1.5
+  y_breaks <- c(
+    zero_pvalue_position,
+    10^seq(
+      floor(log10(min_positive_pvalue)),
+      ceiling(log10(max_positive_pvalue))
+    )
+  )
+  y_breaks <- y_breaks[
+    y_breaks >= zero_pvalue_position &
+      y_breaks <= max_positive_pvalue
+  ]
+
+  plot_df <- plot_df %>%
+    mutate(
+      p_value_plot = if_else(
+        p_value == 0,
+        zero_pvalue_position,
+        p_value
+      )
+    )
+
+  ggplot(plot_df, aes(x = association_difference, y = p_value_plot)) +
+    geom_point(
+      aes(color = point_color),
+      alpha = 0.65,
+      size = 1.4
+    ) +
+    facet_wrap(~ method_label, nrow = 1) +
+    scale_color_identity() +
+    scale_y_log10(
+      limits = c(y_lower_limit, max_positive_pvalue),
+      expand = c(0, 0),
+      breaks = y_breaks,
+      minor_breaks = NULL,
+      labels = if_else(
+        y_breaks == zero_pvalue_position,
+        "0",
+        scales::label_scientific(digits = 1)(y_breaks)
+      )
+    ) +
+    labs(
+      x = "Difference between associations",
+      y = "p-value"
+    ) +
     theme_bw()
 }
 ```
 
 ### diffnet P-Values
 
-```{r diffnet_raw_pvalue_comparison, fig.width=10, fig.height=3.5, dpi=250}
-diffnet_pvalues_long <- extract_diffnet_pvalues()
+```{r diffnet_raw_pvalue_comparison, fig.width=10, fig.height=5, dpi=250}
+diffnet_pvalues_long <- extract_diffnet_pvalues(
+  palette = "Spectral"
+)
 
 diffnet_pvalue_summary <- diffnet_pvalues_long %>%
   group_by(method) %>%
   summarise(
     n = sum(is.finite(p_value)),
+    n_zero = sum(p_value == 0, na.rm = TRUE),
     min = min(p_value, na.rm = TRUE),
+    min_positive = {
+      positive_pvalues <- p_value[is.finite(p_value) & p_value > 0]
+      if (length(positive_pvalues) == 0) {
+        NA_real_
+      } else {
+        min(positive_pvalues)
+      }
+    },
     q25 = quantile(p_value, 0.25, na.rm = TRUE),
     median = median(p_value, na.rm = TRUE),
     q75 = quantile(p_value, 0.75, na.rm = TRUE),
@@ -2720,7 +2945,10 @@ diffnet_pvalue_summary <- diffnet_pvalues_long %>%
 
 diffnet_pvalue_summary
 
-plot_pvalue_pairs(diffnet_pvalues_long, id_cols = "test_id")
+plot_diffnet_pvalues_by_association_difference(
+  diffnet_pvalues_long,
+  method_order = c("empirical", "unconstrained", "constrained", "fisher")
+)
 ```
 
 ### netCompare Centrality P-Values
@@ -2748,9 +2976,10 @@ netcompare_centrality_pvalue_summary
 
 plot_pvalue_pairs(
   netcompare_centrality_pvalues_long,
-  id_cols = c("measure", "taxon")
+  id_cols = c("measure", "taxon"),
+  method_order = c("empirical", "unconstrained", "constrained")
 ) +
-  facet_grid(measure ~ comparison, scales = "free")
+  facet_grid(measure ~ comparison)
 ```
 
 ## Files Written
