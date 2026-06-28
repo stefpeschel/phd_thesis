@@ -1,5 +1,5 @@
 ---
-title: "Network comparison between EBF groups"
+title: "Network comparison between non-EBF and EBF groups"
 date: "Compiled at `r format(Sys.time(), '%Y-%m-%d %H:%M:%S', tz = 'UTC')` UTC"
 output: 
   github_document: default
@@ -97,9 +97,10 @@ refit_permutation_tests <- FALSE
 
 ## Load And Prepare Data
 
-The comparison uses the two EBF groups that define the main contrast in this
-chapter: no exclusive breastfeeding and exclusive breastfeeding for at least two
-months. Samples with one month of exclusive breastfeeding are excluded.
+The comparison uses the non-EBF and EBF groups that define the main contrast in
+this chapter: no exclusive breastfeeding and exclusive breastfeeding for at
+least two months. Samples with one month of exclusive breastfeeding are
+excluded.
 
 ```{r load_data}
 phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev01.rds"))
@@ -124,7 +125,7 @@ metadata_ebf <- sampdata[ebf_keep, , drop = FALSE] %>%
     ebf_group = factor(
       as.character(`EBF duration`),
       levels = c("0", ">=2"),
-      labels = c("0 months", ">=2 months")
+      labels = c("non-EBF", "EBF")
     )
   )
 
@@ -376,8 +377,8 @@ plot_group_degree_distribution <- function(net_objects) {
 }
 
 plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
-                               repulsion = 0.9, title1 = "EBF duration = 0",
-                               title2 = "EBF duration >= 2",
+                               repulsion = 0.9, title1 = "non-EBF",
+                               title2 = "EBF",
                                labelScale = FALSE, cexLabels = 0.9,
                                phylum_legend_x = -0.15,
                                phylum_legend_y = -0.25,
@@ -387,9 +388,16 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
                                layout = NULL, 
                                highlightHubs = TRUE,
                                legends = TRUE,
+                               rmSingles = NULL,
+                               nodeFilter = NULL,
+                               nodeFilterPar = NULL,
                                mar = c(1,3,3,3)) {
   
-  rmSinglesArg <- ifelse(same_layout, "inboth", TRUE)
+  rmSinglesArg <- if (is.null(rmSingles)) {
+    ifelse(same_layout, "inboth", TRUE)
+  } else {
+    rmSingles
+  }
   
   plot_args <- list(
     x = props,
@@ -420,6 +428,12 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
     mar = mar,
     doPlot = doPlot
   )
+  if (!is.null(nodeFilter)) {
+    plot_args$nodeFilter <- nodeFilter
+  }
+  if (!is.null(nodeFilterPar)) {
+    plot_args$nodeFilterPar <- nodeFilterPar
+  }
   if (same_layout) {
     plot_args$layoutGroup <- "union"
   }
@@ -441,12 +455,17 @@ plot_group_network <- function(props, same_layout = FALSE, labels = NULL,
   invisible(p)
 }
 
-build_plot_labels <- function(props, n_abundant = 15, n_central = 10) {
+build_plot_labels <- function(
+    props,
+    n_abundant = 15,
+    n_central = 10,
+    extra_taxa = NULL) {
   make_network_plot_labels(
     props = props,
     top_abundant_taxa = top_abundant_taxa,
     n_abundant = n_abundant,
     n_central = n_central,
+    extra_taxa = extra_taxa,
     label_overrides = network_label_overrides
   )$labels
 }
@@ -457,10 +476,114 @@ blank_plot_labels <- function(labels) {
   out
 }
 
+get_named_pvalues <- function(x, field_candidates) {
+  for (field in field_candidates) {
+    if (!is.null(x[[field]])) {
+      out <- x[[field]]
+      return(out)
+    }
+  }
+  NULL
+}
+
+extract_centrality_pvalues <- function(comp_emp, comp_unconstr, comp_constr) {
+  centrality_fields <- list(
+    degree = c("pvalDiffDeg", "pvalDiffDegree"),
+    betweenness = c("pvalDiffBetw", "pvalDiffBetween", "pvalDiffBetweenness"),
+    closeness = c("pvalDiffClose", "pvalDiffCloseness"),
+    eigenvector = c("pvalDiffEigen", "pvalDiffEigenv", "pvalDiffEigenvector")
+  )
+
+  empirical_list <- comp_emp$pvalDiffCentrEmpirical
+  unconstr_list <- comp_unconstr$pvalDiffCentrRefined
+  constr_list <- comp_constr$pvalDiffCentrRefined
+
+  centrality_pvalues_wide <- purrr::imap_dfr(
+    centrality_fields,
+    function(fields, measure) {
+      p_emp <- get_named_pvalues(empirical_list, fields)
+      p_unconstr <- get_named_pvalues(unconstr_list, fields)
+      p_constr <- get_named_pvalues(constr_list, fields)
+
+      if (is.null(p_emp) || is.null(p_unconstr) || is.null(p_constr)) {
+        return(tibble())
+      }
+
+      taxon <- names(p_emp)
+      if (is.null(taxon)) {
+        taxon <- seq_along(p_emp)
+      }
+
+      tibble(
+        measure = measure,
+        taxon = taxon,
+        empirical = as.numeric(p_emp),
+        unconstrained = as.numeric(p_unconstr),
+        constrained = as.numeric(p_constr)
+      )
+    }
+  )
+
+  if (nrow(centrality_pvalues_wide) == 0) {
+    return(tibble(
+      measure = character(),
+      taxon = character(),
+      method = character(),
+      p_value = numeric()
+    ))
+  }
+
+  centrality_pvalues_wide %>%
+    pivot_longer(
+      cols = c(empirical, unconstrained, constrained),
+      names_to = "method",
+      values_to = "p_value"
+    )
+}
+
+plot_pvalue_pairs <- function(pval_long, id_cols, method_order = NULL) {
+  if (is.null(method_order)) {
+    method_order <- unique(pval_long$method)
+  }
+
+  pval_wide <- pval_long %>%
+    mutate(method = factor(method, levels = method_order)) %>%
+    pivot_wider(names_from = method, values_from = p_value)
+
+  pair_df <- combn(method_order, 2, simplify = FALSE) %>%
+    purrr::map_dfr(function(method_pair) {
+      pval_wide %>%
+        transmute(
+          across(all_of(id_cols)),
+          comparison = paste(method_pair, collapse = " vs "),
+          x = .data[[method_pair[1]]],
+          y = .data[[method_pair[2]]]
+        )
+    }) %>%
+    filter(is.finite(x), is.finite(y), x > 0, y > 0)
+
+  if (nrow(pair_df) == 0) {
+    stop("No positive finite p-value pairs available for log-scaled plotting.")
+  }
+
+  pvalue_limits <- range(c(pair_df$x, pair_df$y), na.rm = TRUE)
+
+  ggplot(pair_df, aes(x = x, y = y)) +
+    geom_abline(slope = 1, intercept = 0, color = "gray60") +
+    geom_point(alpha = 0.7, size = 1.5) +
+    facet_wrap(~ comparison) +
+    scale_x_log10(limits = pvalue_limits) +
+    scale_y_log10(limits = pvalue_limits) +
+    coord_equal() +
+    labs(x = "p-value, method 1",
+         y = "p-value, method 2") +
+    theme_bw()
+}
+
 extract_global_network_properties <- function(props, method) {
   tibble(
     method = method,
-    group = c("EBF = 0", "EBF >= 2"),
+    group = c("non-EBF", "EBF"),
     relative_lcc_size = c(
       props$globalPropsLCC$lccSizeRel1,
       props$globalPropsLCC$lccSizeRel2
@@ -486,7 +609,7 @@ make_global_property_table <- function(global_properties, property) {
 
 ## Descriptive Network Comparisons
 
-The following sections construct and describe EBF-group-specific networks
+The following sections construct and describe non-EBF- and EBF-specific networks
 without permutation testing.
 
 
@@ -536,7 +659,7 @@ labels_ebf_spieceasi_multRepl <- build_plot_labels(
 
 ```{r ebf_spieceasi_multRepl_netAnalyze_summary}
 print(summary(props_ebf_spieceasi_multRepl,
-              groupNames = c("EBF = 0", "EBF >= 2")))
+              groupNames = c("non-EBF", "EBF")))
 ```
 
 
@@ -638,7 +761,7 @@ labels_ebf_spieceasi_bayesMult <- build_plot_labels(
 
 ```{r ebf_spieceasi_bayesMult_netAnalyze_summary}
 print(summary(props_ebf_spieceasi_bayesMult,
-              groupNames = c("EBF = 0", "EBF >= 2")))
+              groupNames = c("non-EBF", "EBF")))
 ```
 
 ```{r ebf_spieceasi_bayesMult_global_property_extract}
@@ -751,7 +874,7 @@ labels_ebf_slr <- build_plot_labels(props_ebf_slr)
 
 ```{r ebf_slr_netAnalyze_summary}
 print(summary(props_ebf_slr,
-              groupNames = c("EBF = 0", "EBF >= 2")))
+              groupNames = c("non-EBF", "EBF")))
 ```
 
 #### Low-Rank Heatmaps
@@ -781,11 +904,11 @@ extract_slr_low_rank <- function(spieceasi_fit, taxa_names) {
 }
 
 slr_low_rank_ebf <- list(
-  "EBF = 0" = extract_slr_low_rank(
+  "non-EBF" = extract_slr_low_rank(
     net_ebf_slr$measureOut1,
     taxa_names = colnames(net_ebf_slr$assoMat1)
   ),
-  "EBF >= 2" = extract_slr_low_rank(
+  "EBF" = extract_slr_low_rank(
     net_ebf_slr$measureOut2,
     taxa_names = colnames(net_ebf_slr$assoMat2)
   )
@@ -967,7 +1090,7 @@ labels_ebf_spring <- build_plot_labels(props_ebf_spring)
 
 ```{r ebf_spring_netAnalyze_summary}
 print(summary(props_ebf_spring,
-              groupNames = c("EBF = 0", "EBF >= 2")))
+              groupNames = c("non-EBF", "EBF")))
 ```
 
 ```{r}
@@ -1079,7 +1202,7 @@ labels_ebf_rhoshrink_multRepl <- build_plot_labels(props_ebf_rhoshrink_multRepl)
 
 ```{r ebf_rhoshrink_multRepl_netAnalyze_summary}
 print(summary(props_ebf_rhoshrink_multRepl,
-              groupNames = c("EBF = 0", "EBF >= 2")))
+              groupNames = c("non-EBF", "EBF")))
 ```
 
 #### Association Histogram
@@ -1175,7 +1298,7 @@ labels_ebf_rhoshrink_bayesMult <- build_plot_labels(props_ebf_rhoshrink_bayesMul
 
 ```{r ebf_rhoshrink_bayesMult_netAnalyze_summary}
 print(summary(props_ebf_rhoshrink_bayesMult,
-              groupNames = c("EBF = 0", "EBF >= 2")))
+              groupNames = c("non-EBF", "EBF")))
 ```
 
 #### Association Histogram
@@ -1279,7 +1402,7 @@ labels_ebf_corshrink_multRepl <- build_plot_labels(props_ebf_corshrink_multRepl)
 
 ```{r ebf_corshrink_multRepl_netAnalyze_summary}
 print(summary(props_ebf_corshrink_multRepl,
-              groupNames = c("EBF = 0", "EBF >= 2")))
+              groupNames = c("non-EBF", "EBF")))
 ```
 
 #### Association Histogram
@@ -1378,7 +1501,7 @@ labels_ebf_corshrink_bayesMult <- build_plot_labels(props_ebf_corshrink_bayesMul
 
 ```{r ebf_corshrink_bayesMult_netAnalyze_summary}
 print(summary(props_ebf_corshrink_bayesMult,
-              groupNames = c("EBF = 0", "EBF >= 2")))
+              groupNames = c("non-EBF", "EBF")))
 ```
 
 #### Association Histogram
@@ -1711,6 +1834,8 @@ and constrained `permApprox` refinement.
 
 ### Empirical P-Values
 
+#### Raw p-values
+
 ```{r run_netcompare_emp_noBH}
 path_comp_ebf_emp_noBH <- path_perm("comp_ebf_emp_noBH.rds")
 
@@ -1732,10 +1857,12 @@ if (file.exists(path_comp_ebf_emp_noBH) && !refit_permutation_tests) {
 }
 
 print(summary(comp_ebf_emp_noBH,
-              groupNames = c("EBF = 0", "EBF >= 2"),
+              groupNames = c("non-EBF", "EBF"),
               showCentr = c("degree", "between", "closeness"),
               numbNodes = 5))
 ```
+
+#### BH adjusted p-values
 
 ```{r run_netcompare_emp_BH}
 path_comp_ebf_emp_BH <- path_perm("comp_ebf_emp_BH.rds")
@@ -1758,12 +1885,14 @@ if (file.exists(path_comp_ebf_emp_BH) && !refit_permutation_tests) {
 }
 
 print(summary(comp_ebf_emp_BH,
-              groupNames = c("EBF = 0", "EBF >= 2"),
-              showCentr = c("degree", "between", "closeness"),
-              numbNodes = 5))
+              groupNames = c("non-EBF", "EBF"),
+              showCentr = c("degree", "between", "closeness", "eigenvector"),
+              numbNodes = 5, sortCentr = "pvalue"))
 ```
 
 ### permApprox Refinement Without Constraint
+
+#### Raw p-values
 
 ```{r run_netcompare_GPD_noConstr_noBH}
 path_comp_ebf_GPD_noConstr_noBH <- path_perm("comp_ebf_GPD_noConstr_noBH.rds")
@@ -1796,10 +1925,12 @@ if (file.exists(path_comp_ebf_GPD_noConstr_noBH) && !refit_permutation_tests) {
 }
 
 print(summary(comp_ebf_GPD_noConstr_noBH,
-              groupNames = c("EBF = 0", "EBF >= 2"),
+              groupNames = c("non-EBF", "EBF"),
               showCentr = c("degree", "between", "closeness"),
               numbNodes = 5))
 ```
+
+#### BH adjusted p-values
 
 ```{r run_netcompare_GPD_noConstr_BH}
 path_comp_ebf_GPD_noConstr_BH <- path_perm("comp_ebf_GPD_noConstr_BH.rds")
@@ -1832,12 +1963,14 @@ if (file.exists(path_comp_ebf_GPD_noConstr_BH) && !refit_permutation_tests) {
 }
 
 print(summary(comp_ebf_GPD_noConstr_BH,
-              groupNames = c("EBF = 0", "EBF >= 2"),
+              groupNames = c("non-EBF", "EBF"),
               showCentr = c("degree", "between", "closeness"),
               numbNodes = 5))
 ```
 
 ### permApprox Refinement With Constraint
+
+#### Raw p-values
 
 ```{r run_netcompare_GPD_constr_noBH}
 path_comp_ebf_GPD_constr_noBH <- path_perm("comp_ebf_GPD_constr_noBH.rds")
@@ -1871,10 +2004,12 @@ if (file.exists(path_comp_ebf_GPD_constr_noBH) && !refit_permutation_tests) {
 }
 
 print(summary(comp_ebf_GPD_constr_noBH,
-              groupNames = c("EBF = 0", "EBF >= 2"),
+              groupNames = c("non-EBF", "EBF"),
               showCentr = c("degree", "between", "closeness"),
               numbNodes = 5))
 ```
+
+#### BH adjusted p-values
 
 ```{r run_netcompare_GPD_constr_BH}
 path_comp_ebf_GPD_constr_BH <- path_perm("comp_ebf_GPD_constr_BH.rds")
@@ -1908,9 +2043,41 @@ if (file.exists(path_comp_ebf_GPD_constr_BH) && !refit_permutation_tests) {
 }
 
 print(summary(comp_ebf_GPD_constr_BH,
-              groupNames = c("EBF = 0", "EBF >= 2"),
+              groupNames = c("non-EBF", "EBF"),
               showCentr = c("degree", "between", "closeness"),
               numbNodes = 5))
+```
+
+
+### p-value comparison
+
+```{r netcompare_centrality_raw_pvalue_comparison, fig.width=10, fig.height=6, dpi=250}
+netcompare_centrality_pvalues_long <- extract_centrality_pvalues(
+  comp_emp = comp_ebf_emp_noBH,
+  comp_unconstr = comp_ebf_GPD_noConstr_noBH,
+  comp_constr = comp_ebf_GPD_constr_noBH
+)
+
+netcompare_centrality_pvalue_summary <- netcompare_centrality_pvalues_long %>%
+  group_by(measure, method) %>%
+  summarise(
+    n = sum(is.finite(p_value)),
+    min = min(p_value, na.rm = TRUE),
+    q25 = quantile(p_value, 0.25, na.rm = TRUE),
+    median = median(p_value, na.rm = TRUE),
+    q75 = quantile(p_value, 0.75, na.rm = TRUE),
+    max = max(p_value, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+netcompare_centrality_pvalue_summary
+
+plot_pvalue_pairs(
+  netcompare_centrality_pvalues_long,
+  id_cols = c("measure", "taxon"),
+  method_order = c("empirical", "unconstrained", "constrained")
+) +
+  facet_grid(measure ~ comparison)
 ```
 
 ### Combined netCompare Summary
@@ -2043,8 +2210,8 @@ format_netcompare_table <- function(df, title, name_width = 30) {
   cat(sprintf(
     paste0("%-", name_width, "s %10s %10s %10s %10s %10s %10s\n"),
     "",
-    "EBF = 0",
-    "EBF >= 2",
+    "non-EBF",
+    "EBF",
     "abs.diff.",
     "p.emp",
     "p.uncon.",
@@ -2191,8 +2358,8 @@ format_centrality_summary <- function(df, top_n = 5, name_width = 30) {
     cat(sprintf(
       paste0("%-", name_width, "s %10s %10s %10s %10s %10s %10s\n"),
       "Genus",
-      "EBF = 0",
-      "EBF >= 2",
+      "non-EBF",
+      "EBF",
       "abs.diff.",
       "p.emp",
       "p.uncon.",
@@ -2349,7 +2516,7 @@ if (file.exists(path_diff_ebf_emp_BH) && !refit_permutation_tests) {
     nPerm = n_perm_network_comparison,
     fileLoadAssoPerm = path_perm("assoPerm_ebf"),
     adjust = "BH",
-    adjustNonzeroOnly = TRUE,
+    adjustNonzeroOnly = FALSE,
     cores = cores,
     verbose = TRUE,
     seed = permutation_seed
@@ -2361,9 +2528,36 @@ if (file.exists(path_diff_ebf_emp_BH) && !refit_permutation_tests) {
 summary(diff_ebf_emp_BH$pAdjustVec)
 ```
 
-```{r}
-plot(diff_ebf_emp_BH)
+**Include only tests being non-zero in both groups**
+
+```{r run_diffnet_BH_zo}
+path_diff_ebf_emp_BH_zo <- path_perm("diff_ebf_emp_BH_zo.rds")
+
+if (file.exists(path_diff_ebf_emp_BH_zo) && !refit_permutation_tests) {
+  diff_ebf_emp_BH_zo <- readRDS(path_diff_ebf_emp_BH_zo)
+} else {
+  diff_ebf_emp_BH_zo <- diffnet(
+    net_ebf_perm,
+    diffMethod = "permute",
+    nPerm = n_perm_network_comparison,
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
+    adjust = "BH",
+    adjustNonzeroOnly = TRUE,
+    cores = cores,
+    verbose = TRUE,
+    seed = permutation_seed
+  )
+
+  saveRDS(diff_ebf_emp_BH_zo, path_diff_ebf_emp_BH_zo)
+}
+
+summary(diff_ebf_emp_BH_zo$pAdjustVec)
 ```
+
+```{r}
+print(summary(diff_ebf_emp_BH_zo))
+```
+
 
 ### permApprox Refinement Without Constraint
 
@@ -2422,7 +2616,7 @@ if (file.exists(path_diff_ebf_noConstr_BH) && !refit_permutation_tests) {
       gpd_ctrl = gpd_ctrl
     ),
     adjust = "BH",
-    adjustNonzeroOnly = TRUE,
+    adjustNonzeroOnly = FALSE,
     cores = cores,
     verbose = TRUE,
     seed = permutation_seed
@@ -2434,12 +2628,59 @@ if (file.exists(path_diff_ebf_noConstr_BH) && !refit_permutation_tests) {
 summary(diff_ebf_noConstr_BH$pAdjustVec)
 ```
 
+```{r}
+print(summary(diff_ebf_noConstr_BH))
+```
 
-```{r plot_diffnet_main_BH, fig.width=10, fig.height=7}
+```{r plot_diffnet_noConstr_BH, fig.width=10, fig.height=7}
 plot(diff_ebf_noConstr_BH, 
      edgeTransp = 0)
 ```
 
+**Include only tests being non-zero in both groups**s
+
+```{r run_diffnet_noConstr_BH_zo}
+path_diff_ebf_noConstr_BH_zo <- path_perm("diff_ebf_noConstr_BH_zo.rds")
+
+if (file.exists(path_diff_ebf_noConstr_BH_zo) && !refit_permutation_tests) {
+  diff_ebf_noConstr_BH_zo <- readRDS(path_diff_ebf_noConstr_BH_zo)
+} else {
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "none",
+    thresh_method = "ftr"
+  )
+
+  diff_ebf_noConstr_BH_zo <- diffnet(
+    net_ebf_perm,
+    diffMethod = "permute",
+    nPerm = n_perm_network_comparison,
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
+    refinePermPvals = TRUE,
+    permApproxParams = list(
+      method = "gpd",
+      gpd_ctrl = gpd_ctrl
+    ),
+    adjust = "BH",
+    adjustNonzeroOnly = FALSE,
+    cores = cores,
+    verbose = TRUE,
+    seed = permutation_seed
+  )
+
+  saveRDS(diff_ebf_noConstr_BH_zo, path_diff_ebf_noConstr_BH_zo)
+}
+
+summary(diff_ebf_noConstr_BH_zo$pAdjustVec)
+```
+
+```{r}
+print(summary(diff_ebf_noConstr_BH_zo))
+```
+
+```{r plot_diffnet_noConstr_BH_zo, fig.width=10, fig.height=7}
+plot(diff_ebf_noConstr_BH_zo, 
+     edgeTransp = 0)
+```
 
 ### permApprox Refinement With Constraint
 
@@ -2452,7 +2693,8 @@ if (file.exists(path_diff_ebf_constr_noBH) && !refit_permutation_tests) {
   gpd_ctrl <- permApprox::make_gpd_ctrl(
     constraint = "support_at_obs",
     sample_size = min(as.vector(table(ebf_group))),
-    thresh_method = "ftr"
+    thresh_method = "ftr",
+    eps_tune = 0.1
   )
 
   diff_ebf_constr_noBH <- diffnet(
@@ -2486,7 +2728,9 @@ if (file.exists(path_diff_ebf_constr_BH) && !refit_permutation_tests) {
   gpd_ctrl <- permApprox::make_gpd_ctrl(
     constraint = "support_at_obs",
     sample_size = min(as.vector(table(ebf_group))),
-    thresh_method = "ftr"
+    thresh_method = "ftr",
+    eps_tune = 0.1,
+    eps_args = list(cap_base = "tmax")
   )
 
   diff_ebf_constr_BH <- diffnet(
@@ -2511,79 +2755,63 @@ if (file.exists(path_diff_ebf_constr_BH) && !refit_permutation_tests) {
 summary(diff_ebf_constr_BH$pAdjustVec)
 ```
 
-### Fisher's Z-Test
+```{r}
+print(summary(diff_ebf_constr_BH))
+```
 
-```{r run_diffnet_fisher_BH}
-path_diff_ebf_fisher_BH <- path_perm("diff_ebf_fisher_BH.rds")
+```{r plot_diffnet_constr_BH, fig.width=10, fig.height=7}
+plot(diff_ebf_constr_BH, 
+     edgeTransp = 0)
+```
 
-if (file.exists(path_diff_ebf_fisher_BH) && !refit_permutation_tests) {
-  diff_ebf_fisher_BH <- readRDS(path_diff_ebf_fisher_BH)
+**Include only tests being non-zero in both groups**
+
+```{r run_diffnet_constr_BH_zo}
+path_diff_ebf_constr_BH_zo <- path_perm("diff_ebf_constr_BH_zo.rds")
+
+if (file.exists(path_diff_ebf_constr_BH_zo) && !refit_permutation_tests) {
+  diff_ebf_constr_BH_zo <- readRDS(path_diff_ebf_constr_BH_zo)
 } else {
-  diff_ebf_fisher_BH <- diffnet(
+  gpd_ctrl <- permApprox::make_gpd_ctrl(
+    constraint = "support_at_obs",
+    sample_size = min(as.vector(table(ebf_group))),
+    thresh_method = "ftr",
+    eps_tune = 0.1,
+    eps_args = list(cap_base = "tmax")
+  )
+
+  diff_ebf_constr_BH_zo <- diffnet(
     net_ebf_perm,
-    diffMethod = "fisherTest",
+    diffMethod = "permute",
+    nPerm = n_perm_network_comparison,
+    fileLoadAssoPerm = path_perm("assoPerm_ebf"),
+    refinePermPvals = TRUE,
+    permApproxParams = list(
+      method = "gpd",
+      gpd_ctrl = gpd_ctrl
+    ),
     adjust = "BH",
-    adjustNonzeroOnly = TRUE,
-    verbose = TRUE
+    cores = cores,
+    verbose = TRUE,
+    seed = permutation_seed
   )
 
-  saveRDS(diff_ebf_fisher_BH, path_diff_ebf_fisher_BH)
+  saveRDS(diff_ebf_constr_BH_zo, path_diff_ebf_constr_BH_zo)
 }
 
-summary(diff_ebf_fisher_BH$pvalsVec)
-summary(diff_ebf_fisher_BH$pAdjustVec)
+summary(diff_ebf_constr_BH_zo$pAdjustVec)
 ```
 
-```{r diffnet_plot_helper}
-plot_diffnet_with_adjust <- function(diff_obj, adjust = c("none", "BH"), ...) {
-  adjust <- match.arg(adjust)
-  plot_try <- tryCatch(
-    plot(diff_obj, adjust = adjust, ...),
-    error = function(e) e
-  )
-
-  if (!inherits(plot_try, "error")) {
-    return(invisible(plot_try))
-  }
-
-  p_adjust_try <- tryCatch(
-    plot(diff_obj, pAdjust = adjust, ...),
-    error = function(e) e
-  )
-
-  if (!inherits(p_adjust_try, "error")) {
-    return(invisible(p_adjust_try))
-  }
-
-  warning(
-    "Could not pass an adjustment selector to plot.diffnet(); ",
-    "falling back to the default plot method. First error: ",
-    conditionMessage(plot_try)
-  )
-  plot(diff_obj, ...)
-}
+```{r}
+print(summary(diff_ebf_constr_BH_zo))
 ```
 
-```{r plot_diffnet_fisher_raw, fig.width=10, fig.height=7}
-plot_diffnet_with_adjust(
-  diff_ebf_fisher_BH,
-  adjust = "none",
-  edgeTransp = 0
-)
+```{r plot_diffnet_constr_BH_zo, fig.width=10, fig.height=7}
+plot(diff_ebf_constr_BH_zo, 
+     edgeTransp = 0)
 ```
 
-```{r plot_diffnet_fisher_BH, fig.width=10, fig.height=7}
-plot_diffnet_with_adjust(
-  diff_ebf_fisher_BH,
-  adjust = "BH",
-  edgeTransp = 0
-)
-```
-
-## Raw P-Value Comparison
-
-This section compares unadjusted p-values from empirical permutation testing,
-unconstrained `permApprox` refinement, and constrained `permApprox` refinement.
+### Raw P-Value Comparison
 
 ```{r pvalue_comparison_helpers}
 safe_pvec <- function(x) {
@@ -2612,7 +2840,11 @@ make_ranked_palette <- function(n, palette = "Spectral") {
   grDevices::colorRampPalette(grDevices::hcl.colors(11, palette = palette))(n)
 }
 
-extract_association_differences <- function(net, absolute = FALSE) {
+extract_association_differences <- function(
+    net,
+    absolute = FALSE,
+    triangle = c("lower", "upper")) {
+  triangle <- match.arg(triangle)
   asso1 <- as.matrix(net$assoEst1)
   asso2 <- as.matrix(net$assoEst2)
 
@@ -2625,14 +2857,18 @@ extract_association_differences <- function(net, absolute = FALSE) {
     taxa <- as.character(seq_len(ncol(asso1)))
   }
 
-  upper_tri <- upper.tri(asso1)
-  association_difference <- asso2[upper_tri] - asso1[upper_tri]
+  edge_tri <- switch(
+    triangle,
+    lower = lower.tri(asso1),
+    upper = upper.tri(asso1)
+  )
+  association_difference <- asso2[edge_tri] - asso1[edge_tri]
 
   if (absolute) {
     association_difference <- abs(association_difference)
   }
 
-  taxa_pairs <- which(upper_tri, arr.ind = TRUE)
+  taxa_pairs <- which(edge_tri, arr.ind = TRUE)
 
   tibble(
     test_id = seq_along(association_difference),
@@ -2666,7 +2902,10 @@ extract_diffnet_method_pvalues <- function(method, diff_obj) {
   )
 }
 
-extract_diffnet_pvalues <- function(absolute = FALSE, palette = "Spectral") {
+extract_diffnet_pvalues <- function(
+    absolute = FALSE,
+    palette = "Spectral",
+    triangle = "lower") {
   pvalues_long <- bind_rows(
     extract_diffnet_method_pvalues(
       method = "empirical",
@@ -2679,15 +2918,14 @@ extract_diffnet_pvalues <- function(absolute = FALSE, palette = "Spectral") {
     extract_diffnet_method_pvalues(
       method = "constrained",
       diff_obj = diff_ebf_constr_BH
-    ),
-    extract_diffnet_method_pvalues(
-      method = "fisher",
-      diff_obj = diff_ebf_fisher_BH
     )
   )
 
-  association_differences <- extract_association_differences(net_ebf_perm,
-                                                             absolute = absolute)
+  association_differences <- extract_association_differences(
+    net_ebf_perm,
+    absolute = absolute,
+    triangle = triangle
+  )
 
   if (any(table(pvalues_long$method) != nrow(association_differences))) {
     stop(
@@ -2696,7 +2934,19 @@ extract_diffnet_pvalues <- function(absolute = FALSE, palette = "Spectral") {
     )
   }
 
-  association_colors <- association_differences %>%
+  pvalues_long <- pvalues_long %>%
+    left_join(association_differences, by = "test_id")
+
+  significant_associations <- pvalues_long %>%
+    group_by(test_id) %>%
+    summarise(
+      significant_in_any_method = any(p_adjust < 0.05, na.rm = TRUE),
+      association_difference = first(association_difference),
+      .groups = "drop"
+    ) %>%
+    filter(significant_in_any_method)
+
+  association_colors <- significant_associations %>%
     arrange(abs(association_difference), test_id) %>%
     mutate(
       association_color = make_ranked_palette(n(), palette = palette)
@@ -2704,121 +2954,20 @@ extract_diffnet_pvalues <- function(absolute = FALSE, palette = "Spectral") {
     select(test_id, association_color)
 
   pvalues_long %>%
-    left_join(association_differences, by = "test_id") %>%
     left_join(association_colors, by = "test_id")
-}
-
-get_named_pvalues <- function(x, field_candidates) {
-  for (field in field_candidates) {
-    if (!is.null(x[[field]])) {
-      out <- x[[field]]
-      return(out)
-    }
-  }
-  NULL
-}
-
-extract_centrality_pvalues <- function(comp_emp, comp_unconstr, comp_constr) {
-  centrality_fields <- list(
-    degree = c("pvalDiffDeg", "pvalDiffDegree"),
-    betweenness = c("pvalDiffBetw", "pvalDiffBetween", "pvalDiffBetweenness"),
-    closeness = c("pvalDiffClose", "pvalDiffCloseness"),
-    eigenvector = c("pvalDiffEigen", "pvalDiffEigenv", "pvalDiffEigenvector")
-  )
-
-  empirical_list <- comp_emp$pvalDiffCentrEmpirical
-  unconstr_list <- comp_unconstr$pvalDiffCentrRefined
-  constr_list <- comp_constr$pvalDiffCentrRefined
-
-  centrality_pvalues_wide <- purrr::imap_dfr(centrality_fields, function(fields, measure) {
-    p_emp <- get_named_pvalues(empirical_list, fields)
-    p_unconstr <- get_named_pvalues(unconstr_list, fields)
-    p_constr <- get_named_pvalues(constr_list, fields)
-
-    if (is.null(p_emp) || is.null(p_unconstr) || is.null(p_constr)) {
-      return(tibble())
-    }
-
-    taxon <- names(p_emp)
-    if (is.null(taxon)) {
-      taxon <- seq_along(p_emp)
-    }
-
-    tibble(
-      measure = measure,
-      taxon = taxon,
-      empirical = as.numeric(p_emp),
-      unconstrained = as.numeric(p_unconstr),
-      constrained = as.numeric(p_constr)
-    )
-  })
-
-  if (nrow(centrality_pvalues_wide) == 0) {
-    return(tibble(
-      measure = character(),
-      taxon = character(),
-      method = character(),
-      p_value = numeric()
-    ))
-  }
-
-  centrality_pvalues_wide %>%
-    pivot_longer(
-      cols = c(empirical, unconstrained, constrained),
-      names_to = "method",
-      values_to = "p_value"
-    )
-}
-
-plot_pvalue_pairs <- function(pval_long, id_cols, method_order = NULL) {
-  if (is.null(method_order)) {
-    method_order <- unique(pval_long$method)
-  }
-
-  pval_wide <- pval_long %>%
-    mutate(method = factor(method, levels = method_order)) %>%
-    pivot_wider(names_from = method, values_from = p_value)
-
-  pair_df <- combn(method_order, 2, simplify = FALSE) %>%
-    purrr::map_dfr(function(method_pair) {
-      pval_wide %>%
-        transmute(
-          across(all_of(id_cols)),
-          comparison = paste(method_pair, collapse = " vs "),
-          x = .data[[method_pair[1]]],
-          y = .data[[method_pair[2]]]
-        )
-    }) %>%
-    filter(is.finite(x), is.finite(y), x > 0, y > 0)
-
-  if (nrow(pair_df) == 0) {
-    stop("No positive finite p-value pairs available for log-scaled plotting.")
-  }
-
-  pvalue_limits <- range(c(pair_df$x, pair_df$y), na.rm = TRUE)
-
-  ggplot(pair_df, aes(x = x, y = y)) +
-    geom_abline(slope = 1, intercept = 0, color = "gray60") +
-    geom_point(alpha = 0.7, size = 1.5) +
-    facet_wrap(~ comparison) +
-    scale_x_log10(limits = pvalue_limits) +
-    scale_y_log10(limits = pvalue_limits) +
-    coord_equal() +
-    labs(x = "p-value, method 1",
-         y = "p-value, method 2") +
-    theme_bw()
 }
 
 plot_diffnet_pvalues_by_association_difference <- function(
     pval_long,
-    method_order = c("empirical", "unconstrained", "constrained", "fisher")) {
+    method_order = c("empirical", "unconstrained", "constrained"),
+    dot_size_nonsig = 2.5, dot_size_sig = 4, alpha = 1) {
+  
   method_labels <- c(
     empirical = "Empirical",
     unconstrained = "GPD unconstrained",
-    constrained = "GPD constrained",
-    fisher = "Fisher test"
+    constrained = "GPD constrained"
   )
-
+  
   zero_counts <- pval_long %>%
     group_by(method) %>%
     summarise(
@@ -2829,13 +2978,13 @@ plot_diffnet_pvalues_by_association_difference <- function(
     mutate(
       method = factor(method, levels = method_order),
       method_label = paste0(
-        method_labels[as.character(method)],
-        "\n(zeros: ", n_zero, " / ", n_total, ")"
+        method_labels[as.character(method)]
+        #"\n(zeros: ", n_zero, " / ", n_total, ")"
       )
     ) %>%
     arrange(method) %>%
     mutate(method = as.character(method))
-
+  
   plot_df <- pval_long %>%
     left_join(zero_counts %>% select(method, method_label), by = "method") %>%
     mutate(
@@ -2845,7 +2994,7 @@ plot_diffnet_pvalues_by_association_difference <- function(
       point_color = if_else(
         significant_BH,
         association_color,
-        "gray65"
+        "gray85"
       )
     ) %>%
     filter(
@@ -2853,11 +3002,11 @@ plot_diffnet_pvalues_by_association_difference <- function(
       is.finite(p_value),
       p_value >= 0
     )
-
+  
   if (nrow(plot_df) == 0) {
     stop("No finite non-negative p-values available for log-scaled plotting.")
   }
-
+  
   positive_pvalues <- plot_df$p_value[plot_df$p_value > 0]
   if (length(positive_pvalues) == 0) {
     stop("At least one positive p-value is needed to define the log scale.")
@@ -2865,8 +3014,8 @@ plot_diffnet_pvalues_by_association_difference <- function(
   
   min_positive_pvalue <- min(positive_pvalues, na.rm = TRUE)
   max_positive_pvalue <- max(positive_pvalues, na.rm = TRUE)
-  zero_pvalue_position <- min_positive_pvalue / 10
-  y_lower_limit <- zero_pvalue_position / 1.5
+  zero_pvalue_position <- min_positive_pvalue / 20
+  y_lower_limit <- zero_pvalue_position / 2
   y_breaks <- c(
     zero_pvalue_position,
     10^seq(
@@ -2878,7 +3027,7 @@ plot_diffnet_pvalues_by_association_difference <- function(
     y_breaks >= zero_pvalue_position &
       y_breaks <= max_positive_pvalue
   ]
-
+  
   plot_df <- plot_df %>%
     mutate(
       p_value_plot = if_else(
@@ -2887,12 +3036,20 @@ plot_diffnet_pvalues_by_association_difference <- function(
         p_value
       )
     )
-
+  
   ggplot(plot_df, aes(x = association_difference, y = p_value_plot)) +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
     geom_point(
+      data = function(x) filter(x, !significant_BH),
+      color = "gray75",
+      alpha = alpha,
+      size = dot_size_nonsig
+    ) +
+    geom_point(
+      data = function(x) filter(x, significant_BH),
       aes(color = point_color),
-      alpha = 0.65,
-      size = 1.4
+      alpha = alpha,
+      size = dot_size_sig
     ) +
     facet_wrap(~ method_label, nrow = 1) +
     scale_color_identity() +
@@ -2915,13 +3072,49 @@ plot_diffnet_pvalues_by_association_difference <- function(
 }
 ```
 
-### diffnet P-Values
-
-```{r diffnet_raw_pvalue_comparison, fig.width=10, fig.height=5, dpi=250}
-diffnet_pvalues_long <- extract_diffnet_pvalues(
-  palette = "Spectral"
+```{r diffnet_raw_pvalue_comparison, fig.width=10, fig.height=4, dpi=250}
+okabe_ito_9 <- c(
+  "#E69F00", # orange
+  "#56B4E9", # sky blue
+  "#009E73", # bluish green
+  "#F0E442", # yellow
+  "#0072B2", # blue
+  "#D55E00", # vermillion
+  "#CC79A7", # reddish purple
+  "#a0e426", # green
+  "#52e3e1"  # turquoise
 )
 
+okabe_ito_9 <- c(
+  "#CC79A7", # orange
+  "#F0E442", # sky blue
+  "#F0E442", # bluish green
+  "#F0E442", # yellow
+  "#56B4E9", # blue
+  "#009E73", # vermillion
+  "#E69F00", # reddish purple
+  "#F0E442", # green
+  "#F0E442"  # turquoise
+)
+
+diffnet_pvalues_long <- extract_diffnet_pvalues(
+  palette = okabe_ito_9
+)
+
+plot_diffnet_pvalues_by_association_difference(
+  diffnet_pvalues_long,
+  method_order = c("empirical", "unconstrained", "constrained"),
+  dot_size_sig = 3, dot_size_nonsig = 2.5, alpha = 1
+) +
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  )
+```
+
+
+```{r}
 diffnet_pvalue_summary <- diffnet_pvalues_long %>%
   group_by(method) %>%
   summarise(
@@ -2945,42 +3138,351 @@ diffnet_pvalue_summary <- diffnet_pvalues_long %>%
 
 diffnet_pvalue_summary
 
-plot_diffnet_pvalues_by_association_difference(
-  diffnet_pvalues_long,
-  method_order = c("empirical", "unconstrained", "constrained", "fisher")
-)
-```
-
-### netCompare Centrality P-Values
-
-```{r netcompare_centrality_raw_pvalue_comparison, fig.width=10, fig.height=6, dpi=250}
-netcompare_centrality_pvalues_long <- extract_centrality_pvalues(
-  comp_emp = comp_ebf_emp_noBH,
-  comp_unconstr = comp_ebf_GPD_noConstr_noBH,
-  comp_constr = comp_ebf_GPD_constr_noBH
-)
-
-netcompare_centrality_pvalue_summary <- netcompare_centrality_pvalues_long %>%
-  group_by(measure, method) %>%
+diffnet_palette_summary <- diffnet_pvalues_long %>%
+  filter(!is.na(association_color)) %>%
+  distinct(test_id, association_difference, association_color) %>%
   summarise(
-    n = sum(is.finite(p_value)),
-    min = min(p_value, na.rm = TRUE),
-    q25 = quantile(p_value, 0.25, na.rm = TRUE),
-    median = median(p_value, na.rm = TRUE),
-    q75 = quantile(p_value, 0.75, na.rm = TRUE),
-    max = max(p_value, na.rm = TRUE),
-    .groups = "drop"
+    n_colored_associations = n(),
+    min_abs_difference = min(abs(association_difference), na.rm = TRUE),
+    max_abs_difference = max(abs(association_difference), na.rm = TRUE),
+    n_unique_colors = n_distinct(association_color)
   )
 
-netcompare_centrality_pvalue_summary
-
-plot_pvalue_pairs(
-  netcompare_centrality_pvalues_long,
-  id_cols = c("measure", "taxon"),
-  method_order = c("empirical", "unconstrained", "constrained")
-) +
-  facet_grid(measure ~ comparison)
+diffnet_palette_summary
 ```
+
+```{r diffnet_significant_BH_table}
+diffnet_significant_BH_table <- diffnet_pvalues_long %>%
+  group_by(test_id) %>%
+  filter(any(p_adjust < 0.05, na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(
+    test_id,
+    taxon1,
+    taxon2,
+    association_difference,
+    method,
+    p_value
+  ) %>%
+  pivot_wider(
+    names_from = method,
+    values_from = p_value,
+    names_prefix = "p_"
+  ) %>%
+  mutate(abs_difference = abs(association_difference)) %>%
+  #arrange(desc(abs_difference)) %>%
+  arrange(p_unconstrained) %>%
+  select(
+    taxon1,
+    taxon2,
+    association_difference,
+    p_empirical,
+    p_unconstrained,
+    p_constrained
+  )
+
+significant_diffnet_taxa <- diffnet_significant_BH_table %>%
+  select(taxon1, taxon2) %>%
+  unlist(use.names = FALSE) %>%
+  unique()
+significant_diffnet_taxa <- setNames(significant_diffnet_taxa,
+                                     significant_diffnet_taxa)
+
+diffnet_significant_BH_table
+
+diffnet_significant_BH_table_latex_data <- diffnet_significant_BH_table %>%
+  mutate(
+    association_difference = formatC(
+      association_difference,
+      format = "f",
+      digits = 3
+    ),
+    across(
+      starts_with("p_"),
+      ~ format.pval(.x, digits = 3, eps = 1e-300)
+    )
+  )
+
+diffnet_significant_BH_table_latex <- knitr::kable(
+  diffnet_significant_BH_table_latex_data,
+  format = "latex",
+  booktabs = TRUE,
+  caption = paste(
+    "Differential associations significant after BH adjustment in at least",
+    "one permutation-based diffnet analysis."
+  ),
+  col.names = c(
+    "Taxon 1",
+    "Taxon 2",
+    "Difference",
+    "Empirical p",
+    "GPD unconstrained p",
+    "GPD constrained p"
+  )
+)
+
+writeLines(
+  diffnet_significant_BH_table_latex,
+  path_target("diffnet_significant_BH_table.tex")
+)
+```
+
+## Network plots
+
+```{r, fig.width=12, fig.height=6, dpi=250}
+names(significant_diffnet_taxa) <- significant_diffnet_taxa
+
+label_info_ebf_final <- make_network_plot_labels(
+  props = props_ebf_corshrink_bayesMult,
+  top_abundant_taxa = top_abundant_taxa,
+  n_abundant = 5,
+  n_central = 5,
+  extra_taxa = significant_diffnet_taxa,
+  label_overrides = network_label_overrides
+)
+
+labels_ebf_corshrink_bayesMult <- label_info_ebf_final$labels
+taxa_to_plot_ebf_final <- label_info_ebf_final$taxa_to_plot
+
+p_ebf_final <- plot_group_network(
+  props_ebf_corshrink_bayesMult,
+  same_layout = TRUE,
+  labels = labels_ebf_corshrink_bayesMult,
+  repulsion = 0.8799999999,
+  doPlot = FALSE,
+  rmSingles = FALSE,
+  nodeFilter = "names",
+  nodeFilterPar = taxa_to_plot_ebf_final
+)
+```
+
+
+```{r thesis_ebf_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
+layout_ebf_final <- p_ebf_final$layout$layout1
+layout_ebf_final["Faecalicoccus", 2] <- 0.33
+layout_ebf_final["Lawsonella", 2] <- 0.08
+layout_ebf_final["Epulopiscium", 2] <- -0.08
+layout_ebf_final["24_Enterobacteriaceae(F)", 1] <- 0.7
+layout_ebf_final["Christensenellaceae_R-7_group", 2] <- -0.19
+layout_ebf_final["Lachnospiraceae_NK4A136_group", 2] <- -0.26
+layout_ebf_final["[Eubacterium]_coprostanoligenegroup", 2] <- -0.41
+layout_ebf_final["Staphylococcus", 2] <- 0.08
+layout_ebf_final["Haemophilus", 2] <- 0.35
+layout_ebf_final["Gemella", ] <- c(0.75, 0.43)
+
+plot_group_network(props_ebf_corshrink_bayesMult, same_layout = TRUE, 
+                   labels = labels_ebf_corshrink_bayesMult, 
+                   layout = layout_ebf_final,
+                   rmSingles = FALSE,
+                   nodeFilter = "names",
+                   nodeFilterPar = taxa_to_plot_ebf_final,
+                   phylum_legend_x = -0.18,
+                   phylum_legend_y = 1.35,
+                   asso_legend_x   = -0.15,
+                   asso_legend_y   = -0.8)
+```
+
+```{r thesis_ebf_diffnet_plot_same_layout, fig.width=10, fig.height=6, dpi=250}
+p_diff <- plot(
+  diff_ebf_constr_BH,
+  layout = layout_ebf_final,
+  labels = significant_diffnet_taxa,
+  rmSingles = FALSE,
+  nodeFilter = "names",
+  nodeFilterPar = taxa_to_plot_ebf_final,
+  edgeTransp = 0,
+  labelScale = FALSE,
+  cexLabels = 1.2,
+  title = "",
+  cexLegend = 1.3,
+  edgeWidth = 0.7,
+  legendArgs = list(lwd = 5),
+  legendGroupnames = c("non-EBF", "EBF"),
+  mar = c(1, 3, 2, 18)
+)
+```
+
+```{r thesis_ebf_degree_distribution_side_by_side, fig.width=10, fig.height=3, dpi=250}
+adja_ebf_final1 <- props_ebf_corshrink_bayesMult$input$adjaMat1
+adja_ebf_final2 <- props_ebf_corshrink_bayesMult$input$adjaMat2
+
+degree_taxa_ebf_final <- intersect(
+  taxa_to_plot_ebf_final,
+  intersect(rownames(adja_ebf_final1), rownames(adja_ebf_final2))
+)
+
+adja_ebf_final1 <- adja_ebf_final1[
+  degree_taxa_ebf_final,
+  degree_taxa_ebf_final,
+  drop = FALSE
+]
+adja_ebf_final2 <- adja_ebf_final2[
+  degree_taxa_ebf_final,
+  degree_taxa_ebf_final,
+  drop = FALSE
+]
+
+diag(adja_ebf_final1) <- 0
+diag(adja_ebf_final2) <- 0
+
+degree_ebf_final1 <- rowSums(adja_ebf_final1 != 0)
+degree_ebf_final2 <- rowSums(adja_ebf_final2 != 0)
+max_degree_ebf_final <- max(degree_ebf_final1, degree_ebf_final2)
+
+degree_distribution_ebf_final <- bind_rows(
+  tibble(
+    group = "non-EBF",
+    degree = degree_ebf_final1
+  ),
+  tibble(
+    group = "EBF",
+    degree = degree_ebf_final2
+  )
+) %>%
+  count(group, degree, name = "n") %>%
+  group_by(group) %>%
+  complete(degree = 0:max_degree_ebf_final, fill = list(n = 0)) %>%
+  mutate(fraction = n / sum(n)) %>%
+  ungroup()
+
+degree_x_breaks_ebf_final <- seq(
+  0,
+  max(5, ceiling(max_degree_ebf_final / 5) * 5),
+  by = 5
+)
+
+ggplot(
+  degree_distribution_ebf_final,
+  aes(x = degree, y = fraction, group = group)
+) +
+  geom_line(color = "gray30", linewidth = 0.6) +
+  geom_point(color = "gray30", size = 1.8) +
+  facet_wrap(~ group, nrow = 1) +
+  scale_x_continuous(
+    breaks = degree_x_breaks_ebf_final,
+    limits = c(0, max(degree_x_breaks_ebf_final))
+  ) +
+  labs(
+    x = "Degree",
+    y = "Fraction"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 17),
+    axis.text = element_text(size = 16),
+    strip.text = element_text(size = 17)
+  )
+```
+
+## Heatmaps for labelled taxa
+
+```{r, fig.width=10, fig.height=7, dpi=250}
+labelled_taxa_ebf_final <- names(labels_ebf_corshrink_bayesMult)[
+  labels_ebf_corshrink_bayesMult != ""
+]
+labelled_taxa_ebf_final <- intersect(
+  labelled_taxa_ebf_final,
+  colnames(counts_ebf_rel_bayesMult)
+)
+
+if (length(labelled_taxa_ebf_final) == 0) {
+  stop("No labelled taxa found in the abundance matrix.")
+}
+
+labelled_taxa_order <- colMeans(
+  counts_ebf_rel[, labelled_taxa_ebf_final, drop = FALSE],
+  na.rm = TRUE
+) %>%
+  sort(decreasing = TRUE) %>%
+  names()
+
+counts_ebf_clr_bayesMult <- log(counts_ebf_rel_bayesMult)
+counts_ebf_clr_bayesMult <- sweep(
+  counts_ebf_clr_bayesMult,
+  1,
+  rowMeans(counts_ebf_clr_bayesMult),
+  "-"
+)
+
+sample_order_heatmap <- order(metadata_ebf$ebf_group)
+clr_heatmap_mat <- t(
+  counts_ebf_clr_bayesMult[
+    sample_order_heatmap,
+    labelled_taxa_order,
+    drop = FALSE
+  ]
+)
+
+rownames(clr_heatmap_mat) <- labels_ebf_corshrink_bayesMult[
+  labelled_taxa_order
+]
+
+annotation_col_heatmap <- data.frame(
+  EBF = metadata_ebf$ebf_group[sample_order_heatmap],
+  row.names = rownames(counts_ebf_clr_bayesMult)[sample_order_heatmap]
+)
+annotation_colors_heatmap <- list(
+  EBF = c("non-EBF" = "#1F78B4", "EBF" = "#E66101")
+)
+```
+
+
+```{r thesis_labelled_taxa_clr_heatmap, fig.width=12, fig.height=7, dpi=250}
+clr_heatmap_lim <- max(abs(clr_heatmap_mat), na.rm = TRUE)
+clr_heatmap_breaks <- seq(
+  -clr_heatmap_lim,
+  clr_heatmap_lim,
+  length.out = 102
+)
+
+pheatmap(
+  mat = clr_heatmap_mat,
+  cluster_rows = FALSE,
+  cluster_cols = FALSE,
+  annotation_col = annotation_col_heatmap,
+  annotation_colors = annotation_colors_heatmap,
+  show_colnames = FALSE,
+  border_color = NA,
+  color = colorRampPalette(c("#2166AC", "white", "#B2182B"))(101),
+  breaks = clr_heatmap_breaks,
+  main = "CLR-transformed abundance of labelled taxa",
+  fontsize_row = 14,   # taxa names
+  fontsize_col = 10,   # sample names, if shown
+  fontsize = 12,       # general text
+  fontsize_number = 10 # only if display_numbers = TRUE
+)
+```
+
+```{r labelled_taxa_relative_abundance_heatmap, fig.width=12, fig.height=7, dpi=250}
+rel_abund_heatmap_mat <- t(
+  counts_ebf_rel_bayesMult[
+    sample_order_heatmap,
+    labelled_taxa_order,
+    drop = FALSE
+  ]
+)
+
+rownames(rel_abund_heatmap_mat) <- labels_ebf_corshrink_bayesMult[
+  labelled_taxa_order
+]
+
+pheatmap(
+  mat = log10(rel_abund_heatmap_mat),
+  cluster_rows = FALSE,
+  cluster_cols = FALSE,
+  annotation_col = annotation_col_heatmap,
+  annotation_colors = annotation_colors_heatmap,
+  show_colnames = FALSE,
+  border_color = NA,
+  color = colorRampPalette(c("white", "#FEE08B", "#D73027"))(101),
+  main = "Relative abundance of labelled taxa",
+  fontsize_row = 14,   # taxa names
+  fontsize_col = 10,   # sample names, if shown
+  fontsize = 12,       # general text
+  fontsize_number = 10 # only if display_numbers = TRUE
+)
+```
+
 
 ## Files Written
 
