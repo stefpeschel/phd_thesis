@@ -1,0 +1,73 @@
+This is BibTeX, Version 0.99e
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: thesis.aux
+Reallocating 'name_of_file' (item size: 1) to 32 items.
+A level-1 auxiliary file: intro_chapters/0_title_page.aux
+Reallocating 'name_of_file' (item size: 1) to 27 items.
+A level-1 auxiliary file: intro_chapters/0_quote.aux
+Reallocating 'name_of_file' (item size: 1) to 29 items.
+A level-1 auxiliary file: intro_chapters/0_summary.aux
+Reallocating 'name_of_file' (item size: 1) to 38 items.
+A level-1 auxiliary file: intro_chapters/0_acknowledgements.aux
+Reallocating 'name_of_file' (item size: 1) to 33 items.
+A level-1 auxiliary file: main_chapters/1_introduction.aux
+Reallocating 'name_of_file' (item size: 1) to 36 items.
+A level-1 auxiliary file: main_chapters/2_microbiome_data.aux
+Reallocating 'name_of_file' (item size: 1) to 40 items.
+A level-1 auxiliary file: main_chapters/3_community_summaries.aux
+Reallocating 'name_of_file' (item size: 1) to 34 items.
+A level-1 auxiliary file: main_chapters/4_feature_level.aux
+Reallocating 'name_of_file' (item size: 1) to 28 items.
+A level-1 auxiliary file: main_chapters/5_NetCoMi.aux
+Reallocating 'name_of_file' (item size: 1) to 31 items.
+A level-1 auxiliary file: main_chapters/6_permApprox.aux
+Reallocating 'name_of_file' (item size: 1) to 32 items.
+A level-1 auxiliary file: main_chapters/7_application.aux
+Reallocating 'name_of_file' (item size: 1) to 31 items.
+A level-1 auxiliary file: main_chapters/8_discussion.aux
+Reallocating 'name_of_file' (item size: 1) to 8 items.
+The style file: apalike.bst
+Reallocating 'name_of_file' (item size: 1) to 11 items.
+Reallocating 'field_info' (item size: 4) to 10324 items.
+Database file #1: references.bib
+You've used 242 entries,
+            1935 wiz_defined-function locations,
+            1752 strings with 59802 characters,
+and the built_in function-call counts, 114248 in all, are:
+= -- 10562
+> -- 6949
+< -- 121
++ -- 2613
+- -- 2510
+* -- 11008
+:= -- 20382
+add.period$ -- 716
+call.type$ -- 242
+change.case$ -- 2444
+chr.to.int$ -- 241
+cite$ -- 242
+duplicate$ -- 3363
+empty$ -- 6660
+format.name$ -- 2860
+if$ -- 21347
+int.to.chr$ -- 2
+int.to.str$ -- 0
+missing$ -- 240
+newline$ -- 1193
+num.names$ -- 729
+pop$ -- 1987
+preamble$ -- 1
+purify$ -- 2462
+quote$ -- 0
+skip$ -- 2542
+stack$ -- 0
+substring$ -- 7232
+swap$ -- 275
+text.length$ -- 11
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 1412
+warning$ -- 0
+while$ -- 804
+width$ -- 0
+write$ -- 3098

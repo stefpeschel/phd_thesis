@@ -1,0 +1,222 @@
+\@ifundefined {etoctocstyle}{\let \etoc@startlocaltoc \@gobble \let \etoc@settocdepth \@gobble \let \etoc@depthtag \@gobble \let \etoc@setlocaltop \@gobble }{}
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{Zusammenfassung}{I}{chapter*.1}%
+\contentsline {chapter}{Summary}{III}{chapter*.2}%
+\contentsline {chapter}{Acknowledgements}{V}{chapter*.3}%
+\contentsline {chapter}{\numberline {1}Introduction}{3}{chapter.1}%
+\etoc@startlocaltoc {2}
+\contentsline {section}{\numberline {1.1}Microbiome data as statistical objects}{4}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Analysis targets in microbiome studies}{6}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Permutation testing as a unifying approach}{8}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Main contributions}{9}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Thesis outline}{11}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Notation}{12}{section.1.6}%
+\contentsline {chapter}{\numberline {2}Microbiome data as statistical objects}{13}{chapter.2}%
+\etoc@startlocaltoc {3}
+\contentsline {section}{\numberline {2.1}Introduction}{14}{section.2.1}%
+\contentsline {section}{\numberline {2.2}From sequencing reads to count matrices}{14}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Characteristics of microbiome data}{16}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Compositionality and induced dependence}{17}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Library size variability}{18}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Sparsity and excess zeros}{19}{subsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.3.4}Overdispersion and heterogeneity}{20}{subsection.2.3.4}%
+\contentsline {subsection}{\numberline {2.3.5}High dimensionality}{20}{subsection.2.3.5}%
+\contentsline {subsection}{\numberline {2.3.6}Consequences for statistical analysis}{21}{subsection.2.3.6}%
+\contentsline {section}{\numberline {2.4}Taxonomic aggregation}{22}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Filtering of samples and taxa}{24}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Sample filtering}{25}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}Taxa filtering}{25}{subsection.2.5.2}%
+\contentsline {section}{\numberline {2.6}Normalization and library-size adjustment}{26}{section.2.6}%
+\contentsline {subsection}{\numberline {2.6.1}Scaling-based library size adjustment}{27}{subsection.2.6.1}%
+\contentsline {subsection}{\numberline {2.6.2}Rarefaction}{29}{subsection.2.6.2}%
+\contentsline {section}{\numberline {2.7}Handling zero counts}{30}{section.2.7}%
+\contentsline {subsection}{\numberline {2.7.1}Types of zeros}{31}{subsection.2.7.1}%
+\contentsline {subsection}{\numberline {2.7.2}Replacement and imputation strategies}{32}{subsection.2.7.2}%
+\contentsline {section}{\numberline {2.8}Transformations}{36}{section.2.8}%
+\contentsline {subsection}{\numberline {2.8.1}Variance-stabilizing transformations}{37}{subsection.2.8.1}%
+\contentsline {subsection}{\numberline {2.8.2}Log-ratio transformations}{38}{subsection.2.8.2}%
+\contentsline {section}{\numberline {2.9}CLR transformations in the presence of zeros}{40}{section.2.9}%
+\contentsline {subsection}{\numberline {2.9.1}CLR after multiplicative replacement}{41}{subsection.2.9.1}%
+\contentsline {subsection}{\numberline {2.9.2}Modified CLR (mCLR)}{42}{subsection.2.9.2}%
+\contentsline {subsection}{\numberline {2.9.3}Geometric mean extension and offset-based CLR}{43}{subsection.2.9.3}%
+\contentsline {subsection}{\numberline {2.9.4}Comparative example}{45}{subsection.2.9.4}%
+\contentsline {section}{\numberline {2.10}Statistical consequences of preprocessing}{49}{section.2.10}%
+\contentsline {section}{\numberline {2.11}Preprocessing choices in this thesis}{51}{section.2.11}%
+\contentsline {chapter}{\numberline {3}Community-level summaries}{55}{chapter.3}%
+\etoc@startlocaltoc {4}
+\contentsline {section}{\numberline {3.1}Introduction}{56}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Within-sample diversity}{57}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Richness estimation}{58}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Diversity indices}{60}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.3}Testing within-sample diversity}{61}{subsection.3.2.3}%
+\contentsline {subsection}{\numberline {3.2.4}Regression modeling of within-sample diversity}{62}{subsection.3.2.4}%
+\contentsline {section}{\numberline {3.3}Between-sample dissimilarity}{65}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Beta diversity as a dissimilarity-based summary}{65}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Bray--Curtis dissimilarity}{67}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Euclidean distance for compositional data}{68}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Ordination}{69}{subsection.3.3.4}%
+\contentsline {subsection}{\numberline {3.3.5}PERMANOVA and distance-based testing}{70}{subsection.3.3.5}%
+\contentsline {subsection}{\numberline {3.3.6}Community dispersion}{72}{subsection.3.3.6}%
+\contentsline {section}{\numberline {3.4}Regression models for compositional responses}{74}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Approaches for modeling microbial compositions}{75}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}CLR-based multivariate regression}{76}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Testing covariate effects}{77}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}Compositional equivalence}{79}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Concept and hypothesis}{80}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Maximum-type test statistic}{81}{subsection.3.5.2}%
+\contentsline {subsection}{\numberline {3.5.3}Permutation-based inference and application}{81}{subsection.3.5.3}%
+\contentsline {chapter}{\numberline {4}Feature-level measures}{83}{chapter.4}%
+\etoc@startlocaltoc {5}
+\contentsline {section}{\numberline {4.1}Introduction}{84}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Exploratory taxon-level analysis}{85}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Differential abundance analysis}{86}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Overview of existing methods}{87}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}DACOMP}{88}{subsection.4.3.2}%
+\contentsline {section}{\numberline {4.4}Differential distribution analysis}{90}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Overview of existing methods}{91}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Two-stage differential distribution testing with \texttt {waddR}}{92}{subsection.4.4.2}%
+\contentsline {subsection}{\numberline {4.4.3}Adaptation of \texttt {waddR} to microbiome data}{93}{subsection.4.4.3}%
+\contentsline {chapter}{\numberline {5}Association networks with NetCoMi}{95}{chapter.5}%
+\etoc@startlocaltoc {6}
+\contentsline {section}{\numberline {5.1}Introduction}{98}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Network construction}{98}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Sparse (inverse) covariance estimation}{100}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Association estimation for microbiome data}{103}{subsection.5.2.2}%
+\contentsline {subsubsection}{SparCC}{103}{subsubsection*.5}%
+\contentsline {subsubsection}{CCLasso}{104}{subsubsection*.6}%
+\contentsline {subsubsection}{SPIEC-EASI}{104}{subsubsection*.7}%
+\contentsline {subsubsection}{SPRING}{106}{subsubsection*.8}%
+\contentsline {subsubsection}{Proportionality}{106}{subsubsection*.9}%
+\contentsline {subsubsection}{Shrinkage proportionality}{107}{subsubsection*.10}%
+\contentsline {subsection}{\numberline {5.2.3}Accounting for latent confounding in association estimation}{108}{subsection.5.2.3}%
+\contentsline {subsection}{\numberline {5.2.4}Sparsification}{109}{subsection.5.2.4}%
+\contentsline {subsection}{\numberline {5.2.5}From sparse associations to edge weights}{110}{subsection.5.2.5}%
+\contentsline {section}{\numberline {5.3}Network analysis}{112}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Connected components and shortest paths}{112}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Centrality measures and hubs}{113}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}Global network properties}{116}{subsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.3.4}Clustering and modular structure}{118}{subsection.5.3.4}%
+\contentsline {subsection}{\numberline {5.3.5}Graphlet-based network summaries}{119}{subsection.5.3.5}%
+\contentsline {section}{\numberline {5.4}Network comparison}{121}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}Differential association analysis}{122}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}Differential network analysis}{124}{subsection.5.4.2}%
+\contentsline {section}{\numberline {5.5}From modular methods to a coherent workflow}{127}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}Motivation and design objectives}{127}{subsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.5.2}Package architecture}{129}{subsection.5.5.2}%
+\contentsline {subsection}{\numberline {5.5.3}Network construction with \texttt {netConstruct}}{131}{subsection.5.5.3}%
+\contentsline {subsection}{\numberline {5.5.4}Network analysis and visualization with \texttt {netAnalyze}}{135}{subsection.5.5.4}%
+\contentsline {subsubsection}{Complete networks and connected components}{135}{subsubsection*.11}%
+\contentsline {subsubsection}{Configurable hub identification}{136}{subsubsection*.12}%
+\contentsline {subsubsection}{Linking numerical summaries and visualization}{136}{subsubsection*.13}%
+\contentsline {subsection}{\numberline {5.5.5}Comparative network inference with \texttt {netCompare} and \texttt {diffnet}}{137}{subsection.5.5.5}%
+\contentsline {subsubsection}{Reusing permuted association matrices with \texttt {createAssoPerm}}{139}{subsubsection*.14}%
+\contentsline {subsubsection}{Comparison-specific outputs and visualization}{140}{subsubsection*.15}%
+\contentsline {section}{\numberline {5.6}Discussion}{141}{section.5.6}%
+\contentsline {chapter}{\numberline {6}Approximation of permutation p-values with permApprox}{145}{chapter.6}%
+\etoc@startlocaltoc {7}
+\contentsline {section}{\numberline {6.1}Introduction}{149}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Permutation testing under finite resolution}{151}{section.6.2}%
+\contentsline {section}{\numberline {6.3}GPD-based $p$-value approximation}{152}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Proposed constrained GPD fitting}{154}{section.6.4}%
+\contentsline {section}{\numberline {6.5}The \texttt {permApprox} workflow}{156}{section.6.5}%
+\contentsline {subsection}{\numberline {6.5.1}Overview and scope of the workflow}{156}{subsection.6.5.1}%
+\contentsline {subsection}{\numberline {6.5.2}Overview of simulation studies}{160}{subsection.6.5.2}%
+\contentsline {subsection}{\numberline {6.5.3}Default \texttt {permApprox} configuration and implementation}{161}{subsection.6.5.3}%
+\contentsline {subsection}{\numberline {6.5.4}Remarks on single and multiple testing}{162}{subsection.6.5.4}%
+\contentsline {section}{\numberline {6.6}Threshold selection for permutation tails}{163}{section.6.6}%
+\contentsline {subsection}{\numberline {6.6.1}Principles of threshold selection in POT modeling}{163}{subsection.6.6.1}%
+\contentsline {subsection}{\numberline {6.6.2}Threshold selection in $p$-value approximation}{164}{subsection.6.6.2}%
+\contentsline {subsection}{\numberline {6.6.3}Existing threshold selection approaches}{165}{subsection.6.6.3}%
+\contentsline {subsection}{\numberline {6.6.4}Additional approaches developed in this work}{168}{subsection.6.6.4}%
+\contentsline {subsection}{\numberline {6.6.5}Simulation study on threshold recovery}{174}{subsection.6.6.5}%
+\contentsline {subsubsection}{Smooth bulk-tail transition}{175}{subsubsection*.16}%
+\contentsline {subsubsection}{Sharp bulk-tail transition}{176}{subsubsection*.17}%
+\contentsline {subsubsection}{Simulation results with repeated samples}{178}{subsubsection*.18}%
+\contentsline {subsection}{\numberline {6.6.6}Simulation study on $p$-value recovery}{180}{subsection.6.6.6}%
+\contentsline {subsection}{\numberline {6.6.7}Study on the number of starting exceedances}{182}{subsection.6.6.7}%
+\contentsline {subsection}{\numberline {6.6.8}Default threshold detection approach}{183}{subsection.6.6.8}%
+\contentsline {section}{\numberline {6.7}Derivation of a data-adaptive $\varepsilon $ rule}{184}{section.6.7}%
+\contentsline {subsection}{\numberline {6.7.1}Motivation}{184}{subsection.6.7.1}%
+\contentsline {subsection}{\numberline {6.7.2}Simulation setup}{185}{subsection.6.7.2}%
+\contentsline {subsection}{\numberline {6.7.3}From linear dependence to the log-saturation rule}{186}{subsection.6.7.3}%
+\contentsline {subsection}{\numberline {6.7.4}Lift for intermediate statistics}{190}{subsection.6.7.4}%
+\contentsline {subsection}{\numberline {6.7.5}Permutation-based cap}{192}{subsection.6.7.5}%
+\contentsline {subsection}{\numberline {6.7.6}Standardization}{194}{subsection.6.7.6}%
+\contentsline {subsection}{\numberline {6.7.7}Final $\varepsilon $ rule}{196}{subsection.6.7.7}%
+\contentsline {subsection}{\numberline {6.7.8}Data-adaptive $\varepsilon $ refinement}{197}{subsection.6.7.8}%
+\contentsline {section}{\numberline {6.8}GPD parameter estimation}{198}{section.6.8}%
+\contentsline {subsection}{\numberline {6.8.1}Methods for GPD parameter estimation}{199}{subsection.6.8.1}%
+\contentsline {subsection}{\numberline {6.8.2}Simulation study on parameter recovery}{205}{subsection.6.8.2}%
+\contentsline {subsection}{\numberline {6.8.3}Tolerance calibration for GPD estimation methods}{207}{subsection.6.8.3}%
+\contentsline {subsection}{\numberline {6.8.4}Simulation study on robustness under support constraints}{210}{subsection.6.8.4}%
+\contentsline {subsection}{\numberline {6.8.5}Runtime comparison of GPD fitting methods}{213}{subsection.6.8.5}%
+\contentsline {subsection}{\numberline {6.8.6}Decision for a default estimation method}{214}{subsection.6.8.6}%
+\contentsline {section}{\numberline {6.9}Simulation studies}{215}{section.6.9}%
+\contentsline {subsection}{\numberline {6.9.1}Compared methods}{215}{subsection.6.9.1}%
+\contentsline {subsection}{\numberline {6.9.2}Two-sample \textit {t}-test with Gaussian data}{216}{subsection.6.9.2}%
+\contentsline {subsection}{\numberline {6.9.3}Wilcoxon rank-sum test with exponential data}{218}{subsection.6.9.3}%
+\contentsline {section}{\numberline {6.10}Discussion}{220}{section.6.10}%
+\contentsline {chapter}{\numberline {7}Integrated analysis of the PASTURE cohort}{223}{chapter.7}%
+\etoc@startlocaltoc {8}
+\contentsline {section}{\numberline {7.1}Introduction}{226}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Data description and preprocessing}{226}{section.7.2}%
+\contentsline {subsection}{\numberline {7.2.1}Study design and metadata}{226}{subsection.7.2.1}%
+\contentsline {subsection}{\numberline {7.2.2}Microbiome data generation}{227}{subsection.7.2.2}%
+\contentsline {subsection}{\numberline {7.2.3}Preprocessing of the microbiome data}{227}{subsection.7.2.3}%
+\contentsline {subsection}{\numberline {7.2.4}Reduced analysis data set}{228}{subsection.7.2.4}%
+\contentsline {subsection}{\numberline {7.2.5}Taxonomic aggregation and prevalence filtering}{229}{subsection.7.2.5}%
+\contentsline {subsection}{\numberline {7.2.6}Default data set for downstream analyses}{232}{subsection.7.2.6}%
+\contentsline {section}{\numberline {7.3}Within-sample diversity}{235}{section.7.3}%
+\contentsline {subsection}{\numberline {7.3.1}Analysis data}{235}{subsection.7.3.1}%
+\contentsline {subsection}{\numberline {7.3.2}Comparison of richness estimators}{235}{subsection.7.3.2}%
+\contentsline {subsection}{\numberline {7.3.3}Within-sample diversity across cohort variables}{238}{subsection.7.3.3}%
+\contentsline {subsection}{\numberline {7.3.4}Permutation-based inference and p-value refinement}{240}{subsection.7.3.4}%
+\contentsline {subsection}{\numberline {7.3.5}Regression-based within-sample diversity analysis}{243}{subsection.7.3.5}%
+\contentsline {section}{\numberline {7.4}Between-sample dissimilarity}{245}{section.7.4}%
+\contentsline {subsection}{\numberline {7.4.1}Exploratory ordination}{246}{subsection.7.4.1}%
+\contentsline {subsection}{\numberline {7.4.2}PERMANOVA}{246}{subsection.7.4.2}%
+\contentsline {subsection}{\numberline {7.4.3}PERMDISP}{250}{subsection.7.4.3}%
+\contentsline {section}{\numberline {7.5}Regression models for compositional responses}{251}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Compositional equivalence}{254}{section.7.6}%
+\contentsline {section}{\numberline {7.7}Exploratory feature-level analysis}{258}{section.7.7}%
+\contentsline {section}{\numberline {7.8}Differential abundance analysis}{260}{section.7.8}%
+\contentsline {subsection}{\numberline {7.8.1}Analysis setup and DACOMP reference set}{261}{subsection.7.8.1}%
+\contentsline {subsection}{\numberline {7.8.2}Permutation resolution and p-value refinement}{262}{subsection.7.8.2}%
+\contentsline {subsection}{\numberline {7.8.3}Runtime comparison}{263}{subsection.7.8.3}%
+\contentsline {subsection}{\numberline {7.8.4}Descriptive characterization of selected genera}{264}{subsection.7.8.4}%
+\contentsline {section}{\numberline {7.9}Differential distribution analysis}{265}{section.7.9}%
+\contentsline {subsection}{\numberline {7.9.1}Analysis setup and adapted \texttt {waddR} workflow}{265}{subsection.7.9.1}%
+\contentsline {subsection}{\numberline {7.9.2}Zero p-values and constrained tail approximation}{266}{subsection.7.9.2}%
+\contentsline {subsection}{\numberline {7.9.3}Differential distribution results}{267}{subsection.7.9.3}%
+\contentsline {subsection}{\numberline {7.9.4}Distribution diagnostics for selected genera}{269}{subsection.7.9.4}%
+\contentsline {section}{\numberline {7.10}Network analysis}{270}{section.7.10}%
+\contentsline {subsection}{\numberline {7.10.1}Baseline association network}{271}{subsection.7.10.1}%
+\contentsline {subsection}{\numberline {7.10.2}Sensitivity to network-construction choices}{275}{subsection.7.10.2}%
+\contentsline {subsubsection}{Prevalence filtering}{275}{subsubsection*.19}%
+\contentsline {subsubsection}{Zero replacement}{276}{subsubsection*.20}%
+\contentsline {subsubsection}{Association estimation}{278}{subsubsection*.21}%
+\contentsline {subsubsection}{Persistent edges across sensitivity analyses}{280}{subsubsection*.22}%
+\contentsline {section}{\numberline {7.11}Network comparison between EBF groups}{282}{section.7.11}%
+\contentsline {subsection}{\numberline {7.11.1}Descriptive comparison}{282}{subsection.7.11.1}%
+\contentsline {subsection}{\numberline {7.11.2}Defining the network construction approach}{284}{subsection.7.11.2}%
+\contentsline {subsection}{\numberline {7.11.3}Permutation procedure}{287}{subsection.7.11.3}%
+\contentsline {subsection}{\numberline {7.11.4}Differential network analysis}{288}{subsection.7.11.4}%
+\contentsline {subsection}{\numberline {7.11.5}Differential association analysis}{292}{subsection.7.11.5}%
+\contentsline {section}{\numberline {7.12}Discussion}{294}{section.7.12}%
+\contentsline {chapter}{\numberline {8}Discussion and conclusion}{299}{chapter.8}%
+\etoc@startlocaltoc {9}
+\contentsline {section}{\numberline {8.1}Bringing the contributions together}{300}{section.8.1}%
+\contentsline {section}{\numberline {8.2}An integrated view of microbiome analysis}{300}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Lessons for microbiome analysis}{301}{section.8.3}%
+\contentsline {section}{\numberline {8.4}Limitations and future directions}{302}{section.8.4}%
+\contentsline {section}{\numberline {8.5}Conclusion}{304}{section.8.5}%
+\contentsline {chapter}{\numberline {A}Appendices to Chapter~\ref {ch:netcomi}}{327}{appendix.A}%
+\contentsline {chapter}{\numberline {B}Appendices to Chapter~\ref {ch:permapprox}}{329}{appendix.B}%
+\contentsline {chapter}{\numberline {C}Appendices to Chapter 7 (PASTURE analysis)}{333}{appendix.C}%
+\contentsline {section}{\numberline {C.1}Within-sample diversity across remaining cohort variables}{333}{appendix.C.1}%
+\contentsline {section}{\numberline {C.2}Compositional equivalence}{337}{appendix.C.2}%
+\contentsline {section}{\numberline {C.3}Differential abundance analysis}{338}{appendix.C.3}%
+\contentsline {section}{\numberline {C.4}Differential distribution analysis}{339}{appendix.C.4}%
+\contentsline {section}{\numberline {C.5}Network analysis}{340}{appendix.C.5}%
+\contentsline {section}{\numberline {C.6}Network comparison}{342}{appendix.C.6}%
+\contentsline {chapter}{\numberline {D}Electronic appendix}{345}{appendix.D}%

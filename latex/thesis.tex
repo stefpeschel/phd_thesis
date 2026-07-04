@@ -1,0 +1,385 @@
+\RequirePackage{fix-cm}
+\documentclass[12pt,a4paper,twoside,openright]{report}
+
+% ------------------------------------------------------------------------------
+% Metadata
+% ------------------------------------------------------------------------------
+\newcommand{\mytitle}{From network learning to improved permutation testing: addressing statistical challenges in microbial data analysis}
+\newcommand{\myname}{Stefanie Peschel}
+\newcommand{\mysupervisor}{Prof.\ Dr.\ Christian L.~M{\"u}ller}
+
+% ------------------------------------------------------------------------------
+% Layout and typography
+% ------------------------------------------------------------------------------
+\usepackage[
+  a4paper,
+  inner=30mm,
+  outer=22mm,
+  top=35mm,
+  bottom=30mm,
+  bindingoffset=3mm
+]{geometry}
+\usepackage[skip=10pt plus1pt,indent=0pt]{parskip}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+
+% Avoid vertical stretching of pages
+\raggedbottom
+
+% No page numbers for cleared pages
+\usepackage{emptypage}
+
+% To center the quote in the middle of the page
+\usepackage{geometry}
+
+\usepackage[title]{appendix}%
+
+% For verbatim text
+\usepackage{fancyvrb}
+
+% ------------------------------------------------------------------------------
+% Math, figures, tables, color
+% ------------------------------------------------------------------------------
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+\usepackage{multirow}
+\usepackage{tikz}
+\usepackage{threeparttable}
+
+% ------------------------------------------------------------------------------
+% Heading styles and chapter opening pages
+% ------------------------------------------------------------------------------
+\usepackage{titlesec}
+\usepackage{etoolbox}
+\usepackage{etoc}
+
+\definecolor{chapternumbergray}{gray}{0.70}
+
+% ------------------------------------------------------------------------------
+% Standard section heading sizes
+% ------------------------------------------------------------------------------
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries}
+  {\thesection}
+  {1em}
+  {}
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}
+  {\thesubsection}
+  {1em}
+  {}
+
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}
+  {\thesubsubsection}
+  {1em}
+  {}
+
+\titleformat{\paragraph}[runin]
+  {\normalfont\normalsize\bfseries}
+  {\theparagraph}
+  {1em}
+  {}
+
+\titlespacing*{\section}{0pt}{18pt plus 2pt minus 2pt}{6pt}
+\titlespacing*{\subsection}{0pt}{14pt plus 2pt minus 2pt}{4pt}
+\titlespacing*{\subsubsection}{0pt}{12pt plus 2pt minus 2pt}{3pt}
+\titlespacing*{\paragraph}{0pt}{10pt plus 2pt minus 2pt}{1em}
+
+% ------------------------------------------------------------------------------
+% Unnumbered chapter headings, e.g. Abstract, Declaration of authorship
+% ------------------------------------------------------------------------------
+
+\titleformat{name=\chapter,numberless}[display]
+  {\normalfont\Huge\bfseries}
+  {}
+  {0pt}
+  {}
+  [\vspace{0.4em}\titlerule]
+
+\titlespacing*{name=\chapter,numberless}{0pt}{-35pt}{1.5cm}
+
+% ------------------------------------------------------------------------------
+% Oxford-style chapter opening command
+% Usage:
+% \thesischapter[<label>][<quote width>]{<quote>}{<quote author>}{<chapter title>}
+% ------------------------------------------------------------------------------
+
+\NewDocumentCommand{\thesischapter}{O{} O{0.63\textwidth} m m m}{%
+  \cleardoublepage
+
+  % Increase chapter counter without printing the default LaTeX chapter heading
+  \refstepcounter{chapter}%
+  \ifstrempty{#1}{}{\label{#1}}%
+
+  \addcontentsline{toc}{chapter}{\protect\numberline{\thechapter}#5}%
+  \markboth{Chapter~\thechapter: #5}{}%
+
+  \thispagestyle{plain}
+
+  % Quote block
+  \vspace*{-0.5cm}
+  \begin{flushleft}
+    \begin{minipage}{#2}
+      \centering
+      \itshape\small
+      #3\par
+      \vspace{0.5em}
+      {\raggedleft\normalfont\small #4\par}
+    \end{minipage}
+  \end{flushleft}
+
+  \vspace{1cm}
+
+  % Large chapter number
+  \begin{flushright}
+    {\fontsize{140}{140}\selectfont\bfseries\color{chapternumbergray}\thechapter}
+  \end{flushright}
+
+  \vspace{0.5cm}
+
+  % Chapter title
+  \begin{flushright}
+    \begin{minipage}{\textwidth}
+      \raggedleft
+      {\fontsize{28}{32}\selectfont\bfseries #5\par}
+    \end{minipage}
+  \end{flushright}
+
+  \vspace{0.5cm}
+}
+
+% ------------------------------------------------------------------------------
+% Chapter abstract
+% ------------------------------------------------------------------------------
+
+\newcommand{\chapterabstract}[1]{%
+  \vspace{0.5cm}
+
+  {\Large\bfseries Abstract}
+
+  \vspace{0.4cm}
+
+  \noindent
+  \begin{minipage}{\textwidth}
+    #1
+  \end{minipage}
+
+  \vspace{0.5cm}
+}
+
+% ------------------------------------------------------------------------------
+% Local chapter contents
+% ------------------------------------------------------------------------------
+
+\newcommand{\chaptercontents}{%
+
+  {\Large\bfseries Contents}
+
+  \vspace{0.2cm}
+  \hrule
+  \vspace{0.4cm}
+
+  \begingroup
+  \small
+  \etocsetnexttocdepth{section}
+  \etocsettocstyle{}{}
+  \localtableofcontents
+  \endgroup
+
+  \vspace{0.6cm}
+  \hrule
+  \vspace{1.2cm}
+  \newpage
+}
+
+\cleardoublepage
+
+% ------------------------------------------------------------------------------
+% Chapter tabs on right-hand pages
+% ------------------------------------------------------------------------------
+
+\usepackage{eso-pic}
+
+\definecolor{chaptertabgray}{gray}{0.60}
+
+\newcommand{\chaptertab}{%
+  \ifnum\value{chapter}>0
+    \ifodd\value{page}
+      \begin{tikzpicture}[remember picture,overlay]
+
+        % Vertical position:
+        % chapter 1 highest, chapter 2 lower, etc.
+        \pgfmathsetmacro{\tabshift}{7 + 1.7*(\value{chapter}-1)}
+
+        \node[
+          anchor=east,
+          fill=chaptertabgray,
+          text=white,
+          minimum width=1.5cm,
+          minimum height=1.5cm,
+          font=\LARGE\bfseries,
+          inner sep=0pt,
+          text width=1.2cm,
+          align=left
+        ] at ([xshift=0mm,yshift=-\tabshift cm]current page.north east)
+        {\hspace{3mm}\thechapter};
+
+      \end{tikzpicture}
+    \fi
+  \fi
+}
+
+\AddToShipoutPictureFG{\chaptertab}
+
+% ------------------------------------------------------------------------------
+% Bibliography and hyperlinks
+% ------------------------------------------------------------------------------
+%\usepackage[square,numbers]{natbib}
+\usepackage[square]{natbib}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=black,citecolor=black}
+
+% ------------------------------------------------------------------------------
+% Header / footer
+% ------------------------------------------------------------------------------
+
+\usepackage{fancyhdr}
+\newcommand{\changefont}{\fontsize{8}{11}\selectfont}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+% Left-hand pages: chapter number and chapter title
+\fancyhead[LE]{\changefont{\leftmark}}
+
+% Right-hand pages: current section title
+\fancyhead[RO]{\changefont{\rightmark}}
+
+% Page number always centered
+\fancyfoot[C]{\thepage}
+
+% Optional: remove header line
+\renewcommand{\headrulewidth}{0pt}
+
+% Chapter-opening pages: no header, centered page number
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+\setlength{\headheight}{14.5pt}
+\interfootnotelinepenalty=10000
+
+% Section header lower case
+\renewcommand{\sectionmark}[1]{%
+  \markright{\thesection\quad #1}%
+}
+% Section header upper case
+% \renewcommand{\sectionmark}[1]{%
+%   \markright{\MakeUppercase{\thesection\quad #1}}%
+% }
+
+% ------------------------------------------------------------------------------
+% Notes
+% ------------------------------------------------------------------------------
+
+% openright makes chapters start on right-hand pages.
+% To manually force the next page to be right-hand, use: \cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Render only a certain chapter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\includeonly{chapters/1_introduction}
+%\includeonly{chapters/2_microbiome_data}
+%\includeonly{chapters/3_community_summaries}
+%\includeonly{chapters/4_feature_level}
+%\includeonly{chapters/5_NetCoMi}
+%\includeonly{chapters/6_permApprox}
+%\includeonly{chapters/7_application}
+%\includeonly{chapters/8_discussion}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Front matter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\include{intro_chapters/0_title_page}
+\include{intro_chapters/0_quote}
+
+\cleardoublepage
+\thispagestyle{empty}
+\pagenumbering{Roman}
+
+\include{intro_chapters/0_summary}
+\include{intro_chapters/0_acknowledgements}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Table of contents
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\setcounter{tocdepth}{2}
+\tableofcontents
+% \listoffigures
+% \listoftables
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Chapters
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\include{main_chapters/1_introduction}
+\include{main_chapters/2_microbiome_data}
+\include{main_chapters/3_community_summaries}
+\include{main_chapters/4_feature_level}
+\include{main_chapters/5_NetCoMi}
+\include{main_chapters/6_permApprox}
+\include{main_chapters/7_application}
+\include{main_chapters/8_discussion}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Bibliography
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\bibliographystyle{apalike}
+\bibliography{references}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Appendices
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+
+\titleformat{\chapter}[hang]
+  {\normalfont\Huge\bfseries}
+  {\thechapter}
+  {0.8em}
+  {}
+
+\titlespacing*{\chapter}{0pt}{-35pt}{0.2cm}
+
+\input{appendix_chapters/app_NetCoMi}
+\input{appendix_chapters/app_permApprox}
+\input{appendix_chapters/app_application}
+\input{appendix_chapters/app_electronic}
+\input{appendix_chapters/app_declaration}
+
+\end{document}
