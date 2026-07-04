@@ -28,46 +28,49 @@ A level-1 auxiliary file: main_chapters/8_discussion.aux
 Reallocating 'name_of_file' (item size: 1) to 8 items.
 The style file: apalike.bst
 Reallocating 'name_of_file' (item size: 1) to 11 items.
-Reallocating 'field_info' (item size: 4) to 10324 items.
+Reallocating 'field_info' (item size: 4) to 10390 items.
 Database file #1: references.bib
-You've used 242 entries,
+Warning--I didn't find a database entry for "north2002more"
+Warning--I didn't find a database entry for "langousis2016review"
+You've used 243 entries,
             1935 wiz_defined-function locations,
-            1752 strings with 59802 characters,
-and the built_in function-call counts, 114248 in all, are:
-= -- 10562
-> -- 6949
-< -- 121
-+ -- 2613
-- -- 2510
-* -- 11008
-:= -- 20382
-add.period$ -- 716
-call.type$ -- 242
-change.case$ -- 2444
-chr.to.int$ -- 241
-cite$ -- 242
-duplicate$ -- 3363
-empty$ -- 6660
-format.name$ -- 2860
-if$ -- 21347
+            1758 strings with 59935 characters,
+and the built_in function-call counts, 114629 in all, are:
+= -- 10602
+> -- 6956
+< -- 122
++ -- 2615
+- -- 2512
+* -- 11041
+:= -- 20446
+add.period$ -- 719
+call.type$ -- 243
+change.case$ -- 2450
+chr.to.int$ -- 242
+cite$ -- 243
+duplicate$ -- 3377
+empty$ -- 6692
+format.name$ -- 2863
+if$ -- 21422
 int.to.chr$ -- 2
 int.to.str$ -- 0
-missing$ -- 240
-newline$ -- 1193
-num.names$ -- 729
-pop$ -- 1987
+missing$ -- 241
+newline$ -- 1198
+num.names$ -- 732
+pop$ -- 1990
 preamble$ -- 1
-purify$ -- 2462
+purify$ -- 2468
 quote$ -- 0
-skip$ -- 2542
+skip$ -- 2553
 stack$ -- 0
-substring$ -- 7232
-swap$ -- 275
+substring$ -- 7275
+swap$ -- 276
 text.length$ -- 11
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 1412
+type$ -- 1418
 warning$ -- 0
-while$ -- 804
+while$ -- 808
 width$ -- 0
-write$ -- 3098
+write$ -- 3111
+(There were 2 warnings)

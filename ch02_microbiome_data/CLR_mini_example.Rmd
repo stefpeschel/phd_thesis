@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params, "/clr_exmpl_"),
+  fig.path = paste0('figures/', params, "/"),
   echo = FALSE)
 ```
 
@@ -162,7 +162,7 @@ kable(clr_add_table, digits = 3, caption = "CLR values after additive offset rep
 
 # Visualization of all transformed values
 
-```{r original_transformed_values, fig.height=4.5, fig.width=8, dpi = 200}
+```{r thesis_original_transformed_values, fig.height=4.5, fig.width=8, dpi = 200}
 set.seed(42)
 # Compact plot: original counts and CLR-transformed values ----------------
 # Fixed horizontal positions for samples within each group

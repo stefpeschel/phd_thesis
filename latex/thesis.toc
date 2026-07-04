@@ -29,42 +29,42 @@
 \contentsline {section}{\numberline {2.6}Normalization and library-size adjustment}{26}{section.2.6}%
 \contentsline {subsection}{\numberline {2.6.1}Scaling-based library size adjustment}{27}{subsection.2.6.1}%
 \contentsline {subsection}{\numberline {2.6.2}Rarefaction}{29}{subsection.2.6.2}%
-\contentsline {section}{\numberline {2.7}Handling zero counts}{30}{section.2.7}%
-\contentsline {subsection}{\numberline {2.7.1}Types of zeros}{31}{subsection.2.7.1}%
-\contentsline {subsection}{\numberline {2.7.2}Replacement and imputation strategies}{32}{subsection.2.7.2}%
-\contentsline {section}{\numberline {2.8}Transformations}{36}{section.2.8}%
-\contentsline {subsection}{\numberline {2.8.1}Variance-stabilizing transformations}{37}{subsection.2.8.1}%
-\contentsline {subsection}{\numberline {2.8.2}Log-ratio transformations}{38}{subsection.2.8.2}%
-\contentsline {section}{\numberline {2.9}CLR transformations in the presence of zeros}{40}{section.2.9}%
-\contentsline {subsection}{\numberline {2.9.1}CLR after multiplicative replacement}{41}{subsection.2.9.1}%
+\contentsline {section}{\numberline {2.7}Handling zero counts}{31}{section.2.7}%
+\contentsline {subsection}{\numberline {2.7.1}Types of zeros}{32}{subsection.2.7.1}%
+\contentsline {subsection}{\numberline {2.7.2}Replacement and imputation strategies}{33}{subsection.2.7.2}%
+\contentsline {section}{\numberline {2.8}Transformations}{37}{section.2.8}%
+\contentsline {subsection}{\numberline {2.8.1}Variance-stabilizing transformations}{38}{subsection.2.8.1}%
+\contentsline {subsection}{\numberline {2.8.2}Log-ratio transformations}{39}{subsection.2.8.2}%
+\contentsline {section}{\numberline {2.9}CLR transformations in the presence of zeros}{41}{section.2.9}%
+\contentsline {subsection}{\numberline {2.9.1}CLR after multiplicative replacement}{42}{subsection.2.9.1}%
 \contentsline {subsection}{\numberline {2.9.2}Modified CLR (mCLR)}{42}{subsection.2.9.2}%
 \contentsline {subsection}{\numberline {2.9.3}Geometric mean extension and offset-based CLR}{43}{subsection.2.9.3}%
 \contentsline {subsection}{\numberline {2.9.4}Comparative example}{45}{subsection.2.9.4}%
-\contentsline {section}{\numberline {2.10}Statistical consequences of preprocessing}{49}{section.2.10}%
-\contentsline {section}{\numberline {2.11}Preprocessing choices in this thesis}{51}{section.2.11}%
+\contentsline {section}{\numberline {2.10}Statistical consequences of preprocessing}{50}{section.2.10}%
+\contentsline {section}{\numberline {2.11}Preprocessing choices in this thesis}{52}{section.2.11}%
 \contentsline {chapter}{\numberline {3}Community-level summaries}{55}{chapter.3}%
 \etoc@startlocaltoc {4}
 \contentsline {section}{\numberline {3.1}Introduction}{56}{section.3.1}%
 \contentsline {section}{\numberline {3.2}Within-sample diversity}{57}{section.3.2}%
 \contentsline {subsection}{\numberline {3.2.1}Richness estimation}{58}{subsection.3.2.1}%
-\contentsline {subsection}{\numberline {3.2.2}Diversity indices}{60}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.2}Diversity indices}{59}{subsection.3.2.2}%
 \contentsline {subsection}{\numberline {3.2.3}Testing within-sample diversity}{61}{subsection.3.2.3}%
 \contentsline {subsection}{\numberline {3.2.4}Regression modeling of within-sample diversity}{62}{subsection.3.2.4}%
-\contentsline {section}{\numberline {3.3}Between-sample dissimilarity}{65}{section.3.3}%
-\contentsline {subsection}{\numberline {3.3.1}Beta diversity as a dissimilarity-based summary}{65}{subsection.3.3.1}%
-\contentsline {subsection}{\numberline {3.3.2}Bray--Curtis dissimilarity}{67}{subsection.3.3.2}%
-\contentsline {subsection}{\numberline {3.3.3}Euclidean distance for compositional data}{68}{subsection.3.3.3}%
-\contentsline {subsection}{\numberline {3.3.4}Ordination}{69}{subsection.3.3.4}%
-\contentsline {subsection}{\numberline {3.3.5}PERMANOVA and distance-based testing}{70}{subsection.3.3.5}%
-\contentsline {subsection}{\numberline {3.3.6}Community dispersion}{72}{subsection.3.3.6}%
-\contentsline {section}{\numberline {3.4}Regression models for compositional responses}{74}{section.3.4}%
-\contentsline {subsection}{\numberline {3.4.1}Approaches for modeling microbial compositions}{75}{subsection.3.4.1}%
-\contentsline {subsection}{\numberline {3.4.2}CLR-based multivariate regression}{76}{subsection.3.4.2}%
-\contentsline {subsection}{\numberline {3.4.3}Testing covariate effects}{77}{subsection.3.4.3}%
-\contentsline {section}{\numberline {3.5}Compositional equivalence}{79}{section.3.5}%
-\contentsline {subsection}{\numberline {3.5.1}Concept and hypothesis}{80}{subsection.3.5.1}%
-\contentsline {subsection}{\numberline {3.5.2}Maximum-type test statistic}{81}{subsection.3.5.2}%
-\contentsline {subsection}{\numberline {3.5.3}Permutation-based inference and application}{81}{subsection.3.5.3}%
+\contentsline {section}{\numberline {3.3}Between-sample dissimilarity}{63}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Beta diversity as a dissimilarity-based summary}{64}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Bray--Curtis dissimilarity}{65}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Euclidean distance for compositional data}{66}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Ordination}{67}{subsection.3.3.4}%
+\contentsline {subsection}{\numberline {3.3.5}PERMANOVA and distance-based testing}{69}{subsection.3.3.5}%
+\contentsline {subsection}{\numberline {3.3.6}Community dispersion}{71}{subsection.3.3.6}%
+\contentsline {section}{\numberline {3.4}Regression models for compositional responses}{72}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Approaches for modeling microbial compositions}{73}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}CLR-based multivariate regression}{75}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Testing covariate effects}{76}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}Compositional equivalence}{77}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Concept and hypothesis}{78}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Maximum-type test statistic}{79}{subsection.3.5.2}%
+\contentsline {subsection}{\numberline {3.5.3}Permutation-based inference and application}{79}{subsection.3.5.3}%
 \contentsline {chapter}{\numberline {4}Feature-level measures}{83}{chapter.4}%
 \etoc@startlocaltoc {5}
 \contentsline {section}{\numberline {4.1}Introduction}{84}{section.4.1}%

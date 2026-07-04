@@ -31,6 +31,7 @@ This script generates some example data used for the overview figures.
 ```{r packages}
 library("conflicted")
 library(ggplot2)
+library(patchwork)
 library(zCompositions)
 ```
 
@@ -279,6 +280,114 @@ round(counts_clr, 3)
 
 ```{r}
 round(counts_clr[, 1:3], 3)
+```
+
+## Beta diversity
+
+```{r}
+# Between-sample distances after multiplicative replacement and CLR transformation.
+# This corresponds to Euclidean distance on the CLR scale.
+sample_info <- data.frame(
+  sample_id = paste0("S", seq_len(nrow(counts_clr))),
+  sample = rownames(counts_clr),
+  group = sample_group,
+  row.names = NULL
+)
+
+counts_clr_beta <- counts_clr
+rownames(counts_clr_beta) <- sample_info$sample_id
+
+beta_distance <- dist(counts_clr_beta, method = "euclidean")
+beta_distance_matrix <- as.matrix(beta_distance)
+
+beta_distance_table <- beta_distance_matrix
+rownames(beta_distance_table) <- sample_info$sample
+colnames(beta_distance_table) <- sample_info$sample
+
+round(beta_distance_table, 2)
+```
+
+```{r beta_diversity_plots, fig.width=9, fig.height=4.5, dpi=250}
+beta_display_idx <- c(1, 2, 8, 11, 12)
+beta_display_ids <- sample_info$sample_id[beta_display_idx]
+beta_display_labels <- c("1", "...", "n1+2", "...", "n")
+
+beta_distance_display_matrix <- beta_distance_matrix[
+  beta_display_ids,
+  beta_display_ids,
+  drop = FALSE
+]
+
+beta_distance_plot_df <- as.data.frame(as.table(beta_distance_display_matrix))
+names(beta_distance_plot_df) <- c("sample_1", "sample_2", "distance")
+beta_distance_plot_df$sample_1 <- factor(
+  beta_distance_plot_df$sample_1,
+  levels = beta_display_ids
+)
+beta_distance_plot_df$sample_2 <- factor(
+  beta_distance_plot_df$sample_2,
+  levels = rev(beta_display_ids)
+)
+beta_distance_plot_df$distance_label <- ifelse(
+  beta_distance_plot_df$distance == 0,
+  "0",
+  sprintf("%.2f", beta_distance_plot_df$distance)
+)
+
+beta_display_label_lookup <- setNames(beta_display_labels, beta_display_ids)
+
+pcoa_object <- cmdscale(beta_distance, k = 2, eig = TRUE)
+pcoa_df <- data.frame(
+  sample_id = rownames(pcoa_object$points),
+  Axis1 = pcoa_object$points[, 1],
+  Axis2 = pcoa_object$points[, 2],
+  row.names = NULL
+)
+pcoa_df <- merge(pcoa_df, sample_info, by = "sample_id", sort = FALSE)
+
+distance_heatmap <- ggplot(
+  beta_distance_plot_df,
+  aes(x = sample_1, y = sample_2, fill = distance)
+) +
+  geom_tile(color = "grey55", linewidth = 0.25) +
+  geom_text(aes(label = distance_label), size = 4) +
+  scale_x_discrete(labels = beta_display_label_lookup) +
+  scale_y_discrete(labels = beta_display_label_lookup) +
+  scale_fill_gradient(low = "white", high = "tomato3", guide = "none") +
+  coord_equal() +
+  labs(
+    x = NULL,
+    y = NULL,
+    fill = "Distance",
+    title = "Between-sample diversity"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 15),
+    axis.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    legend.position = "none"
+  )
+
+ordination_plot <- ggplot(pcoa_df, aes(x = Axis1, y = Axis2, color = group)) +
+  geom_point(size = 4, alpha = 0.9) +
+  scale_color_manual(values = group_colors) +
+  labs(
+    x = "Axis 1",
+    y = "Axis 2",
+    color = NULL,
+    title = "Ordination of sample distances"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.title = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+
+distance_heatmap + ordination_plot +
+  plot_layout(widths = c(1.15, 1), guides = "collect") &
+  theme(legend.position = "bottom")
 ```
 
 

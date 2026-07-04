@@ -1,6 +1,6 @@
 Mini example: zero replacement before CLR transformation
 ================
-Compiled at 2026-06-10 08:42:55 UTC
+Compiled at 2026-07-04 19:18:51 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "7aac30f8-96f0-4cb8-b30e-a3c181fc95c0")
@@ -20,9 +20,26 @@ pairwise log-ratios used in association or proportionality analyses.
 
 # Packages
 
-    ## [conflicted] Removing existing preference.
+    ## ── Attaching core tidyverse packages ───────────────────────────────────────────────────────────────────────────────────────── tidyverse 2.0.0 ──
+    ## ✔ forcats   1.0.1     ✔ readr     2.2.0
+    ## ✔ lubridate 1.9.5     ✔ stringr   1.6.0
+    ## ✔ purrr     1.2.2     
+    ## Loading required package: MASS
+    ## 
+    ## 
+    ## Attaching package: 'MASS'
+    ## 
+    ## 
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     select
+    ## 
+    ## 
+    ## Loading required package: truncnorm
+    ## 
+    ## Loading required package: survival
+    ## 
     ## [conflicted] Will prefer dplyr::select over any other package.
-    ## [conflicted] Removing existing preference.
     ## [conflicted] Will prefer dplyr::filter over any other package.
 
 # Helper functions
@@ -86,7 +103,7 @@ CLR values after additive offset replacement.
 
     ## Warning: `geom_hline()`: Ignoring `data` because `yintercept` was provided.
 
-![](figures/clr_mini_example/clr_exmpl_original_transformed_values-1.png)<!-- -->
+![](figures/clr_mini_example/thesis_original_transformed_values-1.png)<!-- -->
 
 # Distance-based analysis
 
@@ -115,7 +132,7 @@ inspect the CLR-transformed values of Taxon 2.
 
 CLR-transformed values of Taxon 2 under the two replacement strategies.
 
-![](figures/clr_mini_example/clr_exmpl_differential_distribution_plot-1.png)<!-- -->
+![](figures/clr_mini_example/differential_distribution_plot-1.png)<!-- -->
 
 # Differential abundance-style group contrast
 

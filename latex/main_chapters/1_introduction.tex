@@ -31,7 +31,7 @@ Over the past two decades, the human microbiome has received increasing scientif
 The emergence of high-throughput sequencing technologies has fundamentally reshaped microbiome research. Following the transition from first-generation Sanger sequencing to massively parallel next-generation sequencing platforms, DNA sequencing became dramatically faster, more scalable, and substantially less expensive \citep{goodwin2016coming,shendure2017dna}. These advances enabled the direct sequencing of microbial genetic material without prior cultivation, overcoming a central limitation of classical microbiology. In particular, marker-gene amplicon sequencing and shotgun metagenomic sequencing allow researchers to characterize microbial communities on a large scale, providing complementary views on taxonomic composition and functional potential across diverse habitats \citep{sharpton2014introduction}.
 Landmark efforts, including the Human Microbiome Project, have illustrated that systematic and reproducible profiling of microbial diversity across body sites and populations is not only possible but scalable to population-level studies \citep{hmp2009nihHMP,hmpconsortium2012structure}. As a consequence, microbiome research has evolved from small-scale descriptive studies into data-intensive investigations spanning thousands of samples and features. 
 
-However, the ability to generate sequencing data on an increasingly large scale does not automatically translate into reliable scientific insight. Microbiome data exhibit structural characteristics that challenge many assumptions underlying classical statistical methodology. Sequencing experiments typically produce high-dimensional count matrices in which the number of microbial features may exceed the number of samples, a large proportion of taxa are rare, and zero counts are prevalent. In addition, because sequencing data reflect relative rather than absolute abundances, the resulting data are inherently compositional: the total number of reads per sample is constrained, inducing dependence between features even in the absence of biological interaction \citep{gloor2017microbiome}. These properties complicate modeling, inference, and interpretation in fundamental ways.
+However, the ability to generate sequencing data on an increasingly large scale does not automatically translate into reliable scientific insight. Microbiome data exhibit structural characteristics that challenge many assumptions underlying classical statistical methodology. Sequencing experiments typically produce high-dimensional count matrices in which the number of microbial features may exceed the number of samples, a large proportion of taxa are rare, and zero counts are prevalent. In addition, because sequencing data provide information on relative rather than absolute abundances, the resulting observations are commonly treated as compositional: conditional on the sample-specific library size, the components are constrained to sum to a constant, inducing dependence between features even in the absence of biological interaction \citep{gloor2017microbiome}. These properties complicate modeling, inference, and interpretation in fundamental ways.
 
 Consequently, even seemingly straightforward analyses require careful methodological consideration. Standard normalization strategies or classical hypothesis tests, if applied without accounting for sparsity, compositional constraints, and high dimensionality, may yield biased or misleading conclusions \citep{mcmurdie2014waste,weiss2017normalization}. The need for statistically principled approaches to microbiome data has therefore become widely recognized and has contributed to the emergence of \emph{microbiome statistics} as a distinct methodological field \citep{xia2024applied}. At the same time, the scientific questions driving microbiome research are typically comparative and hypothesis-oriented: researchers seek to understand how microbial communities differ across environments, interventions, or disease states, and which observed differences reflect robust biological signals rather than technical artifacts or random variation. Addressing such questions demands statistical frameworks that explicitly acknowledge the structural complexity of microbiome data and the different resolutions at which inference may be formulated.
 
@@ -42,32 +42,27 @@ The methodological developments presented in this thesis arise from precisely th
 \label{sec:intro:levels}
 %====================================
 
+
 Microbiome data can be analyzed with respect to different statistical targets that reflect distinct levels of aggregation. 
 The same count table may give rise to questions about global properties of the microbial community, characteristics of individual taxa, or relationships between taxa. 
 To provide a coherent conceptual organization, we distinguish three primary analysis targets: \emph{community-level summaries}, \emph{feature-level measures}, and \emph{association networks}. 
-These targets represent increasing structural complexity, ranging from aggregated summaries to representations of the relationships between taxa.
+These targets represent increasing structural complexity, ranging from aggregated summaries to representations of the relationships between taxa. Orthogonal to the analysis target is the \emph{mode of analysis}. 
+At each target, one may either characterize a single population or compare two or more groups. Single-population analysis aims to describe properties within a cohort, whereas comparative analysis assesses differences between groups defined by environmental, clinical, or experimental factors. In this thesis, we focus on the comparison between two groups.
 
-Orthogonal to the analysis target is the \emph{mode of analysis}. 
-At each target, one may either characterize a single population or compare two or more groups. Single-population analysis aims to describe properties within a cohort, whereas comparative analysis assesses differences between groups defined by environmental, clinical, or experimental factors. Importantly, comparison is not an additional hierarchical level but a mode that applies uniformly across all analysis targets. In this thesis, we focus on the comparison between two groups.
+Figure~\ref{fig:levels_inference} summarizes this organization. 
+The columns represent the three analysis targets, while the rows distinguish between single-population and comparative analyses. A more detailed overview of the three targets is given below. The figure also highlights permutation testing as a cross-cutting tool for comparative analyses (Chapter~\ref{ch:permapprox}) and the integration of all components in a real-data application (Chapter~\ref{ch:application}). The numbers indicate the chapters in which the respective components are addressed.
 
-Figure~\ref{fig:levels_inference} visualizes this conceptual organization. 
-The three columns represent the analysis targets: community-level summaries, feature-level measures, and association networks. 
-A more detailed overview of the three targets is given below.
-The upper row in the figure corresponds to single-population analysis, while the lower row represents comparative analysis. 
-Each panel therefore denotes a specific combination of analysis target and analysis mode. In addition, the figure highlights permutation testing as a cross-cutting tool for comparative analyses (Chapter~\ref{ch:permapprox}) and the integration of all components in a real-data application (Chapter~\ref{ch:application}).
-The numbers indicate the chapters in which the respective components are addressed.
-
-\begin{figure}[!ht]
-\centering
-\includegraphics[width=\textwidth]{../ch01_introduction/figures/Intro_Figure.pdf}
-\caption{\textbf{Analysis targets and modes in microbiome studies.}
-The three columns represent the analysis targets considered in this thesis: community-level summaries, feature-level measures, and association networks. 
-The rows distinguish between single-population analysis and comparative analysis, where the latter focuses on differences between groups. 
-Data characteristics and preprocessing (Chapter~2) provide the foundation for all analysis targets. 
-Chapters~3 to 5 introduce methodological approaches for community-level summaries, feature-level measures, and association networks, respectively. 
-Permutation testing (Chapter~6) serves as a unifying inferential framework for comparative analyses across all targets. 
-Chapter~7 presents the complete analysis pipeline in an integrated real-data application.}
-\label{fig:levels_inference}
+\begin{figure}[!htb]
+	\centering
+	\includegraphics[width=\textwidth]{../ch01_introduction/figures/Intro_Figure.pdf}
+	\caption{\textbf{Analysis targets and modes in microbiome studies.}
+		The three columns represent the analysis targets considered in this thesis: community-level summaries, feature-level measures, and association networks. 
+		The rows distinguish between single-population analysis and comparative analysis, where the latter focuses on differences between groups. 
+		Data characteristics and preprocessing (Chapter~2) provide the foundation for all analysis targets. 
+		Chapters~3 to 5 introduce methodological approaches for community-level summaries, feature-level measures, and association networks, respectively. 
+		Permutation testing (Chapter~6) serves as a unifying inferential framework for comparative analyses across all targets. 
+		Chapter~7 presents the complete analysis pipeline in an integrated real-data application.}
+	\label{fig:levels_inference}
 \end{figure}
 
 \noindent\textbf{Community-level summaries.}
@@ -84,7 +79,8 @@ This relational representation gives rise to quantities at two complementary sca
 On the one hand, node-level characteristics, such as centrality measures, describe the relative importance or role of individual taxa within the network. 
 On the other hand, global network summaries, such as average path length or clustering coefficients, capture structural properties of the community as a whole. 
 Association networks thus provide an explicitly relational perspective that links feature-level characteristics with community-level structure. 
-As with the other analysis targets, network-based analyses can be performed within a single population or comparatively across groups, for example by assessing differences in network topology or the edges itself.
+As with the other analysis targets, network-based analyses can be performed within a single population or comparatively across groups, for example by assessing differences in network topology or in individual edges.
+
 
 %====================================
 \section{Permutation testing as a unifying approach}
@@ -95,21 +91,16 @@ Across the different analysis targets introduced in the previous section, a comm
 for many quantities of interest in microbiome analysis, the sampling distribution under the null hypothesis is analytically intractable or poorly approximated by classical parametric models. 
 This difficulty is a direct consequence of the structural characteristics of microbiome data, including compositional constraints, sparsity, high dimensionality, and the use of complex transformations and derived statistics.
 
-Permutation testing provides a general and flexible approach for hypothesis testing in such situations. 
-Instead of relying on parametric assumptions, permutation tests approximate the null distribution of a test statistic by repeatedly recomputing it under rearrangements of the data that preserve the null hypothesis. 
-This approach only requires exchangeability and is therefore applicable in a wide range of settings where classical distributional assumptions are violated.
-
+Permutation testing provides a general and flexible approach for hypothesis testing in such situations \citep{fisher1935design, good2005permutation}. Rather than relying on a parametric distribution, permutation tests approximate the null distribution by recomputing the test statistic under rearrangements of the data that preserve the null hypothesis. Their validity relies on exchangeability of the observations under the null hypothesis, which must be assessed with respect to the study design and the chosen permutation scheme \citep{good2005permutation}. Permutation tests are therefore useful in settings where classical distributional assumptions are difficult to justify.
 Importantly, the relevance of permutation testing extends across all analysis targets considered in this thesis.
 
-For community-level summaries, many commonly used quantities such as alpha and beta diversity measures do not follow simple parametric distributions.
-Group comparisons are therefore often based on nonparametric procedures, including permutation-based tests such as PERMANOVA, which assess differences in multivariate community composition without requiring distributional assumptions.
+For community-level summaries, commonly used quantities such as alpha-diversity indices and between-sample dissimilarities often lack convenient parametric reference distributions. Group comparisons are therefore frequently based on nonparametric procedures. For example, PERMANOVA uses permutations of a distance-based test statistic to assess evidence for differences in multivariate community composition between groups \citep{anderson2001new}.
 
-At the feature-level, differential abundance and distribution analyses involve statistics that are affected by data transformations needed to account for the typical data characteristics.
-Consequently, the assumptions of parametric tests are often not met.
+At the feature level, differential abundance and distribution analyses often involve sparse and discrete data, compositional transformations, or complex test statistics. In such settings, simple analytical reference distributions may be unavailable or may provide only an inadequate approximation to the null distribution.
 Permutation-based approaches provide a robust alternative by directly approximating the null distribution of the chosen test statistic, regardless of its analytical form.
 
 For association networks, permutation testing plays a central role in comparative analyses, as network characteristics typically lack tractable sampling distributions.
-Permutation procedures are therefore widely used to assess differences in network structure, both at the level of individual edges and for global network summaries.
+Permutation procedures are commonly used to assess differences in network structure, particularly for global network summaries and node-level characteristics whose sampling distributions are analytically intractable. Depending on the association measure and target of inference, edge-wise comparisons may alternatively be based on parametric or resampling-based procedures.
 
 Taken together, permutation testing provides a unifying approach for hypothesis testing in comparative microbiome analyses across all considered targets. 
 This central role motivates the methodological developments presented in Chapter~\ref{ch:permapprox}, where limitations of permutation-based testing under finite computational budgets are addressed and improved $p$-value approximation methods are developed.
@@ -126,19 +117,18 @@ However, as will become apparent, both topics emerge naturally from the analytic
 
 \subsubsection*{First contribution: a unified framework for microbial network analysis}
 The focus on network analysis is perhaps the more intuitive of the two. 
-Over the past decade, association networks have become a central tool for exploring relationships between microbial taxa and are now routinely included in microbiome analysis pipelines. 
-At the same time, the literature reveals a lack of standardization, with microbial networks being constructed in many different ways and reflecting a wide range of methodological choices. 
+Over the past decade, association networks have become a widely used exploratory tool for investigating relationships between microbial taxa and are increasingly incorporated into microbiome analysis workflows \citep{faust2021open}. 
+At the same time, the literature reveals a lack of standardization, with microbial networks being constructed in many different ways and reflecting a wide range of methodological choices \citep{weiss2017normalization, kurtz2015sparse, ullmann2023overoptimism}. 
 Their construction is inherently a multi-step procedure, involving preprocessing, association estimation, sparsification, and the computation of network characteristics. 
-For each of these steps, a variety of methods exists.
-Normalization strategies differ in their treatment of library size and compositional effects \citep{mcmurdie2014waste,mcknight2019methods,badri2020shrinkage}; compositionally aware association measures range from correlation-based approaches to conditional dependence approaches, that can even take latent influential factors into account \citep{friedman2012inferring,quinn2017propr,kurtz2015sparse,kurtz2019disentangling}; and sparsification techniques include thresholding, shrinkage, and penalized likelihood procedures \citep{schafer2005shrinkage,meinshausen2006highdimensional,friedman2008sparse}. 
+For each of these steps, a variety of methods exist.
+Normalization strategies differ in their treatment of library size and compositional effects \citep{mcmurdie2014waste,mcknight2019methods,badri2020shrinkage}; compositionally aware association measures range from correlation-based methods to conditional-dependence approaches that can account for latent factors \citep{friedman2012inferring,quinn2017propr,kurtz2015sparse,kurtz2019disentangling}; and sparsification techniques include thresholding, shrinkage, and penalized likelihood procedures \citep{schafer2005shrinkage,meinshausen2006highdimensional,friedman2008sparse}. 
 
-These methods are typically implemented in separate software packages and designed for specific components of the workflow rather than for integrated end-to-end analysis. 
-As a consequence, no unified tool exists that combines these components into a coherent and reproducible analysis pipeline, requiring researchers to assemble multiple methods in an ad hoc manner and limiting accessibility, especially for non-expert users.
+At the time of the original \texttt{NetCoMi} development, these methods were typically implemented in separate software packages and designed for specific components of the workflow rather than for integrated end-to-end analysis \citep{peschel2021netcomi}. Researchers therefore often had to assemble multiple methods in an ad hoc manner, limiting reproducibility and accessibility, especially for non-expert users.
 
 To address these issues, the first methodological contribution of this thesis is the development of a unified framework for microbial network analysis. 
 This framework is implemented in the \texttt{NetCoMi} \texttt{R} package \citep{peschel2025netcomi} and was introduced in \citet{peschel2021netcomi}. 
 It provides an integrated workflow that guides the user from count data to a fully constructed and analyzed network by combining preprocessing, association estimation, sparsification, and network characterization within a single framework, while allowing flexible choices among established methods at each step. 
-In addition, the framework supports comparative analyses, enabling the construction and comparison of networks across groups in a statistically consistent manner. 
+In addition, the framework supports comparative analyses, enabling the construction and comparison of networks across groups within a common and reproducible analytical framework. 
 The \texttt{NetCoMi} framework is accompanied by comprehensive documentation and tutorials and has been integrated into the \emph{Orchestrating Microbiome Analysis} (OMA) workflow \citep{borman2024orchestrating}, where network-based methods are embedded into a broader microbiome analysis pipeline. 
 By integrating existing methodology into a coherent and user-friendly framework, \texttt{NetCoMi} improves reproducibility, transparency, and accessibility of network-based microbiome analysis.
 
@@ -149,27 +139,25 @@ However, in this setting, two fundamental challenges emerge.
 
 First, microbiome data are often high-dimensional, and network construction itself is computationally demanding. 
 As a consequence, only a limited number of permutations can be performed in practice. 
-This leads to empirical $p$-values that lie on a coarse discrete grid, resulting in limited resolution in the tail of the distribution. 
-After adjustment for multiple testing, this lack of resolution may substantially reduce statistical power.
+This leads to empirical $p$-values that lie on a coarse discrete grid, resulting in limited resolution in the tail of the distribution \citep{north2002more, phipson2010permutation}. 
+After multiplicity adjustment, this limited resolution can prevent small effects from being distinguished and may render adjusted significance thresholds unattainable unless a substantially larger number of permutations is used \citep{phipson2010permutation, gilbert2005modified}..
 
-Second, while approaches based on extreme value theory, in particular generalized Pareto distribution (GPD) approximations, have been proposed to address this limitation, their practical application raises additional challenges. 
-In preliminary investigations, existing GPD-based methods were found to produce zero $p$-values caused by bounded support of the fitted GPD. 
-Moreover, GPD-based approximation itself involves several methodological choices, including threshold selection and parameter estimation, for which a variety of approaches exists without clear guidance on their suitability in the context of permutation testing.
+Second, while approaches based on extreme value theory, in particular generalized Pareto distribution (GPD) approximations, have been proposed to address this limitation \citep{knijnenburg2009fewer, winkler2016faster}, their practical application raises additional challenges. 
+In preliminary investigations, existing GPD-based methods could still produce zero $p$-values when a negative estimated shape parameter implied bounded fitted support and the observed test statistic lay at or beyond the resulting upper endpoint.
+Moreover, GPD-based approximation involves several methodological choices, including threshold selection and parameter estimation, for which a wide range of approaches has been proposed in extreme-value analysis \citep{scarrott2012review, langousis2016review, bader2018automated}, while guidance tailored specifically to permutation-based p-value approximation remains limited.
 
 The second methodological contribution of this thesis addresses these challenges by developing a robust framework for permutation $p$-value approximation. 
 This methodology is introduced in \citet{peschel2026permapprox} and implemented in the \texttt{permApprox} \texttt{R} package \citep{peschel2025permapprox}. 
 The proposed approach ensures strictly positive $p$-value estimates by incorporating a support constraint into the GPD fitting procedure, thereby avoiding zero $p$-values. 
 In addition, it provides a principled workflow for threshold selection and parameter estimation. 
-Its performance is systematically evaluated through extensive simulation studies, demonstrating accurate and stable $p$-value approximation under limited permutation budgets.
+Its performance is systematically evaluated through extensive simulation studies, showing accurate and stable $p$-value approximation across the simulated settings considered under limited permutation budgets.
 
 Although the motivation for this development originates from comparative network analysis, the resulting methodology is formulated in a general way. 
 It is applicable to permutation testing problems beyond network analysis and is relevant whenever $p$-values must be estimated from a limited number of permutations. 
 This generality is reflected in the applications presented in this thesis, where the approach is used not only for network comparisons but also for analyses at the community and feature levels.
 
 \subsubsection*{Third contribution: integrated real-data analysis across analysis targets}
-The third contribution of this thesis is an integrated real-data analysis that combines the different analysis targets within a coherent workflow. 
-By jointly considering community-level summaries, feature-level measures, and association networks, it illustrates how consistent methodological choices across analysis targets lead to more coherent and interpretable results. 
-... (add when chapter is finished)
+The third contribution of this thesis is an integrated real-data analysis based on infant gut microbiome data from the PASTURE cohort \citep{vonmutius2006pasture}. It combines community-level summaries, feature-level comparisons, and association-network analyses within a coherent workflow. The analysis illustrates how complementary perspectives can yield distinct, but jointly informative, insights: taxa exhibiting marginal abundance differences are not necessarily central within association networks, and differential associations may occur without pronounced marginal group differences. By applying permutation-based procedures across the analysis pipeline and refining the resulting $p$-values with \texttt{permApprox}, the application also demonstrates the practical connection between the two methodological contributions of this thesis.
 
 \subsubsection*{Reproducibility}
 The code, analysis material, and figures accompanying this thesis are available in a GitHub repository archived on Zenodo \citep{Peschel2026thesisRepo}. The repository is structured by thesis chapter. Each chapter is represented by a corresponding folder containing the material used to generate or reproduce the reported results, tables, and figures. For chapters without accompanying analysis scripts, the corresponding folder contains the graphical material shown in the thesis. Large intermediate files from simulation studies are not included in all cases, but can be regenerated by rerunning the corresponding scripts provided in the repository.
@@ -221,7 +209,7 @@ $\mathcal{S}^{p-1}$ & $(p-1)$-dimensional simplex \\
 $r_{ij}$ & Association measure between taxa $i$ and $j$ \\
 $a_{ij}$ & Entry of the adjacency matrix \\
 $d_{ij}$ & Dissimilarity between taxa or samples (context-specific) \\
-$M$ & Number of edges in a network, $M = \frac{p(p-1)}{2}$ \\
+$M$ & Number of possible undirected edges, $M = \frac{p(p-1)}{2}$ \\
 $m$ & Number of hypothesis tests \\
 $T_{\mathrm{obs}}^{(j)}$ & Observed test statistic for test $j$ \\
 $T_{b}^{*(j)}$ & Permuted test statistic (permutation $b$) for test $j$ \\
