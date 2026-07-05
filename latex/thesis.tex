@@ -39,6 +39,29 @@
 % For verbatim text
 \usepackage{fancyvrb}
 
+% Allow PDF version 1.7
+\pdfminorversion=7
+
+% ------------------------------------------------------------------------------
+% Long Notation glossary
+% ------------------------------------------------------------------------------
+\usepackage{enumitem}
+
+\newlist{notationlist}{description}{1}
+
+\newcommand{\notationsettings}[1]{%
+	\setlist[notationlist]{%
+		font=\normalfont,
+		labelwidth=#1,
+		labelsep=0.35cm,
+		leftmargin=\dimexpr#1+0.35cm\relax,
+		align=left,
+		itemsep=0.55\baselineskip,
+		parsep=0pt,
+		topsep=0.4\baselineskip
+	}%
+}
+
 % ------------------------------------------------------------------------------
 % Math, figures, tables, color
 % ------------------------------------------------------------------------------
@@ -300,14 +323,14 @@
 % Render only a certain chapter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\includeonly{main_chapters/1_introduction}
-\includeonly{main_chapters/2_microbiome_data}
-\includeonly{main_chapters/3_community_summaries}
-%\includeonly{chapters/4_feature_level}
-%\includeonly{chapters/5_NetCoMi}
-%\includeonly{chapters/6_permApprox}
-%\includeonly{chapters/7_application}
-%\includeonly{chapters/8_discussion}
+%\includeonly{main_chapters/1_introduction}
+%\includeonly{main_chapters/2_microbiome_data}
+%\includeonly{main_chapters/3_community_summaries}
+%\includeonly{main_chapters/4_feature_level}
+%\includeonly{main_chapters/5_NetCoMi}
+%\includeonly{main_chapters/6_permApprox}
+%\includeonly{main_chapters/7_application}
+%\includeonly{main_chapters/8_discussion}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -376,6 +399,7 @@
 
 \titlespacing*{\chapter}{0pt}{-35pt}{0.2cm}
 
+\input{appendix_chapters/app_notation}
 \input{appendix_chapters/app_NetCoMi}
 \input{appendix_chapters/app_permApprox}
 \input{appendix_chapters/app_application}

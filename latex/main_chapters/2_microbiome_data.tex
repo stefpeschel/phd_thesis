@@ -68,7 +68,7 @@ The count matrix $X \in \mathbb{N}_0^{n \times p}$ constitutes the primary stati
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{../ch02_microbiome_data/figures/overview_characteristics.pdf}
+\includegraphics[width=\textwidth]{../ch02_microbiome_data/overview_figures/overview_characteristics.pdf}
 \caption{\textbf{Overview of characteristic properties of microbiome count data.} The count matrix contains non-negative read counts for $n$ samples and $p$ taxa. Each sample is constrained by its library size $m_k$, leading to compositional structure. Library sizes vary across samples, many taxa contain zero counts, count distributions may be highly heterogeneous and overdispersed, and the number of taxa is often large relative to the number of samples. These properties motivate the preprocessing and modeling choices discussed throughout this chapter.}
 \label{fig:2micro:overview_characteristics}
 \end{figure}
@@ -235,7 +235,7 @@ Taken together, these characteristics restrict the applicability of standard par
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{../ch02_microbiome_data/figures/overview_aggregation.pdf}
+\includegraphics[width=\textwidth]{../ch02_microbiome_data/overview_figures/overview_aggregation.pdf}
 \caption{\textbf{Overview of taxonomic aggregation.} The figure illustrates the aggregation of an ASV-level count matrix to genus level using the corresponding taxonomic annotation. The taxonomic table assigns each ASV to a genus, here denoted by A, B, and C. ASVs assigned to the same genus are combined by summing their counts within each sample, resulting in an aggregated count matrix with one column per genus.}
 \label{fig:2micro:overview_aggregation}
 \end{figure}
@@ -267,7 +267,7 @@ However, aggregation to a single fixed rank is not equally suitable for all micr
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{../ch02_microbiome_data/figures/overview_filtering.pdf}
+\includegraphics[width=\textwidth]{../ch02_microbiome_data/overview_figures/overview_filtering.pdf}
 \caption{\textbf{Overview of sample and taxa filtering.} The figure illustrates filtering of an aggregated microbiome count matrix at genus level. Samples may be removed according to sample-level criteria, such as insufficient sequencing depth, missing metadata, or analysis eligibility. Genera may be removed according to feature-level criteria, such as low abundance, low prevalence, or insufficient variability. The two colored sample blocks represent two groups and are shown for consistency with later comparative analyses. Filtering criteria may be evaluated on the pooled data set or separately within groups, which can lead to different retained samples or genera.}
 \label{fig:2micro:overview_filtering}
 \end{figure}
@@ -314,7 +314,7 @@ The choice of taxa filtering criterion should be aligned with the downstream ana
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{../ch02_microbiome_data/figures/overview_normalization.pdf}
+\includegraphics[width=\textwidth]{../ch02_microbiome_data/overview_figures/overview_normalization.pdf}
 \caption{\textbf{Overview of normalization by total sum scaling.} The figure illustrates library-size adjustment of a filtered genus-level count matrix by total sum scaling. For each sample, counts are divided by the corresponding library size, shown in the column $\Sigma$ of the count matrix. The resulting normalized matrix contains relative abundances, here rounded to three decimal places, and each row sums to one before rounding. The two colored sample blocks represent two groups and are shown for consistency with later comparative analyses. The normalization step itself is applied sample-wise and is not group-specific.}
 \label{fig:2micro:overview_normalization}
 \end{figure}
@@ -416,7 +416,7 @@ These apparently conflicting conclusions are less contradictory when the downstr
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{../ch02_microbiome_data/figures/overview_zero_replacement.pdf}
+\includegraphics[width=\textwidth]{../ch02_microbiome_data/overview_figures/overview_zero_replacement.pdf}
 \caption{\textbf{Overview of zero replacement by multiplicative replacement.} The figure illustrates zero replacement for a normalized genus-level matrix after total sum scaling. Zero entries are replaced by a small positive value $\delta$, while the non-zero entries in the same sample are adjusted multiplicatively so that the sample remains on the same compositional scale. In the example shown, the detection limit $DL$ is defined as the minimum non-zero matrix entry, and the replacement value is chosen as $\delta = 0.65 \cdot DL$, corresponding to the default setting in \texttt{multRepl()}. Matrix entries are rounded to three decimal places, so that the replacement value appears as $0.002$. The two colored sample blocks represent two groups and are shown for consistency with later comparative analyses. The zero-replacement step itself is applied sample-wise and is not group-specific.}
 \label{fig:2micro:overview_zeros}
 \end{figure}
@@ -584,7 +584,7 @@ Beyond the methods introduced above, several approaches have been proposed that 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{../ch02_microbiome_data/figures/overview_transformation.pdf}
+\includegraphics[width=\textwidth]{../ch02_microbiome_data/overview_figures/overview_transformation.pdf}
 \caption{\textbf{Overview of transformation by the centered log-ratio (CLR).} The figure illustrates the transformation of a zero-replaced genus-level matrix to CLR coordinates. For each sample, the strictly positive entries are transformed by taking logarithms relative to the sample-wise geometric mean. The resulting CLR-transformed matrix contains real-valued log-ratio coordinates, which may be positive or negative and are no longer constrained to sum to one. Matrix entries are shown rounded to three decimal places. The two colored sample blocks represent two groups and are shown for consistency with later comparative analyses. The transformation itself is applied sample-wise and is not group-specific.}
 \label{fig:2micro:overview_transformation}
 \end{figure}

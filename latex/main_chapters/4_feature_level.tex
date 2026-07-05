@@ -33,7 +33,7 @@ The chapter first introduces exploratory taxon-level summaries and visualization
 
 Exploratory feature-level analysis provides a first descriptive view of the individual microbial features observed in a microbiome study. While community-level summaries reduce each sample to diversity measures, dissimilarities, or multivariate model summaries, feature-level exploration keeps the taxonomic resolution explicit. The aim is not formal hypothesis testing, but rather to understand which features dominate the data set, how broadly they are observed across samples, and whether apparent patterns may depend on sparsity, taxonomic resolution, or a small number of highly abundant observations. Such analyses are therefore an important intermediate step between preprocessing and formal differential testing. They help to assess whether the chosen filtering, aggregation, and transformation steps are reasonable and provide context for interpreting later feature-wise results.
 
-A basic summary at feature level is the abundance of each taxon. Depending on the analysis goal, abundance can be summarized by total read count, mean relative abundance, median relative abundance, or a transformed value such as a CLR coordinate. Total abundance highlights taxa that contribute strongly to the overall sequencing output, whereas mean or median relative abundance describes the typical contribution of a taxon within samples. However, these quantities can behave quite differently in sparse microbiome data. A taxon with high total abundance may occur in only a few samples, while a taxon with moderate abundance may be observed consistently across many samples. Abundance summaries should therefore usually be considered together with prevalence.
+A basic summary at feature level is the abundance of each taxon. Depending on the analysis goal, abundance can be summarized by total read count, mean relative abundance, median relative abundance, or a transformed value such as a CLR coordinate. Total abundance highlights taxa that contribute strongly to the overall sequencing output, whereas mean or median relative abundance summarizes the relative contribution of a taxon across samples. However, these quantities can behave quite differently in sparse microbiome data. A taxon with high total abundance may occur in only a few samples, while a taxon with moderate abundance may be observed consistently across many samples. Abundance summaries should therefore usually be considered together with prevalence.
 
 Prevalence describes the proportion of samples in which a taxon is observed, commonly defined as
 \begin{equation}
@@ -56,9 +56,19 @@ Differential abundance analysis is one of the most widely used feature-level tas
 
 Let $G_k \in \{0,1\}$ denote the group membership of sample $k$. For each taxon $i$, a differential abundance method defines a test statistic $T_i$ that compares the abundance pattern of taxon $i$ between the two groups, possibly after normalization, transformation, or reference-based adjustment. The corresponding feature-wise hypotheses can be written generically as
 \begin{equation}
-  H_{0i}: \text{taxon } i \text{ is not differentially abundant between the groups},
+	H_{0i}: \text{taxon } i \text{ is not differentially abundant between the groups},
 \end{equation}
-against an alternative that taxon $i$ shows a group-associated abundance difference. The precise meaning of this null hypothesis depends on the chosen method. Some approaches formulate the null in terms of model parameters for observed counts, others in terms of transformed abundances, log-ratios, or contrasts relative to a reference set. This distinction is important because different methods may answer related but not identical statistical questions. The following subsection summarizes common classes of differential abundance methods before DACOMP is described in more detail as the method used in the application chapter.
+against an alternative that taxon $i$ shows a group-associated abundance difference. The precise meaning of this null hypothesis depends on the chosen method. Some approaches formulate the null in terms of model parameters for observed counts, others in terms of transformed abundances, log-ratios, or contrasts relative to a reference set. This distinction is important because different methods may answer related but not identical statistical questions.
+
+Figure~\ref{fig:4feature:overview_diff_abundance} illustrates this feature-wise workflow for DACOMP \citep{brill2022testing}: candidate taxa are compared separately between groups using DACOMP-rarefied counts, resulting in one permutation-based $p$-value per tested genus before multiple-testing correction.
+The following subsection summarizes common classes of differential abundance methods before DACOMP is described in more detail as the method used in the application chapter.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../ch04_feature_level/overview_figures/overview_diff_abundance.pdf}
+	\caption{\textbf{Overview of differential abundance analysis with DACOMP.} DACOMP-rarefied counts are compared between groups separately for each tested genus. Group-wise distributions can be inspected descriptively, whereas formal inference is based on a taxon-specific Wilcoxon rank-sum statistic and a permutation test. This yields one $p$-value per genus, which is subsequently adjusted for multiple testing.}
+	\label{fig:4feature:overview_diff_abundance}
+\end{figure}
 
 %====================================
 \subsection{Overview of existing methods}
@@ -80,52 +90,61 @@ In this thesis, the focus is on differential abundance analysis as a feature-wis
 \label{sec:4feature:dacomp}
 %====================================
 
-DACOMP is a differential abundance method designed for compositional count data with potentially many zero counts \citep{brill2022testing}. In contrast to log-ratio based approaches such as the CLR transformation, DACOMP does not first transform the full composition into log-ratio coordinates. Instead, it accounts for compositionality through a reference-based testing strategy. The method is implemented in the \texttt{dacomp} R package and is based on the idea that differential abundance of an individual taxon cannot be inferred from its raw counts alone. As discussed in Chapter~\ref{ch:microbiome}, the total sequencing depth in microbiome data is arbitrary and the observed counts of all taxa are constrained to sum to this depth. Thus, an apparent change in the count or relative abundance of one taxon may be caused by a change in that taxon, by changes in other taxa, or by the compositional constraint itself. DACOMP addresses this problem by testing each candidate taxon relative to a set of reference taxa whose absolute abundances are assumed not to change with the phenotype or group variable. These reference taxa serve as an internal comparison background, so that the candidate taxon is evaluated relative to taxa that are assumed to be stable rather than relative to the full sample total.
+DACOMP is a differential abundance method designed for compositional count data with potentially many zero counts \citep{brill2022testing}. In contrast to log-ratio based approaches such as the CLR transformation, DACOMP does not first transform the full composition into log-ratio coordinates. Instead, it accounts for compositionality through a reference-based testing strategy. The method is implemented in the \texttt{dacomp} R package and is based on the idea that differential abundance of an individual taxon cannot be inferred from its raw counts alone. As discussed in Chapter~\ref{ch:microbiome}, the total sequencing depth in microbiome data is arbitrary and the observed counts of all taxa are constrained to sum to this depth. Thus, an apparent change in the count or relative abundance of one taxon may be caused by a change in that taxon, by changes in other taxa, or by the compositional constraint itself. DACOMP addresses this problem by testing each candidate taxon relative to a set of reference taxa that are assumed to be non-differential with respect to the phenotype or group variable. These reference taxa serve as an internal comparison background, so that the candidate taxon is evaluated relative to taxa that are assumed to be stable rather than relative to the full sample total.
 
-The reference set $\mathcal{B}$ is constructed from the data by identifying taxa whose log-ratios relative to all other taxa vary only weakly across samples. Let $X = (X_{ij}) \in \mathbb{N}_0^{n \times p}$ denote the count matrix, where $X_{ij}$ is the count of taxon $j$ in sample $i$. For each taxon~$j$, DACOMP considers pairwise log-ratios of the form
+The reference set $\mathcal{B}$ is constructed from the data by identifying taxa whose log-ratios relative to all other taxa vary only weakly across samples. Let $X = (X_{ki}) \in \mathbb{N}_0^{n \times p}$ denote the count matrix, where $X_{ki}$ is the count of taxon $i$ in sample $k$. For each taxon~$i$, DACOMP considers pairwise log-ratios of the form
 \begin{equation}
-\label{eq:4feature:dacomp_log_ratios}
-\log_{10}\!\left(\frac{X_{ij}+1}{X_{ik}+1}\right), \qquad k \neq j,
+	\log_{10}\!\left(\frac{X_{ki}+1}{X_{k\ell}+1}\right), \qquad \ell \neq i,
+	\label{eq:4feature:dacomp_log_ratios}
 \end{equation}
-where the pseudo-count avoids undefined ratios in the presence of zeros. The variability of these log-ratios across samples is summarized by a score $S_j$. Taxa with $S_j \leq S_{\mathrm{crit}}$ are selected as reference taxa, where $S_{\mathrm{crit}}$ is chosen such that the total number of reference reads per sample remains in a practical range. In this way, DACOMP aims to construct a reference set that is sufficiently stable across samples while still large enough to support the subsequent rarefaction-based testing procedure.
+where the pseudo-count avoids undefined ratios in the presence of zeros. The variability of these log-ratios across samples is summarized by a score $S_i$. Taxa with $S_i \leq S_{\mathrm{crit}}$ are selected as reference taxa, where $S_{\mathrm{crit}}$ is chosen such that the total number of reference reads per sample remains in a practical range. In this way, DACOMP aims to construct a reference set that is sufficiently stable across samples while still large enough to support the subsequent rarefaction-based testing procedure.
 
-For a candidate taxon $j \notin \mathcal{B}$, DACOMP compares the abundance of taxon $j$ with the total abundance of the reference taxa. Let
+\newpage
+For a candidate taxon $i \notin \mathcal{B}$, DACOMP compares the abundance of taxon $i$ with the total abundance of the reference taxa. Let
 \begin{equation}
-\label{eq:4feature:dacomp_reference_abundance}
-R_i = \sum_{\ell \in \mathcal{B}} X_{i\ell}
+	R_k = \sum_{\ell \in \mathcal{B}} X_{k\ell}
+	\label{eq:4feature:dacomp_reference_abundance}
 \end{equation}
-denote the total reference abundance in sample $i$. DACOMP then defines a taxon-specific rarefaction depth
+denote the total reference abundance in sample $k$. DACOMP then defines the common rarefaction depth
 \begin{equation}
-\label{eq:4feature:dacomp_rarefaction_depth}
-\lambda_j = \min_i R_i.
+	\lambda = \min_{1 \leq k \leq n} R_k.
+	\label{eq:4feature:dacomp_rarefaction_depth}
 \end{equation}
-For each sample $i$, a rarefied count $Z_{ij}$ is generated by sampling $\lambda_j$ reads without replacement from the pool consisting of taxon $j$ and the reference taxa. Equivalently, using the parametrization by number of draws, candidate-taxon counts, and reference counts, this can be written as
+For each sample $k$, a rarefied count $Z_{ki}$ is generated by sampling $\lambda$ reads without replacement from the pool consisting of taxon $i$ and the reference taxa. Equivalently, writing the hypergeometric distribution in terms of population size, number of candidate-taxon reads, and number of draws,
 \begin{equation}
-\label{eq:4feature:dacomp_rarefied_counts}
-Z_{ij} \sim \operatorname{Hypergeometric}\!\left(\lambda_j, X_{ij}, R_i\right).
+	Z_{ki} \sim \operatorname{Hypergeometric}\!\left(X_{ki}+R_k, X_{ki}, \lambda\right).
+	\label{eq:4feature:dacomp_rarefied_counts}
 \end{equation}
 The rarefaction step places samples on a comparable scale with respect to the reference taxa and avoids relying on a parametric model for the original count distribution.
 
-The feature-wise test statistic is then computed from the rarefied counts. In the two-group setting, let $Y_i \in \{0,1\}$ denote the group label of sample $i$. DACOMP uses the Wilcoxon rank-sum statistic
+The feature-wise test statistic is then computed from the rarefied counts. In the two-group setting, let $Y_k \in \{0,1\}$ denote the group label of sample $k$. DACOMP uses the Wilcoxon rank-sum statistic
 \begin{equation}
-\label{eq:4feature:dacomp_test_statistic}
-T_j = \sum_{i:Y_i = 1} \operatorname{rank}(Z_{ij})
+	T_i = \sum_{k:Y_k = 1} \operatorname{rank}(Z_{ki})
+	\label{eq:4feature:dacomp_test_statistic}
 \end{equation}
 to compare the rarefied counts between groups. The corresponding null hypothesis can be formulated as
 \begin{equation}
-\label{eq:4feature:dacomp_null}
-H_{0j}: \text{taxon } j \text{ is not differentially abundant relative to the reference set } \mathcal{B}.
+	H_{0i}: \text{taxon } i \text{ is not differentially abundant relative to the reference set } \mathcal{B}.
+	\label{eq:4feature:dacomp_null}
 \end{equation}
 Because the test is based on ranks of rarefied counts, DACOMP avoids specifying a full parametric model for the taxon counts. This is advantageous in microbiome data, where sparsity, overdispersion, and excess zeros make simple distributional assumptions difficult to justify.
 
-Inference is performed by permutation of the group labels. For each taxon $j$, the observed statistic $T_j$ is compared with a permutation distribution $\{T_j^{*(b)}\}_{b=1}^B$ obtained by repeatedly shuffling the labels $Y_i$ and recalculating the statistic. This yields empirical permutation p-values for all candidate taxa. The use of permutation testing makes DACOMP flexible and well suited to the feature-wise comparative setting considered in this thesis. At the same time, the resulting p-values are limited by the finite number of permutations: with $B$ permutations, empirical p-values lie on a discrete grid, which can be restrictive after multiple testing correction. This limitation is addressed in Chapter~\ref{ch:permapprox}, where the \texttt{permApprox} framework is introduced for refining small permutation p-values. Since \texttt{dacomp} exports both the observed statistic $T_j$ and the permuted statistics $\{T_j^{*(b)}\}_{b=1}^B$, its output can be used directly as input for \texttt{permApprox}. In the application chapter, DACOMP is therefore used for differential abundance testing, and small permutation p-values are refined with \texttt{permApprox} as a post-processing step.
+Inference is performed by permutation of the group labels. For each taxon $i$, the observed statistic $T_i$ is compared with a permutation distribution $\{T_i^{*(b)}\}_{b=1}^B$ obtained by repeatedly shuffling the labels $Y_k$ and recalculating the statistic. This yields empirical permutation p-values for all candidate taxa. The use of permutation testing makes DACOMP flexible and well suited to the feature-wise comparative setting considered in this thesis. At the same time, the resulting p-values are limited by the finite number of permutations: with $B$ permutations, empirical p-values lie on a discrete grid, which can be restrictive after multiple testing correction. This limitation is addressed in Chapter~\ref{ch:permapprox}, where the \texttt{permApprox} framework is introduced for refining small permutation p-values. Since \texttt{dacomp} exports both the observed statistic $T_i$ and the permuted statistics $\{T_i^{*(b)}\}_{b=1}^B$, its output can be used directly as input for \texttt{permApprox}. In the application chapter, DACOMP is therefore used for differential abundance testing, and small permutation p-values are refined with \texttt{permApprox} as a post-processing step.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Differential distribution analysis}
 \label{sec:4feature:diffdist}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../ch04_feature_level/overview_figures/overview_diff_distribution.pdf}
+	\caption{\textbf{Overview of differential distribution analysis with \texttt{waddR}.} For each genus, the group-specific distributions of CLR-transformed values are compared. The \texttt{waddR} framework separates differences in the frequency of observed zeros from differences in the distribution of CLR values among samples with positive original counts. The resulting zero-part and non-zero-part $p$-values can be combined into an overall $p$-value for each tested genus.}
+	\label{fig:4feature:overview_diff_distribution}
+\end{figure}
+
 Differential abundance analysis aims to identify taxa whose abundance levels differ between groups. In many applications, however, group differences may go beyond a shift in mean or median abundance. A taxon may have similar average abundance in two groups but differ in variability, zero frequency, skewness, multimodality, or other aspects of distributional shape. Such differences can be biologically relevant, for example when a taxon is consistently present in one group but occurs only in a subset of individuals in another group. Differential distribution analysis therefore asks the more general question of whether the full feature-specific distribution differs between groups.
+Figure~\ref{fig:4feature:overview_diff_distribution} illustrates this feature-wise perspective for the two-stage \texttt{waddR} framework, which separately considers differences in zero frequencies and in the distributions of non-zero CLR values.
 
 For taxon $i$, let $F_i^{(1)}$ and $F_i^{(2)}$ denote the distributions of the preprocessed abundance values in the two groups with sample sizes $n_1$ and $n_2$. Differential distribution analysis considers the null hypothesis
 \begin{equation}
@@ -157,7 +176,7 @@ Among the more specialized approaches, \texttt{waddR} provides a Wasserstein-bas
 \label{eq:wasserstein_distance}
 W_2^2\left(F_i^{(1)},F_i^{(2)}\right) = \int_0^1 \left( \left(F_i^{(1)}\right)^{-1}(u) - \left(F_i^{(2)}\right)^{-1}(u) \right)^2 \, \mathrm{d}u.
 \end{equation}
-This distance has an intuitive interpretation as the amount of transport required to transform one distribution into the other. Moreover, in one dimension, the squared 2-Wasserstein distance admits a decomposition into location, size, and shape components. The location component corresponds to differences in means, the size component to differences in standard deviations, and the shape component to remaining distributional differences after centering and scaling. This decomposition is useful because it provides more insight into the nature of a detected distributional difference than a single global p-value alone.
+This distance has an intuitive interpretation as the amount of transport required to transform one distribution into the other. Moreover, in one dimension, the squared 2-Wasserstein distance admits a decomposition into location, size, and shape components. The decomposition separates contributions related to location, variability, and residual shape differences after centering and scaling. This decomposition is useful because it provides more insight into the nature of a detected distributional difference than a single global p-value alone.
 
 Although methods such as \texttt{scDD}, \texttt{distinct}, and \texttt{waddR} were primarily motivated by single-cell applications, the statistical question they address is not restricted to single-cell data. They can also be considered for microbiome feature-level analysis when the aim is to test whether the distribution of a taxon differs between groups beyond a simple abundance shift. In this thesis, we focus on \texttt{waddR} for two reasons. First, it provides a direct feature-wise test for equality of one-dimensional distributions and decomposes the squared 2-Wasserstein distance into interpretable components. Second, the workflow already includes a generalized Pareto distribution (GPD) approximation for small permutation p-values. This makes \texttt{waddR} particularly suitable for comparison with the constrained GPD-based p-value refinement developed in Chapter~\ref{ch:permapprox}.
 
@@ -168,7 +187,9 @@ Although methods such as \texttt{scDD}, \texttt{distinct}, and \texttt{waddR} we
 
 The \texttt{waddR} approach provides a Wasserstein-based framework for testing differential distributions in high-throughput data \citep{schefzik2021fast}. For each feature, the method compares the distributions observed in two groups using the squared 2-Wasserstein distance. As introduced above, this distance compares one-dimensional distributions through their quantile functions and therefore captures differences in the full distribution rather than only differences in a location parameter. This makes \texttt{waddR} particularly suitable for settings in which group differences may involve changes in variability, zero frequency, or distributional shape.
 
-A specific feature of \texttt{waddR} is its two-stage testing strategy for data with excess zeros. In the original single-cell setting, the first stage tests for differential proportions of zero observations between the two groups. This idea follows \texttt{scDD}: for each gene, a logistic regression model\footnote{The \texttt{waddR} paper refers to this step as Bayesian logistic regression. Since the cited \texttt{scDD} description formulates the zero test as logistic regression adjusted for cellular detection rate, we describe the step here in terms of the underlying regression model.} is fitted to the binary zero indicator and adjusted for the cellular detection rate, which accounts for differences in the number of detected genes per cell \citep{finak2015mast,korthauer2016statistical}. Let
+A specific feature of \texttt{waddR} is its two-stage testing strategy for data with excess zeros. In the original single-cell setting, the first stage tests for differential proportions of zero observations between the two groups. This idea follows \texttt{scDD}: for each gene, a logistic regression model\footnote{The \texttt{waddR} paper refers to this step as Bayesian logistic regression. Since the cited \texttt{scDD} description formulates the zero test as logistic regression adjusted for cellular detection rate, we describe the step here in terms of the underlying regression model.} is fitted to the binary zero indicator and adjusted for the cellular detection rate, which accounts for differences in the number of detected genes per cell \citep{finak2015mast,korthauer2016statistical}. 
+
+Let
 \begin{equation}
 \label{eq:waddr_zero_prob}
 \pi_i^{(g)} = \Pr\left(X_i^{(g)} = 0\right), \qquad g \in \{1,2\},
@@ -197,7 +218,7 @@ The two p-values from the zero and non-zero parts can be combined into an overal
 \label{eq:waddr_fisher}
 C_i = -2\left(\log p_{i,0} + \log p_{i,+}\right).
 \end{equation}
-Under the classical Fisher combination framework for two p-values, $C_i$ is compared with a chi-squared distribution with four degrees of freedom, leading to a combined p-value
+Under the classical Fisher combination framework, and assuming independence of the two component p-values under the joint null hypothesis, $C_i$ is compared with a chi-squared distribution with four degrees of freedom, leading to a combined p-value
 \begin{equation}
 \label{eq:4feature:waddr_combined_pvalue}
 p_{i,\mathrm{comb}} = \Pr\left(\chi^2_4 \geq C_i\right).

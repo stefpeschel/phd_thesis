@@ -187,33 +187,4 @@ Practical challenges arising from the implementation and combination of differen
 
 \textbf{Chapter 8} concludes the thesis with a discussion of the methodological contributions, their practical implications, and directions for future research.
 
-%====================================
-\section{Notation}
-%====================================
-
-Throughout this thesis, we use the following notation.
-
-\begin{table}[H]
-\centering
-\caption{Notation used throughout the thesis.}
-\begin{tabular}{ll}
-\hline
-Symbol & Description \\
-\hline
-$n$ & Number of samples \\
-$p$ & Number of taxa (features) \\
-$x_{ki}$ & Observed read count of taxon $i$ in sample $k$ \\
-$X \in \mathbb{N}_0^{n \times p}$ & Microbiome count matrix \\
-$m_k = \sum_{i=1}^p x_{ki}$ & Library size (sequencing depth) of sample $k$ \\
-$\mathcal{S}^{p-1}$ & $(p-1)$-dimensional simplex \\
-$r_{ij}$ & Association measure between taxa $i$ and $j$ \\
-$a_{ij}$ & Entry of the adjacency matrix \\
-$d_{ij}$ & Dissimilarity between taxa or samples (context-specific) \\
-$M$ & Number of possible undirected edges, $M = \frac{p(p-1)}{2}$ \\
-$m$ & Number of hypothesis tests \\
-$T_{\mathrm{obs}}^{(j)}$ & Observed test statistic for test $j$ \\
-$T_{b}^{*(j)}$ & Permuted test statistic (permutation $b$) for test $j$ \\
-$B$ & Number of permutations \\
-\hline
-\end{tabular}
-\end{table}
+Notation used throughout the thesis is summarized in Appendix~\ref{app:notation}. Chapter-specific notation is introduced locally where needed. In particular, Chapter~\ref{ch:permapprox} contains a dedicated overview for permutation testing and GPD tail modeling.

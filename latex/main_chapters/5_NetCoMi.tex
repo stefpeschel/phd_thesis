@@ -58,22 +58,19 @@ The chapter further elaborates on comparative network inference, including permu
 \label{sec:5net:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../ch05_netcomi/overview_figures/overview_NetCoMi_workflow.pdf}
+	\caption{\textbf{Illustrative NetCoMi workflow for group-specific microbial association networks.} The figure shows one possible workflow implemented in \texttt{NetCoMi}. Starting from CLR-transformed data, taxon--taxon associations are estimated separately for the groups under study and subsequently sparsified to obtain adjacency matrices representing group-specific association networks. The methodological foundations of network construction are discussed in Section~\ref{sec:5net:net_construction}. The resulting networks can be visualized and characterized using centrality measures, hub identification, clustering, and global graph properties (Section~\ref{sec:5net:net_analysis}). Finally, the group-specific networks can be compared with respect to global, node-level, edge-level, or structural characteristics (Section~\ref{sec:5net:net_comparison}). The resulting differential network highlights associations that differ between groups; edge colors indicate the direction of the estimated group difference.}
+	\label{fig:5net:workflow}
+\end{figure}
+
 Association networks extend microbiome data analysis beyond marginal and aggregated characteristics by modeling relationships between microbial taxa. In contrast to community-level summaries (Chapter~\ref{ch:community}) and feature-level measures (Chapter~\ref{ch:feature}), which focus on global properties or individual taxa, network-based analysis considers dependencies between taxa and therefore combines aspects of both perspectives. This allows the investigation of how microbial features are associated within a community and how these association patterns differ across conditions.
 
 This increased scope comes at the cost of additional methodological complexity. Microbial network analysis is not a single procedure, but a multi-step workflow that involves several modeling and analysis decisions. These include the estimation of associations between taxa, the construction of a network representation, the analysis of network properties, and, in comparative settings, the formal comparison of networks across groups.
 
 An overview of this workflow is provided in Figure~\ref{fig:5net:workflow}, and the structure of this chapter follows its main components. Preprocessing is not discussed further here, as it has already been introduced in Chapter~\ref{ch:microbiome} and is equally relevant across all analysis targets. Sections~\ref{sec:5net:net_construction} to \ref{sec:5net:net_comparison} review the methodological foundations of network construction, network analysis, and network comparison. These sections highlight key challenges specific to microbiome data, including compositionality, sparsity, and the lack of analytically tractable null distributions for many network-based statistics.
 
-\begin{figure}[!ht]
-\centering
-\includegraphics[width=\textwidth]{figures/NetCoMi/workflow.pdf}
-\caption{
-\textbf{Typical network analysis workflow for microbiome data.}
-Section numbers indicate where the corresponding components are discussed.
-Starting from a count matrix, the data are first preprocessed, including filtering, zero handling, and normalization (Sections~\ref{sec:2micro:filtering} to \ref{sec:2micro:normalization}). Based on the preprocessed data, pairwise associations between taxa are estimated, followed by sparsification and transformation steps to obtain an adjacency structure representing the network (Section~\ref{sec:5net:net_construction}). The resulting network can then be analyzed using node-level and global summary measures and visualized for interpretation (Section~\ref{sec:5net:net_analysis}). In comparative settings, the workflow is extended to include statistical procedures for network comparison, leading to the identification of differential network structures (Section~\ref{sec:5net:net_comparison}).
-}
-\label{fig:5net:workflow}
-\end{figure}
 
 Building on this foundation, the subsequent sections introduce the \texttt{NetCoMi} framework, which constitutes the first methodological contribution of this thesis. It integrates previously disjoint steps of microbial network analysis into a unified and modular workflow, enabling coherent and reproducible construction, analysis, and comparison of association networks. We discuss the motivation for this framework, address practical challenges arising from the combination of different methodological components, and present solutions for flexible and user-friendly network analysis.
 
@@ -104,14 +101,13 @@ A natural starting point for quantifying relationships between microbial taxa is
 where $\mathrm{cov}(X,Y)$ denotes the covariance between $X$ and $Y$, and $\sigma_X$, $\sigma_Y$ are the corresponding standard deviations \citep{schober2018correlation}. Estimating correlations from data therefore requires reliable estimation of the covariance structure.
 
 In microbiome data analysis, covariance estimation is particularly challenging because the data characteristics described in Chapter~\ref{ch:microbiome} must be taken into account. Even after preprocessing to address differences in sequencing depth, excess zeros, and compositionality, one major difficulty remains: high dimensionality. In typical applications, the number of taxa $p$ is large relative to the number of samples $n$, often with $p \gg n$.
-
-One might be tempted to use the sample covariance matrix as an estimator of $\rho(X,Y)$. For a data matrix $X \in \mathbb{R}^{n \times p}$ the sample covariance matrix is given by
+One might be tempted to use the sample covariance matrix as an estimator of $\rho(X,Y)$. For a data matrix $X \in \mathbb{R}^{n \times p}$ it is given by
 \begin{equation}
 S = \frac{1}{n-1} \sum_{i=1}^n (x_i - \bar{x})(x_i - \bar{x})^\top 
 = \frac{1}{n-1} X^{*\top} X^*,
 \end{equation}
 where $X^*$ denotes the column-centered data matrix \citep{hastie2009elements}.
-In the high-dimensional regime $p \gg n$, the sample covariance matrix $S$ has rank at most $n-1$ and is therefore singular. Consequently, it is not invertible, and covariance and correlation estimates derived from $S$ are unstable and may poorly reflect the underlying dependence structure.
+In the high-dimensional regime $p \gg n$, the sample covariance matrix $S$ has rank at most \text{$n-1$} and is therefore singular. Consequently, it is not invertible, and covariance and correlation estimates derived from $S$ are unstable and may poorly reflect the underlying dependence structure.
 
 To obtain meaningful estimates in such settings, additional structural assumptions are required. A common and crucial assumption is \emph{sparsity}, which postulates that only a relatively small number of pairwise associations are non-zero. This assumption is biologically plausible in many microbial ecosystems, where interactions tend to occur within limited subsets of taxa rather than across all pairs. From a statistical perspective, sparsity makes the high-dimensional estimation problem tractable by reducing the effective number of parameters and enabling regularization-based estimation techniques. Most methods for high-dimensional covariance and inverse covariance estimation discussed in this work therefore explicitly or implicitly rely on sparsity assumptions.
 
@@ -150,8 +146,8 @@ Dedicated methods for microbiome data, such as SparCC for sparse correlation est
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/NetCoMi/sparse_cov_estimation.pdf}
-\caption{\textbf{From covariance estimation to correlation and partial correlation.} Overview of high-dimensional association estimation after preprocessing. The upper path illustrates sparse covariance estimation followed by standardization to a sparse correlation matrix. The lower path illustrates sparse inverse covariance estimation and the resulting partial correlation matrix. Examples of microbiome-specific methods are indicated for both branches (SparCC and SpiecEasi).}
+\includegraphics[width=\textwidth]{../ch05_netcomi/overview_figures/overview_sparse_cov_estimation.pdf}
+\caption{\textbf{From covariance estimation to correlation and partial correlation.} Overview of regularized association estimation after preprocessing. The upper path illustrates covariance estimation followed by standardization to a correlation matrix. The lower path illustrates sparse inverse covariance estimation and the resulting partial correlation matrix. Examples of microbiome-specific methods are indicated for both branches (SparCC and SPIEC-EASI).}
 \label{fig:5net:sparse_cov_estimation}
 \end{figure}
 
@@ -160,7 +156,7 @@ Dedicated methods for microbiome data, such as SparCC for sparse correlation est
 \label{sec:5net:net_constr:asso_microbiome}
 %====================================
 
-In the previous subsection, we outlined general strategies for estimating sparse correlation matrices and their partial counterparts after accounting for the typical characteristics of microbiome data described in Chapter~\ref{ch:microbiome}. However, over the last decade, a variety of methods have been specifically developed for microbiome data, which explicitly incorporate compositionality, sparsity, and zero inflation into the proposed approach. In many cases, these methods integrate parts of the preprocessing steps described in Chapter~\ref{ch:microbiome} directly into the model formulation.
+In the previous subsection, we outlined general strategies for estimating sparse correlation matrices and their partial counterparts after accounting for the typical characteristics of microbiome data described in Chapter~\ref{ch:microbiome}. However, over the last decade, a variety of methods have been specifically developed for microbiome data, addressing compositionality and, depending on the method, sparsity or zero handling. In many cases, these methods integrate parts of the preprocessing steps described in Chapter~\ref{ch:microbiome} directly into the model formulation.
 
 In the following, we introduce representative approaches for estimating both marginal and conditional associations in microbiome data. In particular, we consider two widely used methods for correlation estimation, namely SparCC and CCLasso, and two approaches for estimating conditional dependencies based on sparse inverse covariance estimation, namely SPIEC-EASI and SPRING. In addition, we introduce proportionality as an alternative association measure tailored to compositional data, as well as a shrinkage-based extension proposed by \citet{badri2020shrinkage}.
 
@@ -169,7 +165,9 @@ In the following, we introduce representative approaches for estimating both mar
 \label{sec:5net:net_constr:sparcc}
 %------------------------------------
 
-SparCC (Sparse Correlations for Compositional data) \citep{friedman2012inferring} is one of the most widely used methods for estimating correlations between microbial taxa from compositional data. It is based on the idea of approximating the Pearson correlation between the unobserved absolute abundances from log-ratio transformed data. Let $x_i$ and $x_j$ denote the (unobserved) absolute abundances of two taxa. SparCC exploits the relationship between correlations and the variance of log-ratios,
+SparCC (Sparse Correlations for Compositional data) \citep{friedman2012inferring} is one of the most widely used methods for estimating correlations between microbial taxa from compositional data. It is based on the idea of approximating the Pearson correlation between the unobserved absolute abundances from log-ratio transformed data. Let $x_i$ and $x_j$ denote the (unobserved) absolute abundances of two taxa. 
+
+SparCC exploits the relationship between correlations and the variance of log-ratios,
 \begin{equation}
 t_{ij} = \mathrm{Var}\left(\log\frac{x_i}{x_j}\right),
 \end{equation}
@@ -193,7 +191,7 @@ The method is based on the assumption that the underlying correlation structure 
 \label{sec:5net:net_constr:spieceasi}
 %------------------------------------
 
-SPIEC-EASI (Sparse InversE Covariance Estimation for Ecological Association Inference) \citep{kurtz2015sparse} estimates a sparse network of conditional dependencies between microbial taxa. The method is specifically designed for compositional microbiome data and incorporates several steps of the general workflow depicted in Figure~\ref{fig:5net:workflow}. In particular, it combines log-ratio transformation, sparse graphical-model estimation, and stability-based model selection within a single framework.
+SPIEC-EASI (Sparse InversE Covariance Estimation for Ecological Association Inference) \citep{kurtz2015sparse} estimates a sparse network of conditional dependencies between microbial taxa. The method is specifically designed for compositional \text{microbiome} data and incorporates several steps of the general workflow depicted in Figure~\ref{fig:5net:workflow}. In particular, it combines log-ratio transformation, sparse graphical-model estimation, and stability-based model selection within a single framework.
 
 To account for compositionality, the observed count data are transformed using the centered log-ratio (CLR) transformation, as defined in Equation~\eqref{eq:2micro:CLR} in Section~\ref{sec:2micro:norm:log-ratios}. SPIEC-EASI then estimates a sparse conditional-dependence graph from the transformed data. It provides two alternative estimation approaches. The first is neighbourhood selection proposed by \citet{meinshausen2006highdimensional}, commonly referred to as the ``MB'' method. The second is sparse inverse covariance selection, also known as the graphical lasso, introduced by \citet{friedman2008sparse}. While the graphical lasso estimates the precision matrix jointly through a global optimization problem, the MB method reconstructs the graph in a node-wise manner. Since the MB method is used for network construction in the application chapter, it is described in more detail below following the formulation shown in SPIEC-EASI \citep{kurtz2015sparse}.
 
@@ -211,7 +209,7 @@ where $\mathbf{Z}_{-i}$ denotes the matrix of all CLR-transformed taxa except ta
 
 Because this procedure is repeated for every taxon, it initially yields two potentially different coefficient estimates for each pair of taxa: one from the regression of taxon $i$ on taxon $j$ and one from the regression of taxon $j$ on taxon $i$. These node-wise estimates must therefore be symmetrized to obtain an undirected network. SPIEC-EASI offers several symmetrization rules. For example, an edge may be retained when it is selected in at least one of the two regressions or only when it is selected in both. When weighted associations are required, the two directed coefficient estimates can additionally be combined, for example by their average. The resulting non-zero entries define the estimated conditional-dependence network.
 
-Both the MB and graphical-lasso approaches rely on the assumption that the underlying conditional-dependence structure is sparse. Their regularization parameter $\lambda$ controls the degree of sparsity: larger values yield fewer selected edges, whereas smaller values yield denser graphs. SPIEC-EASI selects $\lambda$ using the Stability Approach to Regularization Selection (StARS) \citep{liu2010stability}. StARS repeatedly draws subsamples of the data, estimates networks over a sequence of regularization values, and evaluates how strongly individual edge selections vary across subsamples. The selected regularization level is chosen to keep this estimated edge instability below a user-defined threshold. Thus, SPIEC-EASI performs association estimation and sparsification jointly, so that no additional edge-selection step is required after fitting the model. Alternative sparsification strategies for association measures that do not include an internal model-selection procedure are discussed later in this section.
+Both the MB and graphical-lasso approaches rely on the assumption that the underlying conditional-dependence structure is sparse. Their regularization parameter $\lambda$ controls the degree of sparsity: larger values yield fewer selected edges, whereas smaller values yield denser graphs. SPIEC-EASI selects $\lambda$ using the Stability Approach to Regularization Selection (StARS) \citep{liu2010stability}. StARS repeatedly draws subsamples of the data, estimates networks over a sequence of regularization values, and evaluates how strongly individual edge selections vary across subsamples. The selected regularization level is chosen to keep this estimated edge instability below a user-defined \text{threshold}. Thus, SPIEC-EASI performs association estimation and sparsification jointly, so that no additional edge-selection step is required after fitting the model. Alternative sparsification strategies for association measures that do not include an internal model-selection procedure are discussed later in this section.
 
 %------------------------------------
 \subsubsection{SPRING}
@@ -226,7 +224,7 @@ Based on the estimated latent correlation matrix, sparse conditional dependencie
 
 SPRING was originally developed for quantitative microbiome profiling (QMP) data, where absolute abundances are measured rather than relative abundances. Such data can be obtained, for example, by combining sequencing-based relative abundance measurements with total microbial load estimates from quantitative PCR (qPCR) or flow cytometry. In this setting, the compositional constraint is alleviated, although zero inflation remains a key challenge. 
 
-However, SPRING can also be applied to compositional data. In this case, it employs a modified centered log-ratio transformation (mCLR) that avoids the need for zero replacement. The mCLR transformation computes the geometric mean based only on positive components, applies the clr transformation to these values, and subsequently shifts nonzero entries to ensure strict positivity, while zero values remain unchanged.
+However, SPRING can also be applied to compositional data. In this case, it employs a modified centered log-ratio transformation (mCLR) that avoids the need for zero replacement. The mCLR transformation computes a geometric mean over the positive components of each sample and transforms positive entries relative to this reference, while zero observations remain unchanged. It therefore avoids explicit zero replacement, but yields a zero-aware representation whose interpretation differs from that of the ordinary CLR transformation.
 
 %------------------------------------
 \subsubsection{Proportionality}
@@ -235,6 +233,7 @@ However, SPRING can also be applied to compositional data. In this case, it empl
 
 \citet{lovell2015proportionality} propose proportionality as an alternative measure of association that is consistent with the compositional nature of microbiome data. The key observation is that proportionality between two quantities is invariant under scaling by a common factor.
 
+\newpage
 Consider two positive quantities $\omega_i$ and $\omega_j$. If they are proportional, i.e.,
 $\omega_i \propto \omega_j$,
 then for any positive constant $c > 0$ it holds that
@@ -334,6 +333,13 @@ Resampling-based approaches are broadly applicable and do not rely on parametric
 \label{sec:5net:net_construction:edge_weights}
 %====================================
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{../ch05_netcomi/figures/example_figures/NetCoMi_asso_diss_transformation-1.pdf}
+	\caption{\textbf{Transformation from associations to dissimilarities and similarities.} The figure shows how signed and unsigned transformations map an association value in $[-1,1]$ to a dissimilarity (left) and to the corresponding similarity or edge weight (right). The curves describe the transformation for retained non-zero associations. The dashed vertical line at zero marks entries with $r_{ij}^{*}=0$, which correspond to edges not retained in the sparse network; these are treated separately by setting $d_{ij}=\infty$ and $s_{ij}=0$. The signed hybrid transformation is not shown separately, because it follows the signed transformation for positive associations and removes negative associations from the network.}
+	\label{fig:5net:association_transformations}
+\end{figure}
+
 After sparsification, the association matrix no longer represents all pairwise taxon relationships, but only those retained according to the chosen sparsification rule. Let $r_{ij}^{*}$ denote the resulting sparse association between taxa $i$ and $j$, where $r_{ij}^{*}=0$ indicates that no edge is retained. The next step is to translate these sparse associations into the quantities used by network analysis methods and visualization. In \texttt{NetCoMi}, this translation is performed in two stages. First, sparse associations are transformed into dissimilarities. Second, these dissimilarities are converted into similarities, which serve as edge weights in the adjacency matrix.
 
 The intermediate dissimilarity representation is useful because several network measures, in particular shortest-path-based measures, require distances rather than similarities. Following van Dongen and Enright~\citep{vandongen2012metric}, \texttt{NetCoMi} provides different transformations depending on how negative associations should be interpreted. This choice is not merely technical. A strong negative association may either be treated as a strong relationship, because it indicates a pronounced statistical dependence, or as a large dissimilarity, because the two taxa vary in opposite directions. Both interpretations can be meaningful, but they answer different questions.
@@ -364,12 +370,7 @@ d_{ij}^{\mathrm{unsigned}} =
 \end{equation}
 In this case, both strongly positive and strongly negative associations correspond to small dissimilarities. The unsigned transformation is therefore appropriate if the main interest lies in the strength of statistical dependence, irrespective of its direction. Figure~\ref{fig:5net:association_transformations} illustrates both the signed and unsigned transformation.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/NetCoMi/NetCoMi_asso_diss_transformation-1.pdf}
-\caption{\textbf{Transformation from associations to dissimilarities and similarities.} The figure shows how signed and unsigned transformations map an association value in $[-1,1]$ to a dissimilarity (left) and to the corresponding similarity or edge weight (right). The curves describe the transformation for retained non-zero associations. The dashed vertical line at zero marks entries with $r_{ij}^{*}=0$, which correspond to edges not retained in the sparse network; these are treated separately by setting $d_{ij}=\infty$ and $s_{ij}=0$. The signed hybrid transformation is not shown separately, because it follows the signed transformation for positive associations and removes negative associations from the network.}
-\label{fig:5net:association_transformations}
-\end{figure}
+
 
 The resulting dissimilarities are used for shortest-path-based network measures in the subsequent network analysis. For weighted networks, they are transformed into similarities by setting $s_{ij}=1-d_{ij}$ for finite dissimilarities and $s_{ij}=0$ if $d_{ij}=\infty$. The similarity matrix $S=(s_{ij})$ then defines the weighted adjacency matrix $A=(a_{ij})$ via $a_{ij}=s_{ij}$, so that retained edges receive weights in $[0,1]$ and removed edges have weight zero. If an unweighted network is desired, the adjacency matrix is instead binarized by setting $a_{ij}=1$ for non-zero similarities and $a_{ij}=0$ otherwise.
 
@@ -415,7 +416,7 @@ Node-level centrality measures summarize the position of individual taxa within 
 
 \begin{figure}[!htb]
 \centering
-\includegraphics[width=\textwidth]{figures/NetCoMi/NetCoMi_centrality_measures_network-1.pdf}
+\includegraphics[width=\textwidth]{../ch05_netcomi/figures/example_figures/NetCoMi_centrality_measures_network-1.pdf}
 \caption{\textbf{Illustration of centrality measures in a small example network.} Node color indicates the magnitude of the respective centrality measure, with warmer colors representing higher values. Degree centrality highlights nodes with many direct neighbors, betweenness centrality nodes lying on shortest paths between different parts of the network, closeness centrality nodes with short paths to many other nodes, and eigenvector centrality assigns high values to nodes connected to other central nodes.}
 \label{fig:5net:centrality_example}
 \end{figure}
@@ -497,7 +498,9 @@ G_{\mathrm{Dens}} = \frac{2M}{p(p-1)}.
 \end{equation}
 Density is based only on the presence or absence of edges and is therefore mainly informative for sparse networks. If signed associations are retained, the \textbf{positive edge percentage} additionally summarizes the proportion of retained edges with positive sign.
 
-The \textbf{average dissimilarity} summarizes the typical dissimilarity of directly connected taxa, using the edge dissimilarities defined during network construction. If $\mathcal{E}$ denotes the set of retained edges, it can be written as
+The \textbf{average dissimilarity} summarizes the typical dissimilarity of directly connected taxa, using the edge dissimilarities defined during network construction. 
+
+If $\mathcal{E}$ denotes the set of retained edges, the average dissimilarity can be written as
 \begin{equation}
 \label{eq:5net:net_analysis:average_dissimilarity}
 G_{\mathrm{Diss}} = \frac{1}{|\mathcal{E}|}\sum_{(i,j)\in\mathcal{E}} d_{ij}.
@@ -550,7 +553,7 @@ The graphlet-based characterization used in \texttt{NetCoMi} is based on the Gra
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.7\textwidth]{figures/NetCoMi/graphlets_orbits.pdf}
+\includegraphics[width=0.7\textwidth]{../ch05_netcomi/overview_figures/overview_graphlets_orbits.pdf}
 \caption{\textbf{Graphlets and non-redundant node orbits up to four nodes.} The figure shows the connected graphlets with up to four nodes and their node-orbit labels. Different node fillings indicate different automorphism orbits within the same graphlet. Orange outlines highlight the $11$ non-redundant orbits used for the Graphlet Correlation Matrix as implemented in \texttt{NetCoMi}. Figure adapted from \citet{yaveroglu2014revealing}.}
 \label{fig:5net:net_analysis:graphlets_orbits}
 \end{figure}
@@ -576,11 +579,12 @@ Rather than interpreting a GCM heatmap in isolation, it can be informative to co
 
 The corresponding GCM reflects this hub-and-leaf architecture. The degree orbit~$0$ and the open or branching orbits $2$, $5$, and $7$ show predominantly positive correlations, indicating that nodes involved in these structural roles tend to co-occur across the network. In contrast, the terminal-node orbits $6$, $9$, $4$, and $1$ form a distinct block and show weaker or negative correlations with several of the more central open-structure roles. This pattern is consistent with the coexistence of highly connected hub nodes and many peripheral leaf nodes.
 
+\newpage
 Further examples for Erd\H{o}s--R\'enyi, Barab\'asi--Albert, and stochastic block model networks are shown in Figure~\ref{fig:app:5net:gcm_network_models}. Together, these examples illustrate that networks generated by different structural mechanisms can yield characteristic graphlet-correlation patterns. The GCM is therefore most useful as a comparative topological summary: visually, by contrasting heatmaps across networks, and numerically, through the Graphlet Correlation Distance introduced in Section~\ref{sec:5net:net_comparison:differential_network}.
 
 \begin{figure}[!htb]
 \centering
-\includegraphics[width=0.9\textwidth]{figures/NetCoMi/NetCoMi_network_gcms_BA_peripheral_thesis-1.pdf}
+\includegraphics[width=0.9\textwidth]{../ch05_netcomi/figures/example_figures/NetCoMi_network_gcms_BA_peripheral_thesis-1.pdf}
 \caption{\textbf{Example network and its Graphlet Correlation Matrix.} The left panel shows an illustrative Barab\'asi--Albert-type network with additional leaf nodes, generated to have the same number of nodes as the microbial network analyzed in Chapter~\ref{ch:application}. The right panel shows the corresponding Graphlet Correlation Matrix, with orbit labels ordered as in \texttt{NetCoMi}. Blue colors indicate positive Spearman correlations between orbit count vectors across nodes, whereas red colors indicate negative correlations. The black rectangles represent the grouping of nodes according to their structural role: orbit~$0$ corresponds to the degree; orbits $2$, $5$, and $7$ describe internal or branching positions in open, non-cyclic structures; orbits $8$, $10$, and $11$ represent nodes involved in cyclic structures; orbits $6$, $9$, $4$, and $1$ represent terminal-nodes.}
 \label{fig:5net:net_analysis:gcm_example}
 \end{figure}
@@ -613,6 +617,7 @@ H_{0,ij}: r_{ij}^{(1)} = r_{ij}^{(2)}
 \end{equation}
 against the alternative that the associations differ between groups. This hypothesis is evaluated separately for many taxon pairs and therefore gives rise to a multiple-testing problem. For $p$ taxa, up to $p(p-1)/2$ pairwise hypotheses may be tested. \texttt{NetCoMi} provides three approaches to test this hypothesis, depending on the type of association: Fisher's $z$-test \citep{fisher1992statistical}, the discordant method \citep{siska2016discordant}, and permutation-based testing. 
 
+\newpage
 Fisher's $z$-test is a parametric test for comparing two ordinary sample Pearson correlation coefficients. It uses the well-known Fisher transformation \citep{fisher1921probable}
 \begin{equation}
 \label{eq:5net:net_comparison:fisher_z_transformation}
@@ -641,11 +646,11 @@ T_{ij} =
 where $z_{ij}^{(g)}$ is the Fisher-transformed association between taxa $i$ and $j$ in group $g$, as defined in \eqref{eq:5net:net_comparison:fisher_z_transformation}. Alternatively, the statistic can be computed directly on the original association scale, using $T_{ij}=|r_{ij}^{(1)}-r_{ij}^{(2)}|$.
 
 To approximate the null distribution, the group labels are permuted, the same preprocessing and association-estimation steps as in the network construction process described in Section~\ref{sec:5net:net_construction} are repeated for the two permuted groups, and the statistic is recomputed for each taxon pair.
-Let $T_{ij}^{_(b)}$ denote the statistic obtained in permutation $b$, for $b=1,\dots,B$. The empirical permutation p-value is then given by
+Let $T_{ij}^{*(b)}$ denote the statistic obtained in permutation $b$, for $b=1,\ldots,B$. The empirical permutation p-value is then given by
 \begin{equation}
 \label{eq:5net:net_comparison:differential_association_empirical_pvalue}
 p_{ij}^{\mathrm{emp}} =
-\frac{\sum_{b=1}^{B} I\left(T_{ij}^{_(b)} \geq T_{ij}\right) + 1}
+\frac{\sum_{b=1}^{B} I\left(T_{ij}^{*(b)} \geq T_{ij}\right) + 1}
 {B+1}.
 \end{equation}
 This formulation includes the standard correction that avoids exactly zero empirical permutation p-values. The resulting p-values form a symmetric $p \times p$ matrix, whose entries correspond to tests for differential association between individual taxon pairs.
@@ -760,7 +765,7 @@ NetCoMi was designed as a modular workflow in which the output of one analysis s
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/NetCoMi/overview_functions.pdf}
+\includegraphics[width=\textwidth]{../ch05_netcomi/overview_figures/overview_functions.pdf}
 \caption{\textbf{Overview of the main functions in the NetCoMi workflow.} The four central functions correspond to the main workflow components discussed in this chapter: \texttt{netConstruct()} for network construction, \texttt{netAnalyze()} for network analysis, \texttt{netCompare()} for comparative network analysis, and \texttt{diffnet()} for differential association analysis. The workflow starts from microbiome abundance data, supplied as a count matrix or a supported microbiome data object, or from a user-provided association matrix. Arrows indicate the main flow of information between functions. Selected plotting, summary, permutation, and taxonomic-labeling functions are shown as supporting components.}
 \label{fig:5net:package_architecture}
 \end{figure}
@@ -775,7 +780,7 @@ The function \texttt{netCompare()} performs the comparative network analyses int
 
 In parallel to this sequence, \texttt{diffnet()} provides functionality for differential association analysis. It uses group-specific association estimates to identify taxon pairs whose associations differ between two groups and represents the resulting differences as a differential network. The function \texttt{plot.diffnet()} provides a corresponding visualization. Although \texttt{diffnet()} is conceptually related to \texttt{netCompare()}, it addresses a distinct inferential target: rather than comparing derived properties of two estimated networks, it focuses directly on group differences in individual pairwise associations as described in Section~\ref{sec:5net:net_comparison:differential_association}.
 
-Additional supporting functions were designed to further simplify the workflow for users. The function \texttt{renameTaxa()}, for instance, supports the construction of unique and interpretable taxon labels. In addition, \texttt{createAssoPerm()} provides reusable association matrices from permuted group assignments. These can be supplied to both \texttt{netCompare()} and \texttt{diffnet()}, so that several comparative analyses can rely on the same valid permutation scheme without repeatedly estimating associations for identical permuted data splits.
+Additional supporting functions were designed to further simplify the workflow for users. The function \texttt{renameTaxa()}, for instance, supports the construction of unique and interpretable taxon labels. In addition, \texttt{createAssoPerm()} provides reusable \text{association} matrices from permuted group assignments. These can be supplied to both \texttt{netCompare()} and \texttt{diffnet()}, so that several comparative analyses can rely on the same valid permutation scheme without repeatedly estimating associations for identical permuted data splits.
 
 This architecture separates the main statistical tasks while preserving the information required to connect them consistently. In particular, the objects returned by the central functions retain relevant intermediate results and parameter settings, reducing the need for users to reconstruct analysis steps manually and supporting transparent reporting of the complete workflow. The following subsections discuss the implementation of the four main modules and highlight selected challenges that arose when integrating methods with different assumptions, data requirements, and output formats.
 
@@ -784,7 +789,7 @@ This architecture separates the main statistical tasks while preserving the info
 \label{sec:5net:workflow_implementation:netconstruct}
 %====================================
 
-The function \texttt{netConstruct()} implements the first and most heterogeneous part of the NetCoMi workflow. It combines data preparation, association or dissimilarity estimation, sparsification, and the construction of the network representation within a single interface. This integration was not merely a matter of placing several methods behind one function call. The available methods were developed independently and differ substantially in the type of data they require, the preprocessing steps they assume, and the objects they return. Consequently, the implementation of \texttt{netConstruct()} required explicit rules for coordinating method-specific input and output requirements.
+The function \texttt{netConstruct()} implements the first and most heterogeneous part of the NetCoMi workflow. It combines data preparation, association or dissimilarity estimation, sparsification, and the construction of the network representation within a single interface. The available methods were developed independently and differ substantially in the type of data they require, the preprocessing steps they assume, and the objects they return. Consequently, the implementation of \texttt{netConstruct()} required explicit rules for coordinating method-specific input and output requirements.
 
 %------------------------------------
 \subsubsection*{Coordinating data representations}
@@ -792,13 +797,13 @@ The function \texttt{netConstruct()} implements the first and most heterogeneous
 
 Figure~\ref{fig:5net:workflow_data_types} summarizes the compatibility structure among the zero-replacement, normalization or transformation, and association-estimation methods implemented in NetCoMi. The available methods and their corresponding argument values are listed in Table~\ref{tab:5net:workflow_methods}. The figure distinguishes count or count-like data, relative abundances, integer counts, normalized counts, and transformed data. It further indicates whether a given association estimator requires zero replacement, does not require it, or leaves this choice open. Thus, the figure does not simply list the available methods, but represents the compatibility structure that has to be respected when combining them in one workflow.
 
-
 \begin{figure}[!htb]
-\centering
-\includegraphics[width=\textwidth]{figures/NetCoMi/overview_zero_norm_asso.pdf}
-\caption{\textbf{Data requirements across the network construction workflow.} The figure summarizes the expected input and returned output types of the methods available in \texttt{NetCoMi} for zero replacement, normalization or transformation, and association estimation. Colors distinguish count or count-like data (C), relative abundances (R), integer counts (I), normalized counts in the broader sense (N), and transformed data (T). For association estimation methods, the left symbol indicates whether zero replacement is required, not required, or optional, whereas the right symbol denotes the expected data representation. The figure illustrates a central implementation challenge: methods that are combined within one workflow often differ in their input requirements and output formats. \texttt{NetCoMi} therefore tracks the current data representation and selects compatible outputs where methods provide alternatives. For example, several zero-replacement methods from \texttt{zCompositions} can return either pseudo-absolute count-like data, preserving sample totals, or relative abundances, allowing the subsequent processing steps to be matched to the requirements of the selected association method.}
-\label{fig:5net:workflow_data_types}
+	\centering
+	\includegraphics[width=\textwidth]{../ch05_netcomi/overview_figures/overview_zero_norm_asso.pdf}
+	\caption{\textbf{Data requirements across the network construction workflow.} The figure summarizes the expected input and returned output types of the methods available in \texttt{NetCoMi} for zero replacement, normalization or transformation, and association estimation. Colors distinguish count or count-like data (C), relative abundances (R), integer counts (I), normalized counts in the broader sense (N), and transformed data (T). For association estimation methods, the left symbol indicates whether zero replacement is required, not required, or optional, whereas the right symbol denotes the expected data representation. The figure illustrates a central implementation challenge: methods that are combined within one workflow often differ in their input requirements and output formats. \texttt{NetCoMi} therefore tracks the current data representation and selects compatible outputs where methods provide alternatives. For example, several zero-replacement methods from \texttt{zCompositions} can return either pseudo-absolute count-like data, preserving sample totals, or relative abundances, allowing the subsequent processing steps to be matched to the requirements of the selected association method.}
+	\label{fig:5net:workflow_data_types}
 \end{figure}
+
 
 \begin{table}[!htb]
 \centering
@@ -857,7 +862,7 @@ More generally, \texttt{netConstruct()} records the expected data type of the ch
 \subsubsection*{Integrating externally estimated associations}
 %------------------------------------
 
-A second design objective was to avoid restricting users to association estimators implemented directly in NetCoMi. New methods for microbial association estimation continue to emerge, and users may also wish to apply specialized approaches developed for a particular study design. The function therefore accepts externally computed association matrices as input in addition to count data. This allows users to enter the workflow at the association stage and still use the subsequent functionality for sparsification, transformation into dissimilarities and similarities, network analysis, visualization, and group comparison. This design preserves the modularity of the framework without requiring every possible association estimator to be reimplemented within NetCoMi.
+A second design objective was to avoid restricting users to association estimators implemented directly in NetCoMi. New methods for microbial association estimation continue to emerge, and users may also wish to apply specialized approaches \text{developed} for a particular study design. The function therefore accepts externally computed association matrices as input in addition to count data. This allows users to enter the workflow at the association stage and still use the subsequent functionality for \text{sparsification}, transformation into dissimilarities and similarities, network analysis, visualization, and group comparison. This design preserves the modularity of the framework without requiring every possible association estimator to be reimplemented within NetCoMi.
 
 %------------------------------------
 \subsubsection*{Transforming associations into edge weights}
@@ -877,7 +882,7 @@ The supporting function \texttt{renameTaxa()} was developed to address this issu
 
 Finally, \texttt{netConstruct()} allows users to construct a network directly at a chosen taxonomic rank through the argument \texttt{taxRank}. When a supported microbiome data object with taxonomic annotation is supplied, the function extracts the labels at the requested rank and uses them as node names. To prevent ambiguous network nodes, the function checks whether these labels are unique and stops with an informative error otherwise. Users can then apply \texttt{renameTaxa()} to resolve duplicated or incomplete labels before repeating the construction step. This separation of taxonomic relabeling from network construction keeps the latter function focused on the statistical workflow while ensuring that the network is built on an unambiguous set of taxa.
 
-Taken together, these implementation decisions illustrate the central role of \texttt{netConstruct()} within NetCoMi. The function does not only provide a collection of preprocessing and association-estimation options. It encodes the dependencies between these options, preserves access to externally generated association matrices, and creates a consistent network representation that can be passed to the subsequent analysis and comparison modules.
+Taken together, the variety of implementation decisions illustrate the central role of the \texttt{netConstruct()} function within NetCoMi. The function does not only provide a collection of preprocessing and association-estimation options. It encodes the dependencies between these options, preserves access to externally generated association matrices, and creates a consistent network representation that can be passed to the subsequent analysis and comparison modules.
 
 
 %====================================
@@ -916,6 +921,7 @@ A further design objective was to ensure that network characteristics computed w
 
 At the same time, the visualization is not restricted to the network characteristics calculated during network analysis. Depending on the scientific question, users may prefer to display taxonomic or external information instead. For example, node colors may represent a higher taxonomic rank or another taxon-specific annotation rather than the estimated cluster assignment. Likewise, node size can be based on a centrality measure, but may alternatively reflect taxon abundance or prevalence across samples. In the latter case, the count matrix must be supplied during network construction so that the corresponding quantities can be computed within the plotting function. The plot function can also apply a transformation different from the one used for network construction when this is required for the selected node annotation.
 
+\newpage
 A particular implementation challenge was the translation of taxon-specific numerical values, such as centrality or prevalence, into visually meaningful node sizes. Values may vary substantially in scale and range across networks, so directly using the original values as plotting sizes would often lead to poorly interpretable displays. NetCoMi therefore rescales the selected node-level quantity to a user-defined size interval. The argument \texttt{nodeSizeSpread} controls the difference between the smallest and largest plotted nodes, allowing users to adjust how strongly the selected characteristic is emphasized visually. This separates the information encoded by node size from the absolute numerical scale of the underlying measure and provides a consistent graphical representation across different networks.
 
 % Add: mention the invisible filter
@@ -937,7 +943,7 @@ The comparative functionality of NetCoMi is organized around two complementary i
 
 In contrast, \texttt{diffnet()} addresses differential association analysis at the level of individual taxon pairs. Rather than comparing quantities derived from the complete network, it identifies associations whose estimated strength differs between the two groups. The resulting differential network highlights taxon pairs with evidence for differential association and can be visualized using \texttt{plot.diffnet()}.
 
-Although the two functions operate on related group-specific association estimates, they answer different scientific questions. A differential association analysis asks whether a particular taxon pair changes its statistical relationship across groups. A comparison of network properties asks whether such changes translate into differences in network topology, modular organization, or the importance of individual taxa within the estimated networks. The two perspectives may therefore lead to complementary findings. For example, several differential associations may be present without producing a detectable difference in a global network property, whereas a change in centrality or clustering can reflect the combined effect of multiple moderate association differences.
+Although the two functions operate on related group-specific association estimates, they answer different scientific questions. A differential association analysis asks whether a particular taxon pair changes its statistical relationship across groups. A comparison of network properties asks whether such changes translate into differences in network topology, modular organization, or the importance of individual taxa within the estimated networks. The two perspectives may therefore lead to complementary findings. For example, several differential associations may be present without producing a \text{detectable} difference in a global network property, whereas a change in centrality or clustering can reflect the combined effect of multiple moderate association differences.
 
 By providing both approaches within the same framework, NetCoMi allows users to move from edge-level to network-level comparison without having to reconstruct group-specific association networks separately for each analysis. The following subsections describe the shared permutation-based inference machinery that supports both comparison targets.
 
@@ -960,12 +966,13 @@ An additional implementation challenge arose from the need to support matched st
 
 Permutation-based network comparison can be computationally demanding because each permuted group assignment generally requires the repeated estimation of group-specific association matrices. Depending on the selected association method, this step may involve zero replacement, transformation, model fitting, regularization, or resampling-based sparsification. When several comparative analyses are performed for the same two groups, repeating this procedure independently for each analysis would be inefficient and could also lead to different sets of permuted group assignments being used across related inferential targets.
 
-NetCoMi therefore allows permutation results to be stored and reused across the comparative workflow. Permuted association matrices generated during a call to \texttt{netCompare()} can subsequently be supplied to \texttt{diffnet()}, and association matrices generated during differential association analysis can likewise be reused for network-property comparisons. The supporting function \texttt{createAssoPerm()} provides the same functionality independently of either comparison function. It generates association matrices for a common set of permuted group assignments and stores them in a format that can subsequently be supplied to both \texttt{netCompare()} and \texttt{diffnet()}. In matched designs, the same restricted permutation scheme described above is used when generating these matrices.
+NetCoMi therefore allows permutation results to be stored and reused across the comparative workflow. Permuted association matrices generated during a call to \texttt{netCompare()} can subsequently be supplied to \texttt{diffnet()}, and association matrices generated during differential association analysis can likewise be reused for network-property comparisons. The supporting function \texttt{createAssoPerm()} provides the same functionality independently of either comparison function. It generates association matrices for a common set of permuted group assignments and stores them in a format that can subsequently be supplied to both \texttt{netCompare()} and \texttt{diffnet()}.
 
 This design has two advantages. First, it avoids repeatedly estimating associations for identical permuted data splits when several network-property and edge-level comparisons are of interest. Second, it ensures that the different comparative analyses are based on the same permutation scheme and, where desired, on the same realizations of the permutation distribution. This is particularly useful when results from \texttt{netCompare()} and \texttt{diffnet()} are interpreted jointly, because observed differences in their p-values or inferential conclusions can then be attributed to the respective comparison targets rather than to different random permutations.
 
 A further implementation feature is that the required permutation associations can be generated in separate blocks. For example, several independent computing jobs can each process a subset of the desired permutations and write their results to separate files. These files can later be combined into a single collection of permutation associations and used for a common comparative analysis. This facilitates the use of distributed computing environments and avoids requiring all permutations to be generated within one long-running R session.
 
+\newpage
 The storage mechanism was designed with memory requirements in mind. Rather than retaining all association matrices in memory until the full permutation procedure has finished, the output file is extended iteratively as new permutation results become available. Consequently, the memory requirement is determined primarily by the matrices currently being estimated rather than by the complete collection of permutation associations. This can be important for large taxon sets or computationally expensive association estimators, for which storing all matrices simultaneously in memory may be impractical.
 
 The computational motivation for this functionality is closely related to the problem addressed in Chapter~\ref{ch:permapprox}. Even when permutation associations are stored efficiently, reused across analyses, and computed in parallel blocks, the number of feasible permutations may remain limited when network reconstruction is expensive. The resulting finite permutation resolution motivates the tail-approximation methods developed in the following methodological contribution of this thesis.

@@ -1,0 +1,193 @@
+% !TeX root = ../thesis.tex
+%====================================
+\chapter{Notation}
+\label{app:notation}
+%====================================
+
+This appendix summarizes mathematical notation used repeatedly throughout the thesis. Notation is defined in detail when first introduced in the respective chapter. Chapter~\ref{ch:permapprox} additionally contains a dedicated notation overview for permutation testing and GPD tail modeling.
+
+\section*{Indices, dimensions, and sets}
+
+\notationsettings{1cm}
+\begin{notationlist}
+	\item[$n$] Number of samples. In two-group settings, $n_1$ and $n_2$ denote the group-specific sample sizes. In Chapter~\ref{ch:permapprox}, $n$ may denote the per-group sample size in simulation settings.
+	
+	\item[$p$] Number of taxa, microbial features, or variables.
+	
+	\item[$k$] Index for samples, with $k \in \{1,\ldots,n\}$.
+	
+	\item[$i$] Index for taxa or microbial features, with $i \in \{1,\ldots,p\}$.
+	
+	\item[$j$] Generic index for hypothesis tests or, where appropriate, a second taxon in pairwise quantities.
+	
+	\item[$\ell$] Auxiliary index, commonly used for taxa in sums or pairwise comparisons.
+	
+	\item[$g$] Index for groups, typically $g \in \{1,\ldots,G\}$.
+	
+	\item[$G$] Number of groups.
+	
+	\item[$h$] Index for covariates in regression models.
+	
+	\item[$b$] Index for permutation replicates, with $b \in \{1,\ldots,B\}$.
+	
+	\item[$\mathbb{N}_0$] Set of non-negative integers.
+	
+	\item[$\mathbb{R}$] Set of real numbers.
+	
+	\item[$\mathcal{S}^{p-1}$] The $(p-1)$-dimensional simplex of positive compositions summing to one.
+\end{notationlist}
+
+%====================================
+\section*{Microbiome count data and compositions}
+%====================================
+
+\notationsettings{3.5cm}
+\begin{notationlist}
+	\item[$X = (x_{ki}) \in \mathbb{N}_0^{n \times p}$] Microbiome count matrix with samples in rows and taxa in columns.
+	
+	\item[$x_{ki}$] Observed sequencing count of taxon $i$ in sample $k$.
+	
+	\item[$\mathbf{x}_k = (x_{k1},\ldots,x_{kp})^\top$] Count vector of sample $k$.
+	
+	\item[$m_k = \sum_{i=1}^{p} x_{ki}$] Library size of sample $k$, that is, its observed total sequencing count.
+	
+	\item[$\mathbf{z}_k = (z_{k1},\ldots,z_{kp})^\top$] Latent or estimated relative abundance composition of sample $k$.
+	
+	\item[$z_{ki}$] Relative abundance of taxon $i$ in sample $k$.
+	
+	\item[$\mathbf{x}_k^\ast$] Preprocessed or strictly positive composition derived from sample $k$, where the exact preprocessing procedure is specified in the relevant context.
+	
+	\item[$\mathcal{B}$] Reference set of taxa used by DACOMP.
+	
+	\item[$R_k$] Total abundance of the DACOMP reference taxa in sample $k$.
+	
+	\item[$\lambda$] Common rarefaction depth used in DACOMP.
+	
+	\item[$Z_{ki}$] DACOMP-rarefied count of taxon $i$ in sample $k$.
+\end{notationlist}
+
+%====================================
+\section*{Community-level summaries and regression}
+%====================================
+
+\notationsettings{1.8cm}
+\begin{notationlist}
+	\item[$\alpha_{\mathrm{rich},k}$] Richness of sample $k$.
+	
+	\item[$\alpha_{\mathrm{Sh},k}$] Shannon diversity of sample $k$.
+	
+	\item[$\alpha_{\mathrm{Si},k}$] Simpson diversity of sample $k$.
+	
+	\item[$F_g$] Distribution of a scalar outcome, such as an alpha-diversity measure, in group $g$.
+	
+	\item[$D = (d_{k\ell})$] Sample-by-sample dissimilarity or distance matrix.
+	
+	\item[$d_{k\ell}$] Dissimilarity between samples $k$ and $\ell$.
+	
+	\item[$\mathbf{y}_k$] Multivariate response vector for sample $k$, commonly representing CLR-transformed taxon abundances.
+	
+	\item[$\bar{\mathbf{y}}^{(g)}$] Sample mean CLR vector in group $g$.
+	
+	\item[$\boldsymbol{\mu}_g$] Population mean CLR vector in group $g$.
+	
+	\item[$\boldsymbol{\beta}_h$] Regression coefficient vector associated with covariate $h$ in a multivariate CLR-based regression model.
+	
+	\item[$\boldsymbol{\varepsilon}_k$] Residual vector for sample $k$ in a multivariate regression model.
+	
+	\item[$M_n$] Maximum-type statistic used for compositional equivalence testing.
+	
+	\item[$m_i$] Coordinate-wise contribution of taxon $i$ to the maximum-type compositional equivalence statistic.
+\end{notationlist}
+
+%====================================
+\section*{Association networks}
+%====================================
+
+\notationsettings{2.8cm}
+\begin{notationlist}
+	\item[$\mathcal{G} = (V,E)$] Undirected graph representing a microbial association network, with node set $V$ and edge set $E$.
+	
+	\item[$A = (a_{ij})$] Adjacency matrix of a microbial association network.
+	
+	\item[$a_{ij}$] Adjacency or edge weight between taxa $i$ and $j$.
+	
+	\item[$r_{ij}$] Estimated association between taxa $i$ and $j$.
+	
+	\item[$r_{ij}^\ast$] Sparsified association between taxa $i$ and $j$.
+	
+	\item[$s_{ij}$] Similarity or edge weight derived from an association or distance measure.
+	
+	\item[$d_{ij}$] Dissimilarity or edge length between taxa $i$ and $j$.
+	
+	\item[$\delta_{ij}$] Shortest-path distance between nodes $i$ and $j$.
+	
+	\item[$\Sigma$] Covariance matrix.
+	
+	\item[$\Omega = \Sigma^{-1}$] Precision matrix, whose zero entries encode conditional independencies under suitable model assumptions.
+	
+	\item[$\tilde{\rho}_{ij}$] Partial correlation between taxa $i$ and $j$.
+	
+	\item[$M = p(p-1)/2$] Number of possible undirected edges in a network with $p$ nodes.
+\end{notationlist}
+
+%====================================
+\section*{Feature-level inference and permutation testing}
+%====================================
+
+\notationsettings{3.2cm}
+\begin{notationlist}
+	\item[$G_k$] Group membership of sample $k$, often coded as $G_k \in \{0,1\}$ in two-group comparisons.
+	
+	\item[$T_i$] Feature-specific test statistic for taxon $i$.
+	
+	\item[$p_i$] Feature-specific $p$-value for taxon $i$.
+	
+	\item[$F_i^{(g)}$] Distribution of the preprocessed abundance values of taxon $i$ in group $g$.
+	
+	\item[$\pi_i^{(g)}$] Probability of observing a zero count for taxon $i$ in group $g$.
+	
+	\item[$B$] Number of sampled permutations.
+	
+	\item[$T_{\mathrm{obs}}^{(j)}$] Observed test statistic for hypothesis test $j$.
+	
+	\item[$T_b^{*(j)}$] Test statistic for hypothesis test $j$ obtained in permutation\\ replicate $b$.
+	
+	\item[$\mathcal{T}^{(j)} = \{T_b^{*(j)}\}_{b=1}^{B}$] Permutation distribution for hypothesis test $j$.
+	
+	\item[$p_{\mathrm{emp}}$] Empirical permutation $p$-value.
+	
+	\item[$p_{\mathrm{GPD}}$] Unconstrained GPD-based permutation $p$-value.
+	
+	\item[$p_{\mathrm{cGPD}}$] Support-constrained GPD-based permutation $p$-value.
+	
+	\item[$p_{\mathrm{thr}}$] Screening threshold determining whether an empirical permutation $p$-value is refined by GPD tail modeling.
+\end{notationlist}
+
+%====================================
+\section*{GPD tail modeling}
+%====================================
+
+\notationsettings{2cm}
+\begin{notationlist}
+	\item[$u$] Threshold defining the tail region of a permutation distribution.
+	
+	\item[$Y_{\mathrm{obs}}$] Observed excess above the threshold $u$.
+	
+	\item[$\mathcal{Y} = \{Y_b^\ast\}$] Set of permutation excesses above the threshold.
+	
+	\item[$k$] Number of exceedances above $u$ in the GPD tail-modeling context.
+	
+	\item[$\sigma$] Scale parameter of the Generalized Pareto Distribution.
+	
+	\item[$\xi$] Shape parameter of the Generalized Pareto Distribution.
+	
+	\item[$s = -\sigma/\xi$] Upper support boundary of the GPD when $\xi < 0$.
+	
+	\item[$\hat{\sigma}_{(U)}, \hat{\xi}_{(U)}$] Unconstrained GPD parameter estimates.
+	
+	\item[$\hat{\sigma}_{(C)}, \hat{\xi}_{(C)}$] Support-constrained GPD parameter estimates.
+	
+	\item[$\varepsilon$] Data-adaptive safety margin ensuring that the constrained GPD support extends beyond the observed excess.
+	
+	\item[$\bar{F}_{\mathrm{GPD}}(\cdot)$] Upper-tail probability of the fitted GPD.
+\end{notationlist}

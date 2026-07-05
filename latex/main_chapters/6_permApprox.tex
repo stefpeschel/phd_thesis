@@ -222,15 +222,15 @@ According to the peaks-over-threshold framework of extreme value theory, the con
 
 The GPD is parameterized by a scale parameter $\sigma > 0$ and a shape parameter $\xi \in \mathbb{R}$, with cumulative distribution function
 \begin{equation}
-\label{eq:6perm:GPD_CDF}
-F(y; \sigma, \xi) =
-\begin{cases}
-1 - \left(1 + \frac{\xi y}{\sigma} \right)^{-1/\xi}, & \text{if } \xi \neq 0, \\[6pt]
-1 - \exp\left(-\frac{y}{\sigma}\right), & \text{if } \xi = 0,
-\end{cases}
-\qquad y > 0.
+	\label{eq:6perm:GPD_CDF}
+	F(y; \sigma, \xi) =
+	\begin{cases}
+		1 - \left(1 + \frac{\xi y}{\sigma} \right)^{-1/\xi}, & \text{if } \xi \neq 0, \\[6pt]
+		1 - \exp\left(-\frac{y}{\sigma}\right), & \text{if } \xi = 0,
+	\end{cases}
+	\qquad y \geq 0,\quad 1+\frac{\xi y}{\sigma}>0.
 \end{equation}
-In practice, the parameters $\sigma$ and $\xi$ must be estimated from the permutation excesses $\mathcal{Y}^{(j)}$. 
+For $\xi<0$, the distribution has finite upper endpoint $-\sigma/\xi$, such that $F(y;\sigma,\xi)=1$ for $y\geq -\sigma/\xi$. In practice, the parameters $\sigma$ and $\xi$ must be estimated from the permutation excesses $\mathcal{Y}^{(j)}$. 
 Different estimation approaches can be used for this purpose and will be discussed in detail in Section~\ref{sec:6perm:param_est}.
 
 The shape parameter $\xi$ determines the tail behavior and support of the distribution \citep{hosking1987parameter}:
@@ -510,9 +510,9 @@ First, the threshold detection procedure must be applied repeatedly across a pot
 
 The original implementation of GPD-based permutation $p$-value approximation proposed by \citet{knijnenburg2009fewer} addressed the threshold problem using a simple heuristic procedure. In this approach, an initial tail region consisting of the largest 250 permutation values is defined and the threshold is subsequently increased in increments of ten observations. For each candidate threshold, a GPD is fitted and the adequacy of the model is evaluated using a GoF test. While this strategy provides a pragmatic and computationally efficient solution, it relies on fixed choices for the number of exceedances and threshold increments.
 
-In this work, we therefore investigate a range of automated threshold selection strategies that satisfy the above design criteria. The considered methods include approaches motivated by existing diagnostics in extreme value analysis as well as additional procedures explored during the development of the \texttt{permApprox} framework. Their performance is evaluated in a simulation study that assesses how well the resulting GPD approximations recover reference $p$-values across varying sample sizes, effect sizes, and numbers of permutations.
+In this work, we therefore investigate a range of automated threshold selection strategies that satisfy the above design criteria. The considered methods include approaches motivated by existing diagnostics in extreme value analysis as well as additional procedures developed during the construction of the \texttt{permApprox} framework. Their performance is evaluated in dedicated simulation studies that assess both threshold selection behavior and the accuracy with which the resulting GPD approximations recover reference $p$-values across varying sample sizes, effect sizes, and numbers of permutations.
 
-All considered methods assume a sequence of candidate thresholds ...
+All considered methods operate on an increasing sequence of candidate thresholds in the upper tail of the permutation distribution. This sequence is initialized by specifying a starting number of exceedances $$k_0$$, which determines the lowest candidate threshold and hence the initial tail region considered for GPD fitting. For each subsequent candidate threshold, a GPD is fitted to the corresponding exceedances and evaluated using a method-specific selection criterion. The role of $$k_0$$ and its choice are examined separately in Section~\ref{sec:6perm:threshold:sim_exceed0}.
 
 %====================================
 \subsection{Existing threshold selection approaches}
@@ -705,10 +705,7 @@ The upper panel shows the AD $p$-values across candidate thresholds, while the l
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/permApprox/thresh_ttest_shape_var_ADp_diag-1.pdf}
-  \caption{
-  \textbf{Rejection proportion control (RPC) threshold selection.}
-  The upper panel shows AD $p$-values obtained from fitting a GPD to exceedances above each candidate threshold for the same permutation example as in the previous figures. The dashed horizontal line indicates the significance level $\alpha$ of the AD test, and the vertical line marks the threshold selected by the RPC rule. The lower panel displays the proportion of rejected AD tests among all thresholds greater than or equal to each candidate threshold. The RPC method selects the smallest threshold for which this rejection proportion falls below $\alpha$, here the vertical orange line in the upper panel.
-}
+	\caption{\textbf{Shape-variation threshold selection.} The upper panel shows Anderson--Darling goodness-of-fit $p$-values obtained from fitting a GPD above each candidate threshold for the same permutation example as in the previous figures. The dashed horizontal line indicates the significance level $\alpha$ of the goodness-of-fit test. The lower panel displays the rolling variance of the corresponding estimated shape parameters. Among thresholds for which the goodness-of-fit test does not reject the GPD model (orange dots), the shape-variation rule selects the threshold with the smallest rolling variance. The selected threshold is indicated by the orange vertical line.}
 \label{fig:6perm:thresh_shapevar}
 \end{figure}
 
@@ -2004,7 +2001,7 @@ Complementary results, including the corresponding $p$-values for this setting, 
 
 In this Chapter, we introduced the \texttt{permApprox} framework for accurate permutation $p$-value approximation under limited permutation budgets. Accurate inference in permutation-based testing is often limited by the coarse resolution of empirical permutation $p$-values, which lie on a discrete grid determined by the number of permutations $B$. As a result, extremely small $p$-values cannot be resolved unless $B$ is very large, which is often computationally infeasible. Parametric tail modeling based on the Generalized Pareto Distribution (GPD) has been proposed to overcome this limitation by extrapolating beyond the empirical permutation range \citep{knijnenburg2009fewer}. However, existing GPD-based refinements can yield zero $p$-values when the estimated shape parameter is negative and the fitted tail has a finite upper bound, a problem that has remained largely unresolved. 
 
-The central methodological contribution of this Chapter is a support-constrained GPD tail-fitting approach that guarantees strictly positive tail probabilities at the observed test statistic. Specifically, the GPD is fitted under a support constraint, enforced through a data-adaptive $\varepsilon$ rule that balances the trade-off between unrealistically small $p$-values and overly conservative extrapolation. This approach is embedded in a comprehensive workflow that encompasses all essential components of permutation $p$-value approximation, including the choice of the number of initial exceedances, threshold selection, and GPD parameter estimation.
+The central methodological contribution of this Chapter is a support-constrained GPD tail-fitting approach that ensures that the fitted GPD support extends beyond the observed statistic and thereby avoids structural zero tail probabilities. Specifically, the GPD is fitted under a support constraint, enforced through a data-adaptive $\varepsilon$ rule that balances the trade-off between unrealistically small $p$-values and overly conservative extrapolation. This approach is embedded in a comprehensive workflow that encompasses all essential components of permutation $p$-value approximation, including the choice of the number of initial exceedances, threshold selection, and GPD parameter estimation.
 
 For each component of the workflow, we conducted dedicated simulation studies to identify robust default choices and systematically evaluate competing methods. For the GPD estimation methods, we aimed to balance accuracy in the standard (unconstrained) setting with robustness and numerical stability in the constrained setting. Threshold selection methods were evaluated both with respect to their ability to recover given thresholds and their performance in $p$-value recovery. The resulting default configuration reflects a balance between statistical accuracy, numerical stability, and computational efficiency, tailored to the challenges of permutation testing in high-dimensional settings.
 
