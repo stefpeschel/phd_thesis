@@ -1,6 +1,6 @@
 Network analysis
 ================
-Compiled at 2026-06-27 05:40:58 UTC
+Compiled at 2026-07-05 17:09:49 UTC
 
 ## Aim
 
@@ -243,10 +243,8 @@ We store this layout as main layout.
 #### Nodes colored by phyla
 
     ## phyla
-    ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria 
-    ##                19                 6                 1                75                 1                14 
-    ## Verrucomicrobiota 
-    ##                 1
+    ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria Verrucomicrobiota 
+    ##                19                 6                 1                75                 1                14                 1
 
 ![](figures/10_network_analysis/net_single_net_plot_col_phyla-1.png)<!-- -->
 
@@ -369,15 +367,27 @@ following alternatives:
 
 #### Sparse + low-rank decomposition (SPIEC-EASI slr)
 
-##### Find optimal rank
+##### Find optimal rank using eBIC
 
-    ##   r opt_ind    lambda edges      BIC
-    ## 1 2      10 0.2804681   175 62054.67
-    ## 3 4      10 0.2804681   130 62571.76
-    ## 2 3      10 0.2804681   174 62655.78
-    ## 4 5      10 0.2804681   101 62679.08
+The rank of the sparse-plus-low-rank model is selected using an extended
+BIC criterion. We use 0.5 for the eBIC gamma parameter. In addition to
+the ordinary BIC penalty for model degrees of freedom, the eBIC adds the
+high-dimensional graph-selection penalty `4 * gamma * |E| * log(p)`,
+where `|E|` is the number of sparse off-diagonal edges and `p` is the
+number of taxa.
 
-    ## Optimal r: 2
+We used $\gamma = 0.5$, a commonly used conservative default for
+eBIC-based high-dimensional graph selection. This choice adds a stronger
+penalty for sparse edges than ordinary BIC and was chosen to reduce
+over-selection of associations among taxa.
+
+    ##   r opt_ind    lambda edges df_low_rank df_total gamma      BIC     eBIC
+    ## 4 5      10 0.2804681   101         575      793   0.5 62679.08 63641.04
+    ## 1 2      10 0.2804681   175         233      525   0.5 62054.67 63721.43
+    ## 3 4      10 0.2804681   130         462      709   0.5 62571.76 63809.92
+    ## 2 3      10 0.2804681   174         348      639   0.5 62655.78 64313.02
+
+    ## Optimal r by eBIC (gamma = 0.5 ): 5
 
 ##### Plot low rank heatmaps
 
@@ -534,7 +544,7 @@ Parabacteroides
 
 <td style="text-align:right;">
 
-0.220
+0.208
 </td>
 
 <td style="text-align:right;">
@@ -544,12 +554,12 @@ Parabacteroides
 
 <td style="text-align:right;">
 
-0.356
+0.262
 </td>
 
 <td style="text-align:right;">
 
-0.220
+0.208
 </td>
 
 </tr>
@@ -573,7 +583,7 @@ Streptococcus
 
 <td style="text-align:right;">
 
-0.142
+0.138
 </td>
 
 <td style="text-align:right;">
@@ -583,12 +593,12 @@ Streptococcus
 
 <td style="text-align:right;">
 
-0.176
+0.169
 </td>
 
 <td style="text-align:right;">
 
-0.142
+0.138
 </td>
 
 </tr>
@@ -612,7 +622,7 @@ Veillonella
 
 <td style="text-align:right;">
 
-0.108
+0.104
 </td>
 
 <td style="text-align:right;">
@@ -622,12 +632,12 @@ Veillonella
 
 <td style="text-align:right;">
 
-0.158
+0.132
 </td>
 
 <td style="text-align:right;">
 
-0.108
+0.104
 </td>
 
 </tr>
@@ -651,7 +661,7 @@ Senegalimassilia
 
 <td style="text-align:right;">
 
-0.103
+0.101
 </td>
 
 <td style="text-align:right;">
@@ -661,12 +671,12 @@ Senegalimassilia
 
 <td style="text-align:right;">
 
-0.187
+0.170
 </td>
 
 <td style="text-align:right;">
 
-0.103
+0.101
 </td>
 
 </tr>
@@ -690,7 +700,7 @@ Streptococcus
 
 <td style="text-align:right;">
 
-0.102
+0.100
 </td>
 
 <td style="text-align:right;">
@@ -700,12 +710,12 @@ Streptococcus
 
 <td style="text-align:right;">
 
-0.147
+0.135
 </td>
 
 <td style="text-align:right;">
 
-0.102
+0.100
 </td>
 
 </tr>
@@ -729,7 +739,7 @@ Streptococcus
 
 <td style="text-align:right;">
 
-0.049
+0.044
 </td>
 
 <td style="text-align:right;">
@@ -739,12 +749,12 @@ Streptococcus
 
 <td style="text-align:right;">
 
-0.097
+0.060
 </td>
 
 <td style="text-align:right;">
 
-0.049
+0.044
 </td>
 
 </tr>
@@ -774,7 +784,7 @@ These files have been written to the target directory,
     ##  9 net_single_slr_r3.rds               file       36.17M 2026-06-26 08:41:55
     ## 10 net_single_slr_r4.rds               file        36.1M 2026-06-26 08:50:32
     ## 11 net_single_slr_r5.rds               file       36.03M 2026-06-26 09:14:35
-    ## 12 net_single_slr_us.rds               file       36.21M 2026-06-26 15:51:26
+    ## 12 net_single_slr_us.rds               file       36.03M 2026-07-05 17:05:55
     ## 13 net_single_spring.rds               file        7.73M 2026-06-26 16:24:04
     ## 14 net_single_spring_us.rds            file        7.73M 2026-06-26 16:35:10
     ## 15 net_single_zero_alrEM.rds           file       14.65M 2026-06-25 20:58:35

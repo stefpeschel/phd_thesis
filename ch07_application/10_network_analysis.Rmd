@@ -102,6 +102,7 @@ n_perm_network_comparison <- 999
 cores <- 10
 n_abundant_network_labels <- 15
 n_central_network_labels <- 10
+slr_ebic_gamma <- 0.5
 
 association_measure_final <- "spieceasi"
 normalization_final <- "clr"
@@ -2140,7 +2141,16 @@ association estimation methods. Here, we consider the following alternatives:
 
 #### Sparse + low-rank decomposition (SPIEC-EASI slr)
 
-##### Find optimal rank
+##### Find optimal rank using eBIC
+
+The rank of the sparse-plus-low-rank model is selected using an extended BIC
+criterion. We use `r slr_ebic_gamma` for the eBIC gamma parameter. In addition
+to the ordinary BIC penalty for model degrees of freedom, the eBIC adds the
+high-dimensional graph-selection penalty
+`4 * gamma * |E| * log(p)`, where `|E|` is the number of sparse off-diagonal
+edges and `p` is the number of taxa.
+
+We used $\gamma = 0.5$, a commonly used conservative default for eBIC-based high-dimensional graph selection. This choice adds a stronger penalty for sparse edges than ordinary BIC and was chosen to reduce over-selection of associations among taxa.
 
 ```{r generate_net_single_slr_opt_rank, eval=FALSE}
 
@@ -2179,7 +2189,7 @@ r_candidates <- 2:5
 # Same CLR representation that is used inside SpiecEasi
 X_clr <- t(SpiecEasi::clr(counts_rel_multrepl, mar = 1))
 
-slr_bic <- function(S, L, X, r, tol = 1e-8) {
+slr_ebic <- function(S, L, X, r, gamma = 0.5, tol = 1e-8) {
   
   Theta <- as.matrix(S - L)
   Theta <- (Theta + t(Theta)) / 2
@@ -2191,7 +2201,14 @@ slr_bic <- function(S, L, X, r, tol = 1e-8) {
   chol_theta <- tryCatch(chol(Theta), error = function(e) NULL)
   
   if (is.null(chol_theta)) {
-    return(Inf)
+    return(list(
+      BIC = Inf,
+      eBIC = Inf,
+      df_low_rank = NA_real_,
+      df_total = NA_real_,
+      n_edges = NA_integer_,
+      gamma = gamma
+    ))
   }
   
   log_det_theta <- 2 * sum(log(diag(chol_theta)))
@@ -2210,10 +2227,23 @@ slr_bic <- function(S, L, X, r, tol = 1e-8) {
   # Diagonal sparse precision entries + off-diagonal sparse edges + low-rank term
   df_total <- p + n_edges + df_low_rank
   
-  -2 * loglik + log(n) * df_total
+  bic <- -2 * loglik + log(n) * df_total
+  
+  # Extended BIC penalty for graph selection (Foygel and Drton, 2010),
+  # applied to the sparse off-diagonal edge set.
+  ebic <- bic + 4 * gamma * n_edges * log(p)
+  
+  list(
+    BIC = bic,
+    eBIC = ebic,
+    df_low_rank = df_low_rank,
+    df_total = df_total,
+    n_edges = n_edges,
+    gamma = gamma
+  )
 }
 
-slr_bic_table <- do.call(
+slr_ebic_table <- do.call(
   rbind,
   lapply(r_candidates, function(r) {
     
@@ -2232,30 +2262,36 @@ slr_bic_table <- do.call(
     
     S_opt <- spieceasi_fit$est$icov[[opt_ind]]
     L_opt <- spieceasi_fit$est$resid[[opt_ind]]
+    criterion <- slr_ebic(
+      S = S_opt,
+      L = L_opt,
+      X = X_clr,
+      r = r,
+      gamma = slr_ebic_gamma
+    )
     
     data.frame(
       r = r,
       opt_ind = opt_ind,
       lambda = spieceasi_fit$est$lambda[opt_ind],
-      edges = sum(abs(S_opt[upper.tri(S_opt)]) > 1e-8),
-      BIC = slr_bic(
-        S = S_opt,
-        L = L_opt,
-        X = X_clr,
-        r = r
-      )
+      edges = criterion$n_edges,
+      df_low_rank = criterion$df_low_rank,
+      df_total = criterion$df_total,
+      gamma = criterion$gamma,
+      BIC = criterion$BIC,
+      eBIC = criterion$eBIC
     )
   })
 )
 
-slr_bic_table <- slr_bic_table[order(slr_bic_table$BIC), ]
+slr_ebic_table <- slr_ebic_table[order(slr_ebic_table$eBIC), ]
 
-# SLR-BIC table, sorted by increasing BIC
-slr_bic_table
+# SLR-eBIC table, sorted by increasing eBIC
+slr_ebic_table
 
-r_opt <- slr_bic_table$r[1]
+r_opt <- slr_ebic_table$r[1]
 
-cat("Optimal r:", r_opt)
+cat("Optimal r by eBIC (gamma =", slr_ebic_gamma, "):", r_opt)
 ```
 
 ##### Plot low rank heatmaps
@@ -2291,16 +2327,6 @@ slr_low_rank <- lapply(r_candidates, function(r) {
 })
 
 names(slr_low_rank) <- paste0("r_", r_candidates)
-
-# Use the rank-2 component to define one common ordering of taxa
-L_order <- slr_low_rank[["r_2"]]$L
-diag(L_order) <- 0
-
-taxon_order <- hclust(
-  as.dist(1 - stats::cor(L_order))
-)$order
-
-taxon_names <- colnames(L_order)[taxon_order]
 ```
 
 ```{r}
@@ -2315,15 +2341,15 @@ lim <- max(abs(all_values), na.rm = TRUE)
 
 heatmap_grobs <- lapply(slr_low_rank, function(x) {
   
-  L <- x$L[taxon_order, taxon_order]
+  L <- x$L
   
   # Suppress the diagonal, which is not a pairwise association contribution
   diag(L) <- NA_real_
   
   pheatmap(
     mat = L,
-    cluster_rows = FALSE,
-    cluster_cols = FALSE,
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
     border_color = NA,
     show_rownames = FALSE,
     show_colnames = FALSE,
@@ -2354,7 +2380,7 @@ library(pheatmap)
 library(gridExtra)
 library(grid)
 
-r_chosen <- 2
+r_chosen <- r_opt
 
 net_single_slr <- readRDS(
   path_target(paste0("net_single_slr_r", r_chosen, ".rds"))
@@ -2370,9 +2396,13 @@ opt_ind <- pulsar::opt.index(
 S_opt <- as.matrix(spieceasi_fit$est$icov[[opt_ind]])
 L_opt <- as.matrix(spieceasi_fit$est$resid[[opt_ind]])
 
-# Use a common ordering for both panels
-Theta_slr <- S_opt - L_opt
-taxon_order <- hclust(dist(Theta_slr))$order
+# Use the low-rank component to define a common ordering for both panels
+L_order <- L_opt
+diag(L_order) <- 0
+
+taxon_order <- hclust(
+  as.dist(1 - stats::cor(L_order))
+)$order
 
 S_plot <- S_opt[taxon_order, taxon_order]
 L_plot <- L_opt[taxon_order, taxon_order]
@@ -2492,9 +2522,8 @@ legend(0.65, 1.1, cex = 1, title = "Estimated association:",
 
 ```{r}
 layout_slr <- p$layout$layout1
-layout_slr["Bacteroides", ] <- c(-0.13, 0.12)
-layout_slr["Staphylococcus", ] <- c(0.20, 0.04)
-layout_slr["Haemophilus", ] <- c(0.18, -0.34)
+layout_slr["Terrisporobacter", 2] <- 0.65
+layout_slr["Erysipelatoclostridium", 2] <- 0.35
 ```
 
 
@@ -2604,7 +2633,7 @@ if (file.exists(path_net_single_slr_us) && !refit_complete_network) {
     measure = "spieceasi",
     measurePar = list(method = "slr",
                       nlambda = 30,
-                      r = 2,
+                      r = r_chosen,
                       pulsar.params = list(rep.num = 30, # Subsamples in StARS
                                            thresh = 0.1), # StARS threshold
                       norm.params = list(method = "clr",
