@@ -21,13 +21,14 @@ Some chapter folders mainly store figures used in the thesis, while others also 
 │   ├── clr_mini_example.Rmd        → Compact example on CLR with zero replacement
 │   ├── overview_figure_example.Rmd → Mini dataset for section overview figures
 │   ├── data/                       → Inputs and intermediate files for the examples
-│   └── figures/                    → Generated CLR example figures
+│   ├── figures/                    → Generated figures
+│   └── overview_figures/           → Overview figures to summarize sections
 │
 ├── ch03_community_level/         → Community-level summaries
-│   └── figures/                   → Chapter figures
+│   └── overview_figures/           → Overview figures to summarize sections
 │
 ├── ch04_feature_level/           → Feature-level measures
-│   └── figures/                   → Chapter figures
+│   └── overview_figures/           → Overview figures to summarize sections
 │
 ├── ch05_netcomi/                 → Association networks with NetCoMi
 │   └── figures/                   → Chapter figures

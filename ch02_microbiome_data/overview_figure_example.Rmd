@@ -30,6 +30,7 @@ This script generates some example data used for the overview figures.
 
 ```{r packages}
 library("conflicted")
+library(dacomp)
 library(ggplot2)
 library(patchwork)
 library(zCompositions)
@@ -45,6 +46,59 @@ shannon_index <- function(x) {
   p <- x / sum(x)
   p <- p[p > 0]
   -sum(p * log(p))
+}
+
+pooled_coordinate_variance <- function(y1, y2) {
+  n1 <- nrow(y1)
+  n2 <- nrow(y2)
+  
+  ((n1 - 1) * apply(y1, 2, stats::var) +
+    (n2 - 1) * apply(y2, 2, stats::var)) / (n1 + n2 - 2)
+}
+
+comp_equiv_components <- function(y, group) {
+  group <- droplevels(factor(group))
+  
+  if (nlevels(group) != 2) {
+    stop("Compositional equivalence requires exactly two groups.")
+  }
+  
+  group_levels <- levels(group)
+  y1 <- y[group == group_levels[[1]], , drop = FALSE]
+  y2 <- y[group == group_levels[[2]], , drop = FALSE]
+  
+  n1 <- nrow(y1)
+  n2 <- nrow(y2)
+  mean1 <- colMeans(y1)
+  mean2 <- colMeans(y2)
+  mean_diff <- mean1 - mean2
+  pooled_var <- pooled_coordinate_variance(y1, y2)
+  
+  valid_taxa <- is.finite(pooled_var) & pooled_var > .Machine$double.eps
+  scale_factor <- n1 * n2 / (n1 + n2)
+  
+  standardized_diff <- rep(NA_real_, length(mean_diff))
+  names(standardized_diff) <- names(mean_diff)
+  standardized_diff[valid_taxa] <- mean_diff[valid_taxa] / sqrt(pooled_var[valid_taxa])
+  
+  coordinate_stat <- scale_factor * standardized_diff^2
+  names(coordinate_stat) <- names(mean_diff)
+  statistic <- max(coordinate_stat[valid_taxa], na.rm = TRUE)
+  
+  list(
+    statistic = statistic,
+    n1 = n1,
+    n2 = n2,
+    group1 = group_levels[[1]],
+    group2 = group_levels[[2]],
+    mean1 = mean1,
+    mean2 = mean2,
+    mean_diff = mean_diff,
+    pooled_var = pooled_var,
+    standardized_diff = standardized_diff,
+    coordinate_stat = coordinate_stat,
+    valid_taxa = valid_taxa
+  )
 }
 ```
 
@@ -406,6 +460,261 @@ distance_heatmap + ordination_plot +
   plot_layout(widths = c(1.15, 1), guides = "collect") &
   theme(legend.position = "bottom")
 ```
+
+## Regression
+
+```{r}
+# Fake coefficient matrix for the overview figure. Rows represent model terms,
+# columns represent taxa. Values are illustrative feature-level effects.
+regression_terms <- c("Intercept", "Group", "Covariate 1", "...", "Covariate q")
+regression_taxa <- c("Genus 1", "Genus 2", "...", "Genus p")
+
+regression_coef_matrix <- matrix(
+  c(
+     0.05, -0.42,  0.00, -0.18,
+    -0.68, -0.31,  0.08,  0.55,
+     0.74,  0.03,  0.10,  0.69,
+     0.00,  0.12,  0.08,  0.06,
+    -0.36, -0.10, -0.22,  0.27
+  ),
+  nrow = length(regression_terms),
+  byrow = TRUE,
+  dimnames = list(regression_terms, regression_taxa)
+)
+
+round(regression_coef_matrix, 2)
+```
+
+```{r regression_coefficient_heatmap, fig.width=4.6, fig.height=4.2, dpi=250}
+regression_coef_df <- as.data.frame(as.table(regression_coef_matrix))
+names(regression_coef_df) <- c("term", "genus", "coefficient")
+regression_coef_df$term <- factor(
+  regression_coef_df$term,
+  levels = rev(regression_terms)
+)
+regression_coef_df$genus <- factor(
+  regression_coef_df$genus,
+  levels = regression_taxa
+)
+
+ggplot(regression_coef_df, aes(x = genus, y = term, fill = coefficient)) +
+  geom_tile(color = "grey55", linewidth = 0.25) +
+  scale_fill_gradient2(
+    low = "#2456D9",
+    mid = "white",
+    high = "#D7191C",
+    midpoint = 0,
+    limits = c(-0.8, 0.8),
+    breaks = c(-0.8, 0, 0.8),
+    labels = c("-", "0", "+"),
+    name = NULL
+  ) +
+  coord_equal() +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Coefficient matrix"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 15),
+    axis.text.x = element_text(size = 11),
+    axis.text.y = element_text(size = 11),
+    axis.ticks = element_blank(),
+    legend.position = "bottom",
+    legend.key.width = unit(1.5, "cm")
+  )
+```
+
+## Compositional equivalence
+
+```{r}
+# Real compositional equivalence components for the example data.
+# The statistic is the maximum coordinate-wise standardized squared difference
+# between group CLR means.
+comp_equiv <- comp_equiv_components(
+  y = counts_clr,
+  group = sample_group
+)
+
+clr_group_means <- rbind(
+  comp_equiv$mean1,
+  comp_equiv$mean2
+)
+rownames(clr_group_means) <- c(comp_equiv$group1, comp_equiv$group2)
+
+round(clr_group_means, 3)
+```
+
+**Genera shown in the thesis:**
+
+```{r}
+round(clr_group_means[, 1:3], 3)
+```
+
+```{r}
+comp_equiv_contrasts <- data.frame(
+  genus = names(comp_equiv$coordinate_stat),
+  mean_group1 = as.numeric(comp_equiv$mean1),
+  mean_group2 = as.numeric(comp_equiv$mean2),
+  mean_diff_clr = as.numeric(comp_equiv$mean_diff),
+  standardized_diff = as.numeric(comp_equiv$standardized_diff),
+  m_i = as.numeric(comp_equiv$coordinate_stat),
+  valid_genus = as.logical(comp_equiv$valid_taxa),
+  row.names = NULL
+)
+
+comp_equiv_contrasts <- comp_equiv_contrasts[order(
+  comp_equiv_contrasts$m_i,
+  decreasing = TRUE,
+  na.last = TRUE
+), ]
+
+comp_equiv_statistic <- max(comp_equiv_contrasts$m_i, na.rm = TRUE)
+comp_equiv_statistic
+
+comp_equiv_contrasts
+```
+
+```{r compositional_equivalence_contrasts, fig.width=5, fig.height=3, dpi=250}
+comp_equiv_plot_df <- comp_equiv_contrasts[comp_equiv_contrasts$valid_genus, ]
+comp_equiv_plot_df <- comp_equiv_plot_df[order(comp_equiv_plot_df$m_i), ]
+comp_equiv_plot_df$genus <- factor(
+  comp_equiv_plot_df$genus,
+  levels = comp_equiv_plot_df$genus
+)
+
+comp_equiv_plot_df <- comp_equiv_plot_df[1:10, ]
+
+comp_equiv_plot_df$is_maximum <- comp_equiv_plot_df$m_i == max(
+  comp_equiv_plot_df$m_i,
+  na.rm = TRUE
+)
+
+ggplot(comp_equiv_plot_df, aes(x = m_i, y = genus)) +
+  geom_segment(aes(x = 0, xend = m_i, yend = genus), color = "grey72", 
+               linewidth = 1) +
+  geom_point(aes(color = is_maximum), size = 3) +
+  scale_color_manual(
+    values = c("FALSE" = "grey35", "TRUE" = "#D55E00"),
+    guide = "none"
+  ) +
+  labs(
+    x = expression("Coordinate-wise contrast " * m[i]),
+    y = NULL,
+    #title = expression("Compositional equivalence contrasts: " * M == max[i](m[i]))
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 14),
+    axis.text.y = element_text(size = 9),
+    axis.title.x = element_text(face = "bold")
+  )
+```
+
+
+## Differential abundance with dacomp
+
+```{r differential_abundance_dacomp, warning=FALSE, message=FALSE}
+# dacomp uses the raw count matrix. Here we run a small illustrative dacomp
+# analysis and print the dacomp-rarefied count matrix returned by dacomp.test().
+set.seed(42)
+
+dacomp_counts <- counts
+rownames(dacomp_counts) <- paste0("S", seq_len(nrow(dacomp_counts)))
+
+dacomp_group <- sample_group
+
+dacomp_refs <- dacomp::dacomp.select_references(
+  X = dacomp_counts,
+  minimal_TA = 1,
+  verbose = FALSE
+)
+
+dacomp_reference_taxa <- dacomp_refs$selected_references
+
+if (length(dacomp_reference_taxa) == 0) {
+  dacomp_reference_taxa <- head(
+    order(colSums(dacomp_counts), decreasing = TRUE),
+    min(5, ncol(dacomp_counts))
+  )
+}
+
+dacomp_res <- dacomp::dacomp.test(
+  X = dacomp_counts,
+  y = dacomp_group,
+  ind_reference_taxa = dacomp_reference_taxa,
+  test = dacomp::DACOMP.TEST.NAME.WILCOXON,
+  nr_perm = 1000,
+  q = 0.1,
+  verbose = FALSE,
+  return_rarefied_values = TRUE,
+  Test_All = TRUE
+)
+
+dacomp_transformed_matrix <- dacomp_res$rarefied_counts
+dimnames(dacomp_transformed_matrix) <- dimnames(dacomp_counts)
+
+dacomp_transformed_table <- dacomp_transformed_matrix
+rownames(dacomp_transformed_table) <- rownames(counts)
+
+dacomp_transformed_table
+```
+
+**Genera shown in the thesis:**
+
+```{r}
+dacomp_transformed_table[, c("Genus_1", "Genus_i", "Genus_p")]
+```
+
+```{r differential_abundance_boxplots, fig.width=8, fig.height=4, dpi=250}
+dacomp_plot_genera <- c("Genus_1", "Genus_i", "Genus_p")
+dacomp_plot_labels <- c(
+  "Genus_1" = "Genus 1",
+  "Genus_i" = "Genus i",
+  "Genus_p" = "Genus p"
+)
+
+dacomp_boxplot_df <- as.data.frame(as.table(
+  dacomp_transformed_matrix[, dacomp_plot_genera, drop = FALSE]
+))
+names(dacomp_boxplot_df) <- c("sample_id", "genus", "dacomp_value")
+dacomp_boxplot_df$group <- rep(dacomp_group, times = length(dacomp_plot_genera))
+dacomp_boxplot_df$genus <- factor(
+  dacomp_boxplot_df$genus,
+  levels = dacomp_plot_genera,
+  labels = dacomp_plot_labels[dacomp_plot_genera]
+)
+
+ggplot(
+  dacomp_boxplot_df,
+  aes(x = group, y = dacomp_value, fill = group, color = group)
+) +
+  geom_boxplot(
+    outlier.shape = NA,
+    alpha = 0.75,
+    linewidth = 0.7,
+    width = 0.58
+  ) +
+  geom_jitter(width = 0.08, height = 0, size = 2.4, alpha = 0.85) +
+  facet_wrap(~ genus, scales = "free_y", nrow = 1) +
+  scale_color_manual(values = group_colors) +
+  scale_fill_manual(values = group_fills) +
+  labs(
+    x = NULL,
+    y = "dacomp-rarefied count"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.y = element_text(face = "bold"),
+    strip.text = element_text(face = "bold", size = 12),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  )
+```
+
 
 
 ## Files written
