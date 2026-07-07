@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params$name, "/net_"),
+  fig.path = paste0('figures/', params$name, "/"),
   echo = FALSE)
 ```
 
@@ -64,6 +64,7 @@ conflicts_prefer(dplyr::rename)
 conflicts_prefer(dplyr::mutate)
 conflicts_prefer(dplyr::arrange)
 conflicts_prefer(dplyr::count)
+conflicts_prefer(dplyr::first)
 conflicts_prefer(base::union)
 
 application_path <- rprojroot::find_root(rprojroot::has_file("README.md"))
@@ -87,7 +88,7 @@ permutation_seed <- 42
 n_perm_network_comparison <- 999
 cores <- 10
 
-slr_rank <- 2
+slr_rank <- 5
 selected_permutation_method <- "corshrink_bayesMult"
 
 refit_network_comparison <- FALSE
@@ -101,6 +102,7 @@ The comparison uses the non-EBF and EBF groups that define the main contrast in
 this chapter: no exclusive breastfeeding and exclusive breastfeeding for at
 least two months. Samples with one month of exclusive breastfeeding are
 excluded.
+
 
 ```{r load_data}
 phylo_genus <- readRDS(path_source("02_filtering", "bact_phylo_2m_genus_prev01.rds"))
@@ -705,15 +707,6 @@ plot_group_network(
 )
 ```
 
-```{r ebf_spieceasi_multRepl_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_spieceasi_multRepl,
-  same_layout = TRUE,
-  labels = blank_plot_labels(labels_ebf_spieceasi_multRepl),
-  legends = FALSE,
-  mar = c(1, 1.5, 3, 1.5)
-)
-```
 
 ### SPIEC-EASI MB with BayesMult replacement
 
@@ -820,17 +813,6 @@ plot_group_network(
   repulsion = 0.79999
 )
 ```
-
-```{r ebf_spieceasi_bayesMult_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_spieceasi_bayesMult,
-  same_layout = TRUE,
-  labels = blank_plot_labels(labels_ebf_spieceasi_bayesMult),
-  legends = FALSE,
-  mar = c(1, 1.5, 3, 1.5)
-)
-```
-
 
 
 ### SPIEC-EASI SLR
@@ -1042,15 +1024,7 @@ plot_group_network(props_ebf_slr,
                    cexLabels = 4)
 ```
 
-```{r ebf_slr_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_slr,
-  same_layout = TRUE,
-  labels = blank_plot_labels(labels_ebf_slr),
-  legends = FALSE,
-  mar = c(1, 1.5, 3, 1.5)
-)
-```
+
 
 ### SPRING
 
@@ -1157,15 +1131,7 @@ plot_group_network(props_ebf_spring, same_layout = TRUE,
                    labels = labels_ebf_spring, layout = layout)
 ```
 
-```{r ebf_spring_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_spring, 
-  same_layout = TRUE, 
-  labels = blank_plot_labels(labels_ebf_spring),
-  legends = FALSE,
-  mar = c(1, 1.5, 3, 1.5)
-)
-```
+
 
 
 ### rhoshrink with multRepl
@@ -1254,15 +1220,6 @@ plot_group_network(props_ebf_rhoshrink_multRepl, same_layout = TRUE,
                    asso_legend_y   = -0.8)
 ```
 
-```{r ebf_rhoshrink_multRepl_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_rhoshrink_multRepl,
-  same_layout = TRUE,
-  labels = blank_plot_labels(labels_ebf_rhoshrink_multRepl),
-  legends = FALSE,
-  mar = c(1, 1.5, 3, 1.5)
-)
-```
 
 ### rhoshrink with bayesMult replacement
 
@@ -1356,16 +1313,6 @@ plot_group_network(props_ebf_rhoshrink_bayesMult, same_layout = TRUE,
                    asso_legend_y   = -0.8)
 ```
 
-```{r ebf_rhoshrink_bayesMult_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_rhoshrink_bayesMult,
-  same_layout = TRUE,
-  labels = blank_plot_labels(labels_ebf_rhoshrink_bayesMult),
-  legends = FALSE,
-  mar = c(1, 1.5, 3, 1.5)
-)
-```
-
 
 
 ### corshrink with multiplicative replacement
@@ -1454,16 +1401,6 @@ plot_group_network(props_ebf_corshrink_multRepl, same_layout = TRUE,
                    phylum_legend_y = 1.35,
                    asso_legend_x   = -0.15,
                    asso_legend_y   = -0.8)
-```
-
-```{r ebf_corshrink_multRepl_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_corshrink_multRepl,
-  same_layout = TRUE,
-  labels = blank_plot_labels(labels_ebf_corshrink_multRepl),
-  legends = FALSE,
-  mar = c(1, 1.5, 3, 1.5)
-)
 ```
 
 
@@ -1558,16 +1495,6 @@ plot_group_network(props_ebf_corshrink_bayesMult, same_layout = TRUE,
                    phylum_legend_y = 1.35,
                    asso_legend_x   = -0.15,
                    asso_legend_y   = -0.8)
-```
-
-```{r ebf_corshrink_bayesMult_network_plot_nolabs, fig.width=12, fig.height=6, dpi=250}
-plot_group_network(
-  props_ebf_corshrink_bayesMult,
-  same_layout = TRUE,
-  labels = blank_plot_labels(labels_ebf_corshrink_bayesMult),
-  legends = FALSE,
-  mar = c(1, 1.5, 3, 1.5)
-)
 ```
 
 ## Comparison Of Global Network Properties
@@ -2813,6 +2740,8 @@ plot(diff_ebf_constr_BH_zo,
 
 ### Raw P-Value Comparison
 
+We use a significance level of 5% here.
+
 ```{r pvalue_comparison_helpers}
 safe_pvec <- function(x) {
   if (is.null(x)) {
@@ -2940,7 +2869,7 @@ extract_diffnet_pvalues <- function(
   significant_associations <- pvalues_long %>%
     group_by(test_id) %>%
     summarise(
-      significant_in_any_method = any(p_adjust < 0.05, na.rm = TRUE),
+      significant_in_any_method = any(p_adjust < 0.01, na.rm = TRUE),
       association_difference = first(association_difference),
       .groups = "drop"
     ) %>%
@@ -2990,7 +2919,7 @@ plot_diffnet_pvalues_by_association_difference <- function(
     mutate(
       method = factor(method, levels = method_order),
       method_label = factor(method_label, levels = zero_counts$method_label),
-      significant_BH = !is.na(p_adjust) & p_adjust < 0.05,
+      significant_BH = !is.na(p_adjust) & p_adjust < 0.01,
       point_color = if_else(
         significant_BH,
         association_color,
@@ -3072,7 +3001,7 @@ plot_diffnet_pvalues_by_association_difference <- function(
 }
 ```
 
-```{r diffnet_raw_pvalue_comparison, fig.width=10, fig.height=4, dpi=250}
+```{r thesis_diffnet_raw_pvalue_comparison, fig.width=10, fig.height=4, dpi=250}
 okabe_ito_9 <- c(
   "#E69F00", # orange
   "#56B4E9", # sky blue
@@ -3154,7 +3083,7 @@ diffnet_palette_summary
 ```{r diffnet_significant_BH_table}
 diffnet_significant_BH_table <- diffnet_pvalues_long %>%
   group_by(test_id) %>%
-  filter(any(p_adjust < 0.05, na.rm = TRUE)) %>%
+  filter(any(p_adjust < 0.01, na.rm = TRUE)) %>%
   ungroup() %>%
   select(
     test_id,
@@ -3229,6 +3158,11 @@ writeLines(
 
 ## Network plots
 
+Here we plot the networks for the comparison based on correlation shrinkage
+with bayesian multiplicative replacement
+
+### Association networks for corshrink with bayesMult
+
 ```{r, fig.width=12, fig.height=6, dpi=250}
 names(significant_diffnet_taxa) <- significant_diffnet_taxa
 
@@ -3248,39 +3182,151 @@ p_ebf_final <- plot_group_network(
   props_ebf_corshrink_bayesMult,
   same_layout = TRUE,
   labels = labels_ebf_corshrink_bayesMult,
-  repulsion = 0.8799999999,
-  doPlot = FALSE,
-  rmSingles = FALSE,
-  nodeFilter = "names",
-  nodeFilterPar = taxa_to_plot_ebf_final
+  rmSingles = "none",
+  repulsion = 0.8799,
+  doPlot = FALSE
 )
 ```
 
 
 ```{r thesis_ebf_network_plot_same_layout, fig.width=12, fig.height=6, dpi=250}
 layout_ebf_final <- p_ebf_final$layout$layout1
-layout_ebf_final["Faecalicoccus", 2] <- 0.33
-layout_ebf_final["Lawsonella", 2] <- 0.08
-layout_ebf_final["Epulopiscium", 2] <- -0.08
-layout_ebf_final["24_Enterobacteriaceae(F)", 1] <- 0.7
-layout_ebf_final["Christensenellaceae_R-7_group", 2] <- -0.19
-layout_ebf_final["Lachnospiraceae_NK4A136_group", 2] <- -0.26
-layout_ebf_final["[Eubacterium]_coprostanoligenegroup", 2] <- -0.41
-layout_ebf_final["Staphylococcus", 2] <- 0.08
-layout_ebf_final["Haemophilus", 2] <- 0.35
-layout_ebf_final["Gemella", ] <- c(0.75, 0.43)
+layout_ebf_final["Coprobacillus", 2] <- -0.12
+layout_ebf_final["Bifidobacterium", 2] <- -0.7
+layout_ebf_final["Leuconostoc", 2] <- -0.21
+layout_ebf_final["Epulopiscium", 2] <- -0.28
+layout_ebf_final["Faecalicoccus", 2] <- -0.36
 
 plot_group_network(props_ebf_corshrink_bayesMult, same_layout = TRUE, 
                    labels = labels_ebf_corshrink_bayesMult, 
                    layout = layout_ebf_final,
-                   rmSingles = FALSE,
-                   nodeFilter = "names",
-                   nodeFilterPar = taxa_to_plot_ebf_final,
+                   rmSingles = "none",
                    phylum_legend_x = -0.18,
                    phylum_legend_y = 1.35,
                    asso_legend_x   = -0.15,
                    asso_legend_y   = -0.8)
 ```
+
+### Association networks for the other methods with same layout
+
+#### SpiecEasi multRepl
+
+```{r nolabs_ebf_spieceasi_multRepl_network_plot, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spieceasi_multRepl,
+  rmSingles = "none",
+  layout = layout_ebf_final,
+  cexLabels = 0,
+  labels = FALSE,
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+#### SpiecEasi bayesMult
+
+```{r nolabs_ebf_spieceasi_bayesMult_network_plot, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_spieceasi_bayesMult,
+  rmSingles = "none",
+  layout = layout_ebf_final,
+  cexLabels = 0,
+  labels = FALSE,
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+
+```
+
+#### SpiecEasi SLR
+
+```{r nolabs_ebf_slr_network_plot, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_slr,
+  rmSingles = "none",
+  layout = layout_ebf_final,
+  cexLabels = 0,
+  labels = FALSE,
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+#### SPRING
+
+```{r nolabs_ebf_spring_network_plot, fig.width=12, fig.height=6, dpi=250}
+adja_spring <- props_ebf_spring$input$adjaMat1
+layout_ebf_final_spring <- layout_ebf_final[rownames(adja_spring), ]
+
+plot_group_network(
+  props_ebf_spring, 
+  rmSingles = "none",
+  layout = layout_ebf_final_spring,
+  cexLabels = 0,
+  labels = FALSE,
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+#### rhoShrink with multRepl
+
+```{r nolabs_ebf_rhoshrink_multRepl_network_plot, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_rhoshrink_multRepl,
+  rmSingles = "none",
+  layout = layout_ebf_final,
+  cexLabels = 0,
+  labels = FALSE,
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+#### rhoShrink with bayesMult
+
+```{r nolabs_ebf_rhoshrink_bayesMult_network_plot, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_rhoshrink_bayesMult,
+  rmSingles = "none",
+  layout = layout_ebf_final,
+  cexLabels = 0,
+  labels = FALSE,
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+#### corShrink with multRepl 
+
+```{r nolabs_ebf_corshrink_multRepl_network_plot, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_corshrink_multRepl,
+  rmSingles = "none",
+  layout = layout_ebf_final,
+  cexLabels = 0,
+  labels = FALSE,
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+#### corShrink with bayesMult
+
+```{r nolabs_ebf_corshrink_bayesMult_network_plot, fig.width=12, fig.height=6, dpi=250}
+plot_group_network(
+  props_ebf_corshrink_bayesMult,
+  rmSingles = "none",
+  layout = layout_ebf_final,
+  cexLabels = 0,
+  labels = FALSE,
+  legends = FALSE,
+  mar = c(1, 1.5, 3, 1.5)
+)
+```
+
+
+### Differential network for corshrink with bayesMult
 
 ```{r thesis_ebf_diffnet_plot_same_layout, fig.width=10, fig.height=6, dpi=250}
 p_diff <- plot(
@@ -3288,8 +3334,8 @@ p_diff <- plot(
   layout = layout_ebf_final,
   labels = significant_diffnet_taxa,
   rmSingles = FALSE,
-  nodeFilter = "names",
-  nodeFilterPar = taxa_to_plot_ebf_final,
+  #nodeFilter = "names",
+  #nodeFilterPar = taxa_to_plot_ebf_final,
   edgeTransp = 0,
   labelScale = FALSE,
   cexLabels = 1.2,

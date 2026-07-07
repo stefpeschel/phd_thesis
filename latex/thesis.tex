@@ -247,13 +247,13 @@
           anchor=east,
           fill=chaptertabgray,
           text=white,
-          minimum width=1.5cm,
+          minimum width=1.5cm, %1.3
           minimum height=1.5cm,
           font=\LARGE\bfseries,
           inner sep=0pt,
           text width=1.2cm,
           align=left
-        ] at ([xshift=0mm,yshift=-\tabshift cm]current page.north east)
+        ] at ([xshift=0mm,yshift=-\tabshift cm]current page.north east) %-2mm
         {\hspace{3mm}\thechapter};
 
       \end{tikzpicture}
@@ -343,6 +343,7 @@
 % Front matter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\include{intro_chapters/0_cover_deans}
 \include{intro_chapters/0_title_page}
 \include{intro_chapters/0_quote}
 

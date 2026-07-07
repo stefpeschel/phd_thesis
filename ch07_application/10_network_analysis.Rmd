@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params$name, "/net_"),
+  fig.path = paste0('figures/', params$name, "/"),
   echo = FALSE)
 ```
 
@@ -57,6 +57,8 @@ conflicts_prefer(dplyr::rename)
 conflicts_prefer(dplyr::mutate)
 conflicts_prefer(dplyr::arrange)
 conflicts_prefer(dplyr::count)
+conflicts_prefer(base::rownames, base::colnames, base::as.factor)
+conflicts_prefer(base::setdiff, base::intersect, base::unname)
 
 # Load global functions
 application_path <- rprojroot::find_root(rprojroot::has_file("README.md"))
@@ -831,7 +833,7 @@ plotHeat(
 
 #### Association histogram
 
-```{r single_association_histrogram, fig.width=8, fig.height=2}
+```{r thesis_single_association_histrogram, fig.width=8, fig.height=2}
 n_zero_asso <- sum(assomat_single_main[lower.tri(assomat_single_main)] == 0)
 
 data.frame(correlation = assomat_single_main[lower.tri(assomat_single_main)]) %>%
@@ -860,7 +862,7 @@ cat("\nNon-zero entries in the lower triangle:", n_asso - n_zero_asso)
 
 #### Degree distribution
 
-```{r single_degree_distribution, fig.width=8, fig.height=2, dpi = 200}
+```{r thesis_single_degree_distribution, fig.width=8, fig.height=2, dpi = 200}
 # Compute degree distribution
 ddist <- igraph::degree.distribution(graph_single_main)
 
@@ -897,7 +899,7 @@ print(summary(props_single_main))
 
 ### Graphlet correlation matrix
 
-```{r single_gcm, fig.width=6, fig.height=6, dpi = 200}
+```{r thesis_single_gcm, fig.width=6, fig.height=6, dpi = 200}
 plotGCM(props_single_main,
         legendCex = 1, 
         labCex = 1.1,
@@ -965,6 +967,7 @@ We store this layout as main layout.
 
 ```{r}
 layout <- p$layout$layout1
+saveRDS(layout, file = path_target("main_layout.rds"))
 ```
 
 
@@ -1062,7 +1065,7 @@ layout["Lachnospira", ] <- c(-0.34, -0.05)
 ```
 
 
-```{r single_net_plot_baseline, fig.width=8.5, fig.height=6, dpi=250}
+```{r thesis_single_net_plot_baseline, fig.width=8.5, fig.height=6, dpi=250}
 plot(props_single_main,
      layout = layout,
      nodeFilter = "names",
@@ -1127,7 +1130,7 @@ plot(props_single_main,
      mar = c(1, 1, 3, 1))
 ```
 
-## Alternative preprocessing steps
+## Alternative network cunstruction steps
 
 In this section we analyze, how the network changes when alternative 
 preprocessing steps like filtering or zero replacement, or a different 
@@ -2717,6 +2720,48 @@ legend(0.65, 1.1, cex = 1, title = "Estimated association:",
        bty = "n", horiz = TRUE, xpd = NA)
 ```
 
+```{r}
+layout <- p$layout$layout1
+layout["Terrisporobacter", 2] <- 0.1
+```
+
+
+```{r thesis_single_net_plot_slr_us, fig.width=8.5, fig.height=6, dpi=250}
+plot(props_single_slr_us,
+     layout = layout,
+     nodeFilter = "names",
+     nodeFilterPar = taxa_to_plot,
+     labelScale = FALSE,
+     labels = network_labels,
+     repulsion = 0.9,
+     nodeColor = "feature", 
+     featVecCol = phyla, 
+     colorVec =  phylcol,
+     nodeSize = "clr",
+     nodeSizeSpread = 4,
+     cexNodes = 2,
+     nodeTransp = 40,
+     hubTransp = 40,
+     posCol = "gray50", 
+     negCol = "red3",
+     showTitle = FALSE,
+     cexLabels = 0.9,
+     cexHubLabels = 0.9,
+     hubBorderCol = "gray40",
+     mar = c(1, 7, 1, 3))
+
+# Colors used in the legend should be equally transparent as in the plot
+phylcol_transp <- colToTransp(phylcol, 40)
+
+# xpd = NA allows drawing outside the plot region into the margins
+legend(-1.7, 1.1, cex = 1, pt.cex = 2.5, title = "Phylum:", 
+       legend=levels(phyla), col = phylcol_transp, bty = "n", pch = 16,
+       xpd = NA) 
+
+legend(0.65, 1.1, cex = 1, title = "Estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("gray50","red3"), 
+       bty = "n", horiz = TRUE, xpd = NA)
+```
 
 #### SPRING
 

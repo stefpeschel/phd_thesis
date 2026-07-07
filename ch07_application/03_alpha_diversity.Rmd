@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params, "/alpha_"),
+  fig.path = paste0('figures/', params, "/"),
   echo = FALSE)
 ```
 
@@ -776,7 +776,7 @@ explains why: unseen-species estimators such as breakaway extrapolate unobserved
 diversity from the ratio of rare taxa (singletons, doubletons, …). At genus level,
 read counts are aggregated across ASVs, so genera with very few reads are rare.
 
-```{r freq_spectrum_genus, fig.width=7, fig.height=4}
+```{r thesis_freq_spectrum_genus, fig.width=7, fig.height=4}
 # For each read-count class 0–10, count how many genera hit that count per sample
 freq_spectrum <- map_dfr(0:10, function(k) {
   counts_per_sample <- colSums(otutab_genus == k)
@@ -1573,7 +1573,7 @@ pg <- plot_gini(metadata_alpha, feature_name, binwidth = 0.01, dotsize = 1,
 
 
 
-```{r breast_excl_2m, fig.width=12, fig.height=5}
+```{r thesis_breast_excl_2m, fig.width=12, fig.height=5}
 ggarrange(pr, ps, pg,
           ncol = 3, nrow = 1)
 ```
@@ -1936,7 +1936,7 @@ plot_obs_est_richness_cov <-
 plot_obs_est_richness_cov
 ```
 
-```{r observed_vs_predicted_richness_libsize_combined, fig.width=8, fig.height=4}
+```{r thesis_observed_vs_predicted_richness_libsize_combined, fig.width=8, fig.height=4}
 (plot_obs_est_richness | plot_obs_est_richness_cov) +
   plot_layout(guides = 'collect')
 ```
@@ -1997,7 +1997,7 @@ betta_gini$table
 
 #### Combined coefficient plot
 
-```{r betta_forest_combined, fig.width=10, fig.height=5}
+```{r thesis_betta_forest_combined, fig.width=10, fig.height=5}
 term_labels <- c(
   "CountryGermany"      = "Country: Germany",
   "CountrySwitzerland"  = "Country: Switzerland",
@@ -2057,7 +2057,7 @@ associated with shorter breastfeeding duration, and shorter breastfeeding is ass
 higher Shannon diversity (the dominant effect in the model). The following two plots
 investigate this.
 
-```{r cesarean_breastfeed_confounding, fig.width=9, fig.height=4}
+```{r thesis_cesarean_breastfeed_confounding, fig.width=9, fig.height=4}
 plot_dat <- alpha_diversity_div %>%
   left_join(
     sdata %>%

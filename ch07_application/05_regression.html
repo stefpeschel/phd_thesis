@@ -1479,11 +1479,12 @@ border-radius: 0px;
 
 <h1 class="title toc-ignore">Regression models for compositional
 responses</h1>
-<h4 class="date">Compiled at 2026-06-11 11:12:04 UTC</h4>
+<h4 class="date">Compiled at 2026-07-06 19:19:52 UTC</h4>
 
 </div>
 
 
+<pre class="r"><code>here::i_am(paste0(params$name, &quot;.Rmd&quot;), uuid = &quot;9b9d6ec0-81d9-43a9-9e04-c99b38578ef2&quot;)</code></pre>
 <div id="set-global-parameters" class="section level2">
 <h2>Set global parameters</h2>
 </div>
@@ -1504,15 +1505,100 @@ replaced with the multiplicative replacement implemented in
 <code>zCompositions::multRepl()</code>, using the global minimum
 non-zero relative abundance as detection limit and
 <code>frac = 0.65</code>. The CLR transformation is applied after
-replacement.</p>
+replacement. The shared preprocessing helpers are defined in
+<code>functions.R</code>.</p>
 </div>
 <div id="prepare-clr-response-matrix" class="section level2">
 <h2>Prepare CLR response matrix</h2>
+<pre><code>## Warning in zCompositions::multRepl(rel_abund_mat, label = 0, dl = detection_limit_mat, : Column no. 1 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 3 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 5 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 6 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 7 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 12 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 13 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 15 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 17 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 18 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 19 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 20 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 22 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 23 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 25 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 26 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 27 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 28 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 30 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 33 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 34 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 35 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 36 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 37 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 38 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 39 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 40 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 42 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 43 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 44 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 45 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 46 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 48 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 50 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 51 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 54 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 55 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 58 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 59 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 60 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 61 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 64 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 66 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 67 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 69 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 70 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 71 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 72 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 73 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 74 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 76 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 77 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 78 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 81 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 84 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 85 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 86 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 87 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 88 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 90 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 91 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 92 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 93 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Column no. 94 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Col</code></pre>
+<pre><code>## Warning in zCompositions::multRepl(rel_abund_mat, label = 0, dl = detection_limit_mat, : Row no. 80 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 102 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 112 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 145 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 147 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 157 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 164 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 265 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 366 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 368 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 397 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 399 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 403 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 410 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 416 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 436 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 471 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 480 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 533 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+## Row no. 551 containing &gt;90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).</code></pre>
 <pre><code>## # A tibble: 1 × 9
-##   n_samples n_taxa min_library_size median_library_size max_library_size zero_fraction detection_limit
-##       &lt;int&gt;  &lt;int&gt;            &lt;dbl&gt;               &lt;dbl&gt;            &lt;dbl&gt;         &lt;dbl&gt;           &lt;dbl&gt;
-## 1       592    117             1456              21898.            69556         0.796       0.0000288
-## # ℹ 2 more variables: replacement_value &lt;dbl&gt;, replacement_fraction &lt;dbl&gt;</code></pre>
+##   n_samples n_taxa min_library_size median_library_size max_library_size zero_fraction detection_limit replacement_value replacement_fraction
+##       &lt;int&gt;  &lt;int&gt;            &lt;dbl&gt;               &lt;dbl&gt;            &lt;dbl&gt;         &lt;dbl&gt;           &lt;dbl&gt;             &lt;dbl&gt;                &lt;dbl&gt;
+## 1       592    117             1456              21898.            69556         0.796       0.0000288         0.0000187                 0.65</code></pre>
 </div>
 <div id="regression-analysis-setup" class="section level2">
 <h2>Regression analysis setup</h2>
@@ -1528,6 +1614,8 @@ comparisons. This ensures that differences in the test statistics
 reflect the covariate being omitted rather than changes in the sample
 composition. The number of taxa is fixed by the filtered genus-level
 phyloseq object used to construct the CLR response matrix.</p>
+<p>Then, a linear regression model (<code>lm()</code>) is fitted to the
+data, using the CLR transformed data as response.</p>
 <pre><code>## # A tibble: 1 × 4
 ##   n_samples n_taxa excluded_ebf_one_month n_covariates
 ##       &lt;int&gt;  &lt;int&gt;                  &lt;int&gt;        &lt;int&gt;
@@ -1616,7 +1704,7 @@ permutation results.</p>
 ## Not selected for fitting : 2
 ## 
 ## Final p-values:
-##   min = 8.776e-07, median = 2.407e-02, max = 1.480e-01
+##   min = 0.000000878, median = 0.0241, max = 0.148
 ## 
 ## Use summary() for detailed fit diagnostics.</code></pre>
 <pre><code>## # A tibble: 7 × 9
@@ -1638,17 +1726,17 @@ permutation results.</p>
 <pre><code>## # A tibble: 11 × 4
 ##    path                                           type         size modification_time  
 ##    &lt;fs::path&gt;                                     &lt;fct&gt; &lt;fs::bytes&gt; &lt;dttm&gt;             
-##  1 regression_coefficient_heatmap_data.csv        file        60.4K 2026-06-11 11:12:08
-##  2 regression_coefficient_heatmap_top20_data.csv  file       10.25K 2026-06-11 11:12:12
-##  3 regression_covariate_level_summary.csv         file          224 2026-06-11 11:12:07
-##  4 regression_full_model_fit.rds                  file        1.99M 2026-06-11 11:12:07
-##  5 regression_model_summary.csv                   file           65 2026-06-11 11:12:07
-##  6 regression_multrepl_clr_object.rds             file      262.74K 2026-06-11 11:12:07
+##  1 regression_coefficient_heatmap_data.csv        file        60.4K 2026-07-06 19:19:56
+##  2 regression_coefficient_heatmap_top20_data.csv  file       10.25K 2026-07-06 19:19:58
+##  3 regression_covariate_level_summary.csv         file          224 2026-07-06 19:19:54
+##  4 regression_full_model_fit.rds                  file        1.99M 2026-07-06 19:19:55
+##  5 regression_model_summary.csv                   file           65 2026-07-06 19:19:54
+##  6 regression_multrepl_clr_object.rds             file      262.74K 2026-07-06 19:19:54
 ##  7 regression_permapprox_results_multrepl_clr.rds file       16.88K 2026-06-11 10:47:49
-##  8 regression_preprocessing_summary.csv           file          233 2026-06-11 11:12:07
-##  9 regression_results_multrepl_clr.csv            file          405 2026-06-11 11:12:15
+##  8 regression_preprocessing_summary.csv           file          233 2026-07-06 19:19:54
+##  9 regression_results_multrepl_clr.csv            file          405 2026-07-06 19:19:59
 ## 10 regression_results_multrepl_clr.rds            file       46.84K 2026-06-11 10:47:49
-## 11 regression_table.tex                           file        1.14K 2026-06-11 11:12:19</code></pre>
+## 11 regression_table.tex                           file        1.14K 2026-07-06 19:20:02</code></pre>
 </div>
 
 

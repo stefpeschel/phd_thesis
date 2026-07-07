@@ -1,6 +1,6 @@
 Build reduced data set
 ================
-Compiled at 2026-06-10 12:10:08 UTC
+Compiled at 2026-07-06 18:40:16 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "8ad93c89-8d43-4945-9813-3d10fac8034c")
@@ -9,8 +9,6 @@ here::i_am(paste0(params$name, ".Rmd"), uuid = "8ad93c89-8d43-4945-9813-3d10fac8
 In this script, we load the original PASTURE data (not published) and
 build the reduced data set, which is the basis for all analyses
 conducted in this project.
-
-    ## Warning: package 'ggrepel' was built under R version 4.5.3
 
 ## Load data & set parameters
 
@@ -73,6 +71,6 @@ These files have been written to the target directory,
     ## # A tibble: 3 × 4
     ##   path                    type         size modification_time  
     ##   <fs::path>              <fct> <fs::bytes> <dttm>             
-    ## 1 bact_phylo_2m_asv.rds   file       212.8K 2026-06-10 12:10:15
-    ## 2 bact_phylo_2m_genus.rds file        67.5K 2026-06-10 12:10:15
-    ## 3 sampdata.rds            file         5.2K 2026-06-10 12:10:15
+    ## 1 bact_phylo_2m_asv.rds   file      212.85K 2026-07-06 18:40:20
+    ## 2 bact_phylo_2m_genus.rds file       67.52K 2026-07-06 18:40:20
+    ## 3 sampdata.rds            file        5.21K 2026-07-06 18:40:20

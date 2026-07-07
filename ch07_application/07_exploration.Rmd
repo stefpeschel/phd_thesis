@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8,
   fig.height = 5,
   dpi = 250,
-  fig.path = paste0('figures/', params$name, "/expl_"),
+  fig.path = paste0('figures/', params$name, "/"),
   echo = FALSE)
 ```
 
@@ -326,7 +326,7 @@ taxon_summary %>%
   theme_minimal()
 ```
 
-```{r prevalence_abundance, fig.width=8, fig.height=4.1, dpi=200}
+```{r thesis_prevalence_abundance, fig.width=8, fig.height=4.1, dpi=200}
 set.seed(42)
 taxa_to_label <- taxon_summary %>%
   slice_head(n = 10)
@@ -503,7 +503,7 @@ composition_group_df <- composition_df %>%
 composition_group_df
 ```
 
-```{r relative_abundance_barplot, fig.width=9, fig.height=4, dpi=200}
+```{r thesis_relative_abundance_barplot, fig.width=9, fig.height=4, dpi=200}
 ggplot(
   composition_group_df,
   aes(x = EBF_group, y = mean_relative_abundance, fill = taxon)
@@ -683,7 +683,7 @@ selected_clr_df
 
 **Distributional change from relative to CLR coordinates**
 
-```{r rel_to_clr_histogram_comparison, fig.width=9, fig.height=6, dpi=250}
+```{r thesis_rel_to_clr_histogram_comparison, fig.width=9, fig.height=6, dpi=250}
 ggplot(selected_transform_density_df, aes(x = value)) +
   geom_histogram(
     data = filter(selected_transform_density_df, zero_status == "Observed"),
@@ -755,7 +755,7 @@ ggplot(
   )
 ```
 
-```{r selected_taxon_violin, fig.width=10, fig.height=5, dpi=250}
+```{r thesis_selected_taxon_violin, fig.width=10, fig.height=5, dpi=250}
 ggplot(selected_clr_df, aes(x = EBF_group, y = clr_abundance, fill = EBF_group)) +
   geom_violin(alpha = 0.55, trim = FALSE, color = NA) +
   geom_boxplot(width = 0.16, outlier.shape = NA, alpha = 0.8) +

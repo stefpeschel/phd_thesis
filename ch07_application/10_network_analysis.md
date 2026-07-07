@@ -1,6 +1,6 @@
 Network analysis
 ================
-Compiled at 2026-07-05 17:09:49 UTC
+Compiled at 2026-07-07 17:27:36 UTC
 
 ## Aim
 
@@ -88,15 +88,15 @@ The preprocessing approach used throughout the thesis is:
 
 **For all taxa**
 
-![](figures/10_network_analysis/net_single_association_heatmap-1.png)<!-- -->
+![](figures/10_network_analysis/single_association_heatmap-1.png)<!-- -->
 
 **For non-singletons only**
 
-![](figures/10_network_analysis/net_single_association_heatmap_nonzero-1.png)<!-- -->
+![](figures/10_network_analysis/single_association_heatmap_nonzero-1.png)<!-- -->
 
 #### Association histogram
 
-![](figures/10_network_analysis/net_single_association_histrogram-1.png)<!-- -->
+![](figures/10_network_analysis/thesis_single_association_histrogram-1.png)<!-- -->
 
     ## Entries in the lower triangle: 6786
 
@@ -105,7 +105,7 @@ The preprocessing approach used throughout the thesis is:
 
 #### Degree distribution
 
-![](figures/10_network_analysis/net_single_degree_distribution-1.png)<!-- -->
+![](figures/10_network_analysis/thesis_single_degree_distribution-1.png)<!-- -->
 
 #### Analysis with netAnalyze()
 
@@ -222,7 +222,7 @@ The preprocessing approach used throughout the thesis is:
 
 ### Graphlet correlation matrix
 
-![](figures/10_network_analysis/net_single_gcm-1.png)<!-- -->
+![](figures/10_network_analysis/thesis_single_gcm-1.png)<!-- -->
 
 ### Network plot
 
@@ -236,7 +236,7 @@ In the network plot, the following taxa are labelled:
 
 #### Node colors: clusters; node size: eigenvector centrality
 
-![](figures/10_network_analysis/net_single_net_plot_basic-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_basic-1.png)<!-- -->
 
 We store this layout as main layout.
 
@@ -246,15 +246,15 @@ We store this layout as main layout.
     ##  Actinobacteriota      Bacteroidota  Desulfobacterota        Firmicutes    Fusobacteriota    Proteobacteria Verrucomicrobiota 
     ##                19                 6                 1                75                 1                14                 1
 
-![](figures/10_network_analysis/net_single_net_plot_col_phyla-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_col_phyla-1.png)<!-- -->
 
 **Add labels or further highly abundant taxa and improve layout**
 
-![](figures/10_network_analysis/net_single_net_plot_baseline-1.png)<!-- -->
+![](figures/10_network_analysis/thesis_single_net_plot_baseline-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_baseline_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_baseline_nolabs-1.png)<!-- -->
 
-## Alternative preprocessing steps
+## Alternative network cunstruction steps
 
 In this section we analyze, how the network changes when alternative
 preprocessing steps like filtering or zero replacement, or a different
@@ -269,17 +269,17 @@ increase this to 5% and 10%. Everything else stays the same.
 
     ## [1] 58 58
 
-![](figures/10_network_analysis/net_single_net_plot_prev05-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_prev05-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_prev05_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_prev05_nolabs-1.png)<!-- -->
 
 #### 10% prevalence filter
 
     ## [1] 41 41
 
-![](figures/10_network_analysis/net_single_net_plot_prev10-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_prev10-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_prev10_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_prev10_nolabs-1.png)<!-- -->
 
 ### Different zero replacement
 
@@ -322,9 +322,9 @@ replacement value.
 
 #### Additive pseudo count
 
-![](figures/10_network_analysis/net_single_net_plot_zero_pseudo-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_pseudo-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_zero_pseudo_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_pseudo_nolabs-1.png)<!-- -->
 
 #### Multiplicative replacement with sample-wise detection limit
 
@@ -334,27 +334,27 @@ replacement value.
     ## 1 Global detection limit          124
     ## 2 Sample-wise detection limit     188
 
-![](figures/10_network_analysis/net_single_net_plot_zero_multrepl_sample-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_multrepl_sample-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_zero_multrepl_sample_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_multrepl_sample_nolabs-1.png)<!-- -->
 
 #### Random pseudo counts
 
-![](figures/10_network_analysis/net_single_net_plot_zero_random-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_random-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_zero_random_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_random_nolabs-1.png)<!-- -->
 
 #### Modified EM ALR algorithm
 
-![](figures/10_network_analysis/net_single_net_plot_zero_alrEM-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_alrEM-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_zero_alrEM_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_alrEM_nolabs-1.png)<!-- -->
 
 #### Bayesian-multiplicative replacement
 
-![](figures/10_network_analysis/net_single_net_plot_zero_bayesMult-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_bayesMult-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_zero_bayesMult_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_zero_bayesMult_nolabs-1.png)<!-- -->
 
 ### Different association estimation method
 
@@ -391,41 +391,43 @@ over-selection of associations among taxa.
 
 ##### Plot low rank heatmaps
 
-![](figures/10_network_analysis/net_slr_low_rank_heatmaps-1.png)<!-- -->
+![](figures/10_network_analysis/slr_low_rank_heatmaps-1.png)<!-- -->
 
 ##### Continue with optimal rank
 
-![](figures/10_network_analysis/net_slr_decomposition_sparse_lowrank-1.png)<!-- -->
+![](figures/10_network_analysis/slr_decomposition_sparse_lowrank-1.png)<!-- -->
 
 ##### Network plot
 
-![](figures/10_network_analysis/net_single_net_plot_slr-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_slr-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_slr_slrlay-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_slr_slrlay-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_slr_slrlay_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_slr_slrlay_nolabs-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_slr_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_slr_nolabs-1.png)<!-- -->
 
 #### Sparse + low rank (unsigned)
 
-![](figures/10_network_analysis/net_single_net_plot_slr_us-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_slr_us-1.png)<!-- -->
+
+![](figures/10_network_analysis/thesis_single_net_plot_slr_us-1.png)<!-- -->
 
 #### SPRING
 
-![](figures/10_network_analysis/net_single_net_plot_spring-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_spring-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_spring_ownlay-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_spring_ownlay-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_spring_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_spring_nolabs-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_spring_slrlay_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_spring_slrlay_nolabs-1.png)<!-- -->
 
 #### SPRING (unsigned)
 
-![](figures/10_network_analysis/net_single_net_plot_spring_us-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_spring_us-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_spring_us_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_spring_us_nolabs-1.png)<!-- -->
 
 #### Shrinkage proportionality
 
@@ -437,11 +439,11 @@ over-selection of associations among taxa.
     ## 
     ## Calculate 'rhoshrink' associations ... Done.
 
-![](figures/10_network_analysis/net_single_rhoshrink_histrogram-1.png)<!-- -->
+![](figures/10_network_analysis/single_rhoshrink_histrogram-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_rhoshrink-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_rhoshrink-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_single_net_plot_rhoshrink_nolabs-1.png)<!-- -->
+![](figures/10_network_analysis/single_net_plot_rhoshrink_nolabs-1.png)<!-- -->
 
 ## Summary of edge overlap
 
@@ -452,21 +454,21 @@ networks are included.
 
 ### Prevalence filtering
 
-![](figures/10_network_analysis/net_edge_upset_prevalence-1.png)<!-- -->
+![](figures/10_network_analysis/edge_upset_prevalence-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_edge_upset_prevalence8-1.png)<!-- -->
+![](figures/10_network_analysis/edge_upset_prevalence8-1.png)<!-- -->
 
 ### Zero replacement
 
-![](figures/10_network_analysis/net_edge_upset_zero_replacement-1.png)<!-- -->
+![](figures/10_network_analysis/edge_upset_zero_replacement-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_edge_upset_zero_replacement8-1.png)<!-- -->
+![](figures/10_network_analysis/edge_upset_zero_replacement8-1.png)<!-- -->
 
 ### Association measure
 
-![](figures/10_network_analysis/net_edge_upset_association-1.png)<!-- -->
+![](figures/10_network_analysis/edge_upset_association-1.png)<!-- -->
 
-![](figures/10_network_analysis/net_edge_upset_association8-1.png)<!-- -->
+![](figures/10_network_analysis/edge_upset_association8-1.png)<!-- -->
 
 ## Persistent edges across selected networks
 
@@ -763,32 +765,33 @@ Streptococcus
 
 </table>
 
-![](figures/10_network_analysis/net_persistent_edge_network_plot-1.png)<!-- -->
+![](figures/10_network_analysis/persistent_edge_network_plot-1.png)<!-- -->
 
 ## Files written
 
 These files have been written to the target directory,
 `data/10_network_analysis`:
 
-    ## # A tibble: 19 × 4
+    ## # A tibble: 20 × 4
     ##    path                                type         size modification_time  
     ##    <fs::path>                          <fct> <fs::bytes> <dttm>             
     ##  1 counts_rel_alrEM.rds                file      517.53K 2026-06-25 20:43:46
     ##  2 counts_rel_bayesMult.rds            file      771.33K 2026-06-26 04:43:31
-    ##  3 net_single_main.rds                 file       11.16M 2026-06-26 09:25:25
-    ##  4 net_single_prev05.rds               file        4.34M 2026-06-25 18:29:13
-    ##  5 net_single_prev10.rds               file        3.01M 2026-06-25 18:37:05
-    ##  6 net_single_rhoshrink.rds            file      676.81K 2026-06-26 05:56:00
-    ##  7 net_single_slr.rds                  file       36.21M 2026-06-26 05:10:10
-    ##  8 net_single_slr_r2.rds               file       36.21M 2026-06-26 08:33:17
-    ##  9 net_single_slr_r3.rds               file       36.17M 2026-06-26 08:41:55
-    ## 10 net_single_slr_r4.rds               file        36.1M 2026-06-26 08:50:32
-    ## 11 net_single_slr_r5.rds               file       36.03M 2026-06-26 09:14:35
-    ## 12 net_single_slr_us.rds               file       36.03M 2026-07-05 17:05:55
-    ## 13 net_single_spring.rds               file        7.73M 2026-06-26 16:24:04
-    ## 14 net_single_spring_us.rds            file        7.73M 2026-06-26 16:35:10
-    ## 15 net_single_zero_alrEM.rds           file       14.65M 2026-06-25 20:58:35
-    ## 16 net_single_zero_bayesMult.rds       file        15.6M 2026-06-25 21:00:47
-    ## 17 net_single_zero_multrepl_sample.rds file       11.76M 2026-06-26 21:01:06
-    ## 18 net_single_zero_pseudo.rds          file       11.13M 2026-06-25 20:51:27
-    ## 19 net_single_zero_random.rds          file       16.82M 2026-06-25 20:56:23
+    ##  3 main_layout.rds                     file        2.38K 2026-07-07 17:27:53
+    ##  4 net_single_main.rds                 file       11.16M 2026-06-26 09:25:25
+    ##  5 net_single_prev05.rds               file        4.34M 2026-06-25 18:29:13
+    ##  6 net_single_prev10.rds               file        3.01M 2026-06-25 18:37:05
+    ##  7 net_single_rhoshrink.rds            file      676.81K 2026-06-26 05:56:00
+    ##  8 net_single_slr.rds                  file       36.21M 2026-06-26 05:10:10
+    ##  9 net_single_slr_r2.rds               file       36.21M 2026-06-26 08:33:17
+    ## 10 net_single_slr_r3.rds               file       36.17M 2026-06-26 08:41:55
+    ## 11 net_single_slr_r4.rds               file        36.1M 2026-06-26 08:50:32
+    ## 12 net_single_slr_r5.rds               file       36.03M 2026-06-26 09:14:35
+    ## 13 net_single_slr_us.rds               file       36.03M 2026-07-05 17:05:55
+    ## 14 net_single_spring.rds               file        7.73M 2026-06-26 16:24:04
+    ## 15 net_single_spring_us.rds            file        7.73M 2026-06-26 16:35:10
+    ## 16 net_single_zero_alrEM.rds           file       14.65M 2026-06-25 20:58:35
+    ## 17 net_single_zero_bayesMult.rds       file        15.6M 2026-06-25 21:00:47
+    ## 18 net_single_zero_multrepl_sample.rds file       11.76M 2026-06-26 21:01:06
+    ## 19 net_single_zero_pseudo.rds          file       11.13M 2026-06-25 20:51:27
+    ## 20 net_single_zero_random.rds          file       16.82M 2026-06-25 20:56:23

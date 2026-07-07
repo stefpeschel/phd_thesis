@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params$name, "/DA_"),
+  fig.path = paste0('figures/', params$name, "/"),
   echo = FALSE)
 ```
 
@@ -364,7 +364,7 @@ write_csv(
 dacomp_reference_score_df
 ```
 
-```{r dacomp_reference_score_plot, fig.width=8, fig.height=4, dpi=200}
+```{r thesis_dacomp_reference_score_plot, fig.width=8, fig.height=4, dpi=200}
 dacomp_reference_labels <- dacomp_reference_score_df %>%
   filter(reference_status == "reference", prevalence >= 0.25)
 
@@ -1594,7 +1594,7 @@ write_csv(
 obs_dist_df
 ```
 
-```{r permutation_distribution_plot, fig.width=10.5, fig.height=5, dpi=200}
+```{r thesis_permutation_distribution_plot, fig.width=10.5, fig.height=5, dpi=200}
 ggplot(perm_dist_df, aes(x = perm_stat)) +
   geom_blank(
     data = obs_dist_df,
@@ -1745,7 +1745,7 @@ The following version uses the same log-scale display, but includes zero counts
 in the boxplot summaries. Zero counts are displayed at the small plotting value
 labelled as 0 on the y-axis.
 
-```{r rarefied_count_boxplots_with_zeros, fig.width=11, fig.height=5, dpi=200}
+```{r thesis_rarefied_count_boxplots_with_zeros, fig.width=11, fig.height=5, dpi=200}
 ggplot(rarefied_boxplot_plot_df, aes(x = group, y = rarefied_count_plot)) +
   geom_jitter(aes(color = group), width = 0.15, alpha = 0.5, size = 1.2) +
   geom_boxplot(

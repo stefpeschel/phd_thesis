@@ -1,12 +1,14 @@
 % !TeX root = ../thesis.tex
 %====================================
-\chapter{Notation}
+\chapter{Notation and abbreviations}
 \label{app:notation}
 %====================================
 
-This appendix summarizes mathematical notation used repeatedly throughout the thesis. Notation is defined in detail when first introduced in the respective chapter. Chapter~\ref{ch:permapprox} additionally contains a dedicated notation overview for permutation testing and GPD tail modeling.
+This appendix summarizes mathematical notation and abbreviations that are used repeatedly throughout the thesis. The entries are intended as a reference aid and do not replace the local definitions provided in the respective chapters. Notation that is specific to a particular method or derivation is introduced at the point where it is needed.
 
-\section*{Indices, dimensions, and sets}
+\section{Mathematical notation}
+
+\subsection*{Indices, dimensions, and sets}
 
 \notationsettings{1cm}
 \begin{notationlist}
@@ -38,7 +40,7 @@ This appendix summarizes mathematical notation used repeatedly throughout the th
 \end{notationlist}
 
 %====================================
-\section*{Microbiome count data and compositions}
+\subsection*{Microbiome count data and compositions}
 %====================================
 
 \notationsettings{3.5cm}
@@ -67,7 +69,7 @@ This appendix summarizes mathematical notation used repeatedly throughout the th
 \end{notationlist}
 
 %====================================
-\section*{Community-level summaries and regression}
+\subsection*{Community-level summaries and regression}
 %====================================
 
 \notationsettings{1.8cm}
@@ -100,7 +102,7 @@ This appendix summarizes mathematical notation used repeatedly throughout the th
 \end{notationlist}
 
 %====================================
-\section*{Association networks}
+\subsection*{Association networks}
 %====================================
 
 \notationsettings{2.8cm}
@@ -131,7 +133,7 @@ This appendix summarizes mathematical notation used repeatedly throughout the th
 \end{notationlist}
 
 %====================================
-\section*{Feature-level inference and permutation testing}
+\subsection*{Feature-level inference and permutation testing}
 %====================================
 
 \notationsettings{3.2cm}
@@ -164,7 +166,7 @@ This appendix summarizes mathematical notation used repeatedly throughout the th
 \end{notationlist}
 
 %====================================
-\section*{GPD tail modeling}
+\subsection*{GPD tail modeling}
 %====================================
 
 \notationsettings{2cm}
@@ -190,4 +192,139 @@ This appendix summarizes mathematical notation used repeatedly throughout the th
 	\item[$\varepsilon$] Data-adaptive safety margin ensuring that the constrained GPD support extends beyond the observed excess.
 	
 	\item[$\bar{F}_{\mathrm{GPD}}(\cdot)$] Upper-tail probability of the fitted GPD.
+\end{notationlist}
+
+
+\section{Abbreviations}
+
+\begin{notationlist}
+	
+	\item[AD] Anderson--Darling.
+	
+	\item[ALR] Additive log-ratio transformation.
+	
+	\item[ANCOM] Analysis of compositions of microbiomes.
+	
+	\item[ANOSIM] Analysis of similarities.
+	
+	\item[ARI] Adjusted Rand index.
+	
+	\item[ASV] Amplicon sequence variant.
+	
+	\item[BH] Benjamini--Hochberg procedure.
+	
+	\item[CLR] Centered log-ratio transformation.
+	
+	\item[COM] Common sum scaling.
+	
+	\item[CP] Change-point detection.
+	
+	\item[CSS] Cumulative sum scaling.
+	
+	\item[DACOMP] Differential abundance testing for compositional data.
+	
+	\item[DADA2] Divisive amplicon denoising algorithm 2.
+	
+	\item[EBF] Exclusive breastfeeding.
+	
+	\item[EDF] Empirical distribution function.
+	
+	\item[EM] Expectation--maximization.
+	
+	\item[EVT] Extreme value theory.
+	
+	\item[FDR] False discovery rate.
+	
+	\item[FTR] Failure-to-reject threshold selection.
+	
+	\item[GCD] Graphlet correlation distance.
+	
+	\item[GCM] Graphlet correlation matrix.
+	
+	\item[GMPR] Geometric mean of pairwise ratios normalization.
+	
+	\item[GoF] Goodness of fit.
+	
+	\item[GPD] Generalized Pareto distribution.
+	
+	\item[ILR] Isometric log-ratio transformation.
+	
+	\item[ITS] Internal transcribed spacer.
+	
+	\item[LCC] Largest connected component.
+	
+	\item[LDM] Linear decomposition model.
+	
+	\item[LME] Likelihood moment estimation.
+	
+	\item[MB] Meinshausen--Bühlmann neighborhood selection.
+	
+	\item[MLE] Maximum likelihood estimation.
+	
+	\item[MLE1D] One-dimensional maximum likelihood estimation.
+	
+	\item[MLE2D] Two-dimensional maximum likelihood estimation.
+	
+	\item[MOM] Method of moments.
+	
+	\item[mCLR] Modified centered log-ratio transformation.
+	
+	\item[NetCoMi] Network construction and comparison for microbiome data.
+	
+	\item[NLS2] Two-step nonlinear least squares estimator.
+	
+	\item[OTU] Operational taxonomic unit.
+	
+	\item[PASTURE] Protection Against Allergy--Study in Rural Environments.
+	
+	\item[PCA] Principal component analysis.
+	
+	\item[PCR] Polymerase chain reaction.
+	
+	\item[PERMANOVA] Permutational multivariate analysis of variance.
+	
+	\item[PERMDISP] Permutational analysis of multivariate dispersions.
+	
+	\item[POT] Peaks over threshold.
+	
+	\item[PWM] Probability-weighted moments.
+	
+	\item[QIIME2] Quantitative insights into microbial ecology 2.
+	
+	\item[RI] Rand index.
+	
+	\item[RLE] Relative log expression normalization.
+	
+	\item[RMSE] Root mean squared error.
+	
+	\item[robFTR] Robust failure-to-reject threshold selection.
+	
+	\item[RPC] Rejection proportion control.
+	
+	\item[SD] Standard deviation.
+	
+	\item[SLR] Sparse-plus-low-rank estimation.
+	
+	\item[SLLS] Standardized lifted log-saturation rule.
+	
+	\item[SPH] Shape-parameter heuristic.
+	
+	\item[SPIEC-EASI] Sparse inverse covariance estimation for ecological association inference.
+	
+	\item[SPRING] Semi-parametric rank-based approach for inference in graphical models.
+	
+	\item[StARS] Stability approach to regularization selection.
+	
+	\item[TMM] Trimmed mean of M-values normalization.
+	
+	\item[TOM] Topological overlap matrix.
+	
+	\item[TSS] Total sum scaling.
+	
+	\item[VST] Variance-stabilizing transformation.
+	
+	\item[WNLLSM] Weighted nonlinear log-least squares method.
+	
+	\item[ZSE] Zhang--Stephens estimator.
+	
 \end{notationlist}

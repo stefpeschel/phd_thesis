@@ -113,7 +113,7 @@ Despite their theoretical validity, permutation tests face practical limitations
 Such zero $p$-values are formally invalid \citep{phipson2010permutation} and remain zero after multiplicity adjustment, potentially distorting downstream inference.
 
 A commonly recommended remedy to avoid zero $p$-values is to include the observed test statistic in the permutation set \citep{north2002note,phipson2010permutation}, which guarantees strictly positive $p$-values. However, this approach raises a new problem: the smallest attainable $p$-value remains bounded below by $1/(B+1)$, which may be insufficient in large-scale multiple testing settings. Increasing $B$ improves resolution but can become computationally prohibitive, particularly when test statistics are costly to evaluate or when thousands of hypotheses are assessed simultaneously \citep{john2022efficient}. 
-This limitation is especially pronounced in comparative network analysis as discussed in Chapter~\ref{ch:netcomi}, where constructing a single microbial network already involves multi-step estimation, sparsification, and summary computation, so that repeating this workflow for a sufficiently large number of permutations is often computationally infeasible.
+This limitation is especially pronounced in comparative network analysis (see Chapter~\ref{ch:netcomi}), where constructing a single microbial network already involves multi-step estimation, sparsification, and summary computation, so that repeating this workflow for a sufficiently large number of permutations is often computationally infeasible.
 
 % Copied from the paper:
 To overcome the limitations of finite permutation resolution, \citet{knijnenburg2009fewer} introduced a parametric tail approximation based on the Generalized Pareto Distribution (GPD), which enables accurate extrapolation of small $p$-values from a limited number of permutations. Their method fits a GPD to the largest subset of permuted test statistics and uses the resulting model to extrapolate beyond the observed permutation range, thereby reducing the number of permutations needed while retaining accuracy in the small-$p$ regime. Building on this idea, \citet{winkler2016faster} conducted a systematic comparison of several strategies for accelerating permutation inference in the general linear model, including (i) early stopping with negative binomial modeling, (ii) Gamma distribution fitting to the full permutation distribution, and (iii) GPD fitting restricted to the tail. They recommended the GPD-based tail approximation as a general-purpose choice due to its flexibility and weak distributional assumptions. The authors also emphasized that including or excluding the observed test statistic in the permutation set can systematically shift the resulting $p$-values, leading either to conservativeness or to ``invalid'' $p$-values.
@@ -270,25 +270,25 @@ GPD-based tail modeling for permutation testing was first proposed by \citet{kni
 
 The GPD-based tail approximation described in the previous section provides a principled way to approximate small permutation $p$-values beyond the empirical permutation grid. However, a practical difficulty arises when the fitted GPD has bounded support. As discussed above, this situation occurs when the estimated shape parameter is negative ($\hat{\xi}<0$), implying that the distribution has a finite upper endpoint. In this case, the tail approximation may produce a $p$-value equal to zero if the observed test statistic lies beyond this boundary. Figure~\ref{fig:6perm:GPD_standard_constrained} illustrates this issue together with the proposed remedy. For clarity, we omit the test index $j$ throughout this section and write all quantities for a fixed test.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.95\textwidth]{../ch06_permapprox/overview_figures/GPD_standard_constrained.pdf}
+	\caption{
+		\textbf{GPD-based $p$-value approximation.}
+		\textbf{Left panel:} Distribution of the permuted test statistic $T^*$ with threshold $u$ defining the permutation excesses (orange), and observed test statistic $T_{\mathrm{obs}}$.
+		\textbf{Upper right:} Standard (unconstrained) GPD tail approximation when the estimated shape parameter is negative ($\hat{\xi}<0$), resulting in a finite upper support boundary $\hat{s}$. If the observed excess $Y_{\mathrm{obs}}$ lies beyond this boundary, the tail approximation assigns zero probability mass, yielding a zero GPD-based $p$-value.
+		\textbf{Lower right:} Proposed constrained GPD fit, enforcing that the upper support boundary $\hat{s}_{(C)}$ lies strictly above the evaluation point, with offset $\varepsilon$. This guarantees a strictly positive tail probability at $Y_{\mathrm{obs}}$.
+		This figure is adapted from \citep{peschel2026permapprox}.
+	}
+	\label{fig:6perm:GPD_standard_constrained}
+\end{figure}
+
 To formalize this problem, let $(\hat{\sigma}, \hat{\xi})$ denote the parameter estimates obtained from fitting a GPD to the permutation excesses, as proposed by \citet{knijnenburg2009fewer}. When $\hat{\xi} < 0$, the fitted distribution has a finite upper support boundary given by
 \begin{equation}
   \hat{s} = -\frac{\hat{\sigma}}{\hat{\xi}}.
 \end{equation}
 
 If the observed excess $Y_{\mathrm{obs}}$ lies at or beyond this boundary, the fitted tail distribution assigns zero probability mass to the evaluation point, resulting in a GPD-based $p$-value of zero. This situation is illustrated in the upper right panel of Figure~\ref{fig:6perm:GPD_standard_constrained}.
-
-\begin{figure}[!ht]
-  \centering
-  \includegraphics[width=0.95\textwidth]{figures/permApprox/GPD_standard_constrained.png}
-  \caption{
-  \textbf{GPD-based $p$-value approximation.}
-  \textbf{Left panel:} Distribution of the permuted test statistic $T^*$ with threshold $u$ defining the permutation excesses (orange), and observed test statistic $T_{\mathrm{obs}}$.
-  \textbf{Upper right:} Standard (unconstrained) GPD tail approximation when the estimated shape parameter is negative ($\hat{\xi}<0$), resulting in a finite upper support boundary $\hat{s}$. If the observed excess $Y_{\mathrm{obs}}$ lies beyond this boundary, the tail approximation assigns zero probability mass, yielding a zero GPD-based $p$-value.
-  \textbf{Lower right:} Proposed constrained GPD fit, enforcing that the upper support boundary $\hat{s}_{(C)}$ lies strictly above the evaluation point, with offset $\varepsilon$. This guarantees a strictly positive tail probability at $Y_{\mathrm{obs}}$.
-  This figure is adapted from \citep{peschel2026permapprox}.
-  }
-  \label{fig:6perm:GPD_standard_constrained}
-\end{figure}
 
 Zero-valued $p$-values produced by the GPD tail approximation are undesirable for the same reasons discussed earlier for empirical permutation $p$-values.
 As emphasized by \citet{phipson2010permutation}, permutation $p$-values should never be exactly zero, since the exact permutation distribution necessarily includes the observed data configuration. This principle should equally apply to approximations of permutation $p$-values obtained through tail modeling.
@@ -332,7 +332,25 @@ Beyond the support-constrained GPD fitting approach introduced in the previous s
 
 To address these interdependent decisions in a principled and reproducible manner, we propose the \texttt{permApprox} workflow, which is implemented in an R package of the same name. The workflow integrates constrained GPD fitting with data-driven choices for all preceding steps, resulting in a coherent pipeline for permutation-based $p$-value approximation.
 
+\begin{figure}[!htb]
+	\centering
+	\includegraphics[width=\textwidth]{../ch06_permapprox/overview_figures/workflow.pdf}
+	\caption{\textbf{Graphical representation of the \texttt{permApprox} workflow.}\\
+		\textbf{Input:} A vector with observed test statistics $T_{\mathrm{obs}}$ and a matrix with permuted test statistics $\mathcal{T} = {T_b^{*(j)}}$ for $B$ permutations and $m$ tests.
+		\textbf{Step 1:} Empirical permutation $p$-values are computed and screened for small values relative to the chosen significance level $\alpha$ (i.e., $p_{\mathrm{emp}} < 2\alpha$), with selected tests flagged for GPD-based tail approximation.
+		\textbf{Step 2:} For a selected test $j$, the tail approximation stage consists of three main steps:
+		\textbf{Step 2a:} A threshold $u^{(j)}$ is chosen via the Anderson--Darling (AD) based test to define the tail region of the permutation distribution.
+		\textbf{Step 2b:} The safety margin $\varepsilon^{(j)}$ is selected (with optional refinement in rare cases of machine-underflow). 
+		\textbf{Step 2c:} A GPD is fitted to the permutation excesses under a support constraint ensuring valid evaluation beyond the observed excess.
+		The fitted constrained GPD yields refined tail $p$-values $p_{\mathrm{cGPD}}^{(j)}$, which replace the corresponding empirical values.
+		\textbf{Output:} Vector of hybrid $p$-values that are discrete in the bulk of the distribution and continuous in the extreme tail. The \textbf{red flags} mark our suggested default methods as explained in Section~\ref{sec:6perm:workflow:default_config}.
+		This figure is adapted from \citep{peschel2026permapprox}.
+	}
+	\label{fig:6perm:workflow}
+\end{figure}
+
 Figure~\ref{fig:6perm:workflow} provides a schematic overview of the workflow. Each step is discussed in detail in the subsequent sections of this chapter. For every stage, we consider a range of candidate methods, evaluate their performance in dedicated simulation studies, and derive a recommended default configuration. These default choices are summarized in Section~\ref{sec:6perm:workflow:default_config} and highlighted in Figure~\ref{fig:6perm:workflow}. All alternative methods considered throughout this chapter are available in the \texttt{permApprox} package, allowing users to adapt the workflow to specific applications.
+
 
 \subsubsection*{Input}
 
@@ -387,22 +405,6 @@ p_{\mathrm{cGPD}}^{(j)}, & \text{if } p_{\mathrm{emp}}^{(j)} < p_{\mathrm{thr}}.
 
 The resulting vector $\{p^{(j)}\}_{j=1}^m$ combines discrete empirical values in the bulk of the distribution with continuous tail approximations in the extreme region. These hybrid $p$-values form the primary output of the \texttt{permApprox} workflow and serve as the basis for subsequent inference, including multiple testing correction.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/workflow.pdf}
-  \caption{\textbf{Graphical representation of the \texttt{permApprox} workflow.}\\
-  \textbf{Input:} A vector with observed test statistics $T_{\mathrm{obs}}$ and a matrix with permuted test statistics $\mathcal{T} = {T_b^{*(j)}}$ for $B$ permutations and $m$ tests.
-  \textbf{Step 1:} Empirical permutation $p$-values are computed and screened for small values relative to the chosen significance level $\alpha$ (i.e., $p_{\mathrm{emp}} < 2\alpha$), with selected tests flagged for GPD-based tail approximation.
-  \textbf{Step 2:} For a selected test $j$, the tail approximation stage consists of three main steps:
-  \textbf{Step 2a:} A threshold $u^{(j)}$ is chosen via the Anderson--Darling (AD) based test to define the tail region of the permutation distribution.
-  \textbf{Step 2b:} The safety margin $\varepsilon^{(j)}$ is selected (with optional refinement in rare cases of machine-underflow). 
-  \textbf{Step 2c:} A GPD is fitted to the permutation excesses under a support constraint ensuring valid evaluation beyond the observed excess.
-  The fitted constrained GPD yields refined tail $p$-values $p_{\mathrm{cGPD}}^{(j)}$, which replace the corresponding empirical values.
-  \textbf{Output:} Vector of hybrid $p$-values that are discrete in the bulk of the distribution and continuous in the extreme tail. The \textbf{red flags} mark our suggested default methods as explained in Section~\ref{sec:6perm:workflow:default_config}.
-  This figure is adapted from \citep{peschel2026permapprox}.
-  }
-  \label{fig:6perm:workflow}
-\end{figure}
 
 %====================================
 \subsection{Overview of simulation studies}
@@ -410,6 +412,15 @@ The resulting vector $\{p^{(j)}\}_{j=1}^m$ combines discrete empirical values in
 %====================================
 
 To determine appropriate default settings for the \texttt{permApprox} workflow, a series of simulation studies was conducted, each addressing a specific component of the procedure. An overview of these studies and their interdependencies is provided in Figure~\ref{fig:6perm:sim_overview}, where the numbering reflects the order in which the studies were conducted.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../ch06_permapprox/overview_figures/simulation_studies.pdf}
+	\caption{\textbf{Simulation studies for selecting default \texttt{permApprox} settings.}\\
+		Rectangular boxes represent components of the workflow, while rounded boxes indicate the objectives of the corresponding simulation studies. Dashed arrows denote the simulation studies, whereas solid arrows indicate the selected default configuration that is carried forward to subsequent steps. The numbering reflects the order in which the simulation studies were conducted, which differs from the sequential order of the workflow. The studies comprise evaluation of GPD parameter estimation methods (parameter recovery and robustness under constraint), selection of the initial number of exceedances $k_0$, comparison of threshold selection methods (threshold and $p$-value recovery), and final benchmarking of the complete workflow against competing approaches for $p$-value approximation.
+	}
+	\label{fig:6perm:sim_overview}
+\end{figure}
 
 While the workflow itself proceeds sequentially from threshold selection to parameter estimation and finally $p$-value approximation, the corresponding simulation studies were designed in a different order, reflecting both the relative importance of the individual components and their methodological dependencies.
 
@@ -421,14 +432,6 @@ Subsequently, six different threshold selection methods were compared with respe
 
 Finally, the selected components were combined into the full \texttt{permApprox} workflow and compared to four competing approaches for $p$-value approximation (Section~\ref{sec:6perm:simulations}). This comparison was performed both for the $t$-test and for the Wilcoxon test applied to exponential data, thereby assessing the performance of the method under parametric as well as non-parametric settings.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/simulation_studies.pdf}
-  \caption{\textbf{Simulation studies for selecting default \texttt{permApprox} settings.}\\
-  Rectangular boxes represent components of the workflow, while rounded boxes indicate the objectives of the corresponding simulation studies. Dashed arrows denote the simulation studies, whereas solid arrows indicate the selected default configuration that is carried forward to subsequent steps. The numbering reflects the order in which the simulation studies were conducted, which differs from the sequential order of the workflow. The studies comprise evaluation of GPD parameter estimation methods (parameter recovery and robustness under constraint), selection of the initial number of exceedances $k_0$, comparison of threshold selection methods (threshold and $p$-value recovery), and final benchmarking of the complete workflow against competing approaches for $p$-value approximation.
-  }
-  \label{fig:6perm:sim_overview}
-\end{figure}
 
 
 %====================================
@@ -475,7 +478,7 @@ An important distinction between single and multiple testing settings arises in 
 
 Within the \texttt{permApprox} workflow introduced in Section~\ref{sec:6perm:workflow}, threshold selection constitutes the first step of the tail modeling stage (Step~2a). Its purpose is to identify the subset of permutation statistics that belong to the extreme tail and are therefore suitable for approximation by a generalized Pareto distribution (GPD).
 
-The threshold choice plays a central role in extreme value modeling. If the threshold is chosen too low, the GPD is fitted to observations that do not follow the limiting tail behavior, leading to model misspecification and biased parameter estimates. Conversely, if the threshold is chosen too high, only few observations remain, resulting in high variability of the estimates. This bias-variance trade-off is particularly pronounced in permutation settings, where the number of available tail observations is inherently limited by the number of permutations. In this section, we review existing approaches to threshold selection and investigate additional methods that were developed in the course of this thesis.
+The threshold plays a central role in extreme value modeling. If the threshold is chosen too low, the GPD is fitted to observations that do not follow the limiting tail behavior, leading to model misspecification and biased parameter estimates. Conversely, if the threshold is too high, only few observations remain, resulting in high variability of the estimates. This bias-variance trade-off is particularly pronounced in permutation settings, where the number of available tail observations is limited by the number of permutations. In this section, we review existing approaches to threshold selection and investigate additional methods that were developed in the course of this thesis.
 
 In addition to evaluating the threshold selection methods themselves, the choice of the initial number of exceedances used to start the threshold search requires careful consideration in the permutation setting. In classical extreme value applications, it is common to select thresholds corresponding to approximately $5\%$ to $10\%$ of the sample, resulting in a moderate number of exceedances that balances bias and variance \citep{coles2001introduction}. In contrast, \citet{knijnenburg2009fewer} suggest using a fixed number of 250 exceedances in the context of permutation testing, which corresponds to $25\%$ of the data when $B=1000$ permutations are used. This discrepancy highlights that standard EVT heuristics may not directly translate to permutation-based settings. Therefore, in addition to comparing threshold selection methods, we systematically investigate the influence of the initial number of exceedances $k_0$ on the accuracy of resulting $p$-value approximations. Throughout this section, we use the term \emph{exceedances} to refer to observations above the threshold, and do not explicitly distinguish between exceedances and the corresponding excesses unless required for clarity.
 
@@ -512,7 +515,7 @@ The original implementation of GPD-based permutation $p$-value approximation pro
 
 In this work, we therefore investigate a range of automated threshold selection strategies that satisfy the above design criteria. The considered methods include approaches motivated by existing diagnostics in extreme value analysis as well as additional procedures developed during the construction of the \texttt{permApprox} framework. Their performance is evaluated in dedicated simulation studies that assess both threshold selection behavior and the accuracy with which the resulting GPD approximations recover reference $p$-values across varying sample sizes, effect sizes, and numbers of permutations.
 
-All considered methods operate on an increasing sequence of candidate thresholds in the upper tail of the permutation distribution. This sequence is initialized by specifying a starting number of exceedances $$k_0$$, which determines the lowest candidate threshold and hence the initial tail region considered for GPD fitting. For each subsequent candidate threshold, a GPD is fitted to the corresponding exceedances and evaluated using a method-specific selection criterion. The role of $$k_0$$ and its choice are examined separately in Section~\ref{sec:6perm:threshold:sim_exceed0}.
+All considered methods operate on an increasing sequence of candidate thresholds in the upper tail of the permutation distribution. This sequence is initialized by specifying a starting number of exceedances $k_0$, which determines the lowest candidate threshold and hence the initial tail region considered for GPD fitting. For each subsequent candidate threshold, a GPD is fitted to the corresponding exceedances and evaluated using a method-specific selection criterion. The role of $k_0$ and its choice are examined separately in Section~\ref{sec:6perm:threshold:sim_exceed0}.
 
 %====================================
 \subsection{Existing threshold selection approaches}
@@ -566,20 +569,22 @@ To ensure that a sufficient number of exceedances is available for reliable GPD 
 
 For each candidate threshold, a GPD is fitted to the corresponding exceedances and the Anderson--Darling GoF test is applied. Panel (b) in Figure~\ref{fig:6perm:thresh_ftr_fwdstop} displays the resulting sequence of AD $p$-values, while panel (c) shows the ForwardStop statistic (Equation~\eqref{eq:6perm:thresh_fwdstop}) computed from these $p$-values. The vertical lines in panel (b) indicate the thresholds selected by the FTR and ForwardStop rules. While the FTR rule selects the first candidate threshold for which the GoF test is not rejected, the ForwardStop procedure evaluates the entire sequence of tests before determining the stopping point.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_ttest_ftr_fwd_stop_ADp_diag-1.pdf}
+	\caption{
+		\textbf{Threshold selection with FTR and ForwardStop.}
+		Illustrative example based on two samples drawn from Gaussian distributions ($\mu_1=1$, $\mu_2=0$, $\sigma=1$) with per-group sample sizes $n_1=n_2=250$. The permutation test is based on the Student's $t$-statistic with $B=1000$ permutations. 
+		\textbf{(a)} Permutation distribution of the test statistic. 
+		\textbf{(b)} Anderson--Darling (AD) goodness-of-fit $p$-values obtained from fitting a GPD to the exceedances above each candidate threshold. The dashed horizontal line indicates the significance level $\alpha$ of the AD test, while the dotted vertical line marks the largest admissible threshold ensuring that at least 20 exceedances remain for fitting. The colored vertical lines indicate the thresholds selected by the FTR and ForwardStop methods. 
+		\textbf{(c)} ForwardStop statistic evaluated across the sequence of candidate thresholds. The dashed horizontal line indicates the stopping criterion used by the method.
+	}
+	\label{fig:6perm:thresh_ftr_fwdstop}
+\end{figure}
+
 In this work, we consider both the failure-to-reject (FTR) rule and the ForwardStop procedure as automated strategies for threshold detection. In Sections~\ref{sec:6perm:threshold:sim_thresh_recovery} and \ref{sec:6perm:threshold:sim_pval_recovery}, the performance of the methods is compared with that of additional threshold selection strategies proposed in this work. These strategies are evaluated using simulation experiments designed to assess the performance of the methods in threshold recovery as well as $p$-value recovery.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/permApprox/thresh_ttest_ftr_fwd_stop_ADp_diag-1.pdf}
-  \caption{
-  \textbf{Threshold selection with FTR and ForwardStop.}
-  Illustrative example based on two samples drawn from Gaussian distributions ($\mu_1=1$, $\mu_2=0$, $\sigma=1$) with per-group sample sizes $n_1=n_2=250$. The permutation test is based on the Student's $t$-statistic with $B=1000$ permutations. 
-  \textbf{(a)} Permutation distribution of the test statistic. 
-  \textbf{(b)} Anderson--Darling (AD) goodness-of-fit $p$-values obtained from fitting a GPD to the exceedances above each candidate threshold. The dashed horizontal line indicates the significance level $\alpha$ of the AD test, while the dotted vertical line marks the largest admissible threshold ensuring that at least 20 exceedances remain for fitting. The colored vertical lines indicate the thresholds selected by the FTR and ForwardStop methods. 
-  \textbf{(c)} ForwardStop statistic evaluated across the sequence of candidate thresholds. The dashed horizontal line indicates the stopping criterion used by the method.
-}
-\label{fig:6perm:thresh_ftr_fwdstop}
-\end{figure}
+
 
 %====================================
 \subsection{Additional approaches developed in this work}
@@ -616,7 +621,7 @@ For the same Student's $t$-test permutation example considered in Section~\ref{s
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\textwidth]{figures/permApprox/thresh_ttest_rob_ftr_ADp-1}
+\includegraphics[width=0.8\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_ttest_rob_ftr_ADp-1}
   \caption{\textbf{Robust failure-to-reject (robFTR) threshold selection.}
   Illustration of the same Student's $t$-test permutation example used in Section~\ref{sec:6perm:threshold:existing}. AD $p$-values obtained from fitting a GPD to exceedances above each candidate threshold. The dashed horizontal line indicates the significance level $\alpha$ of the AD test. The vertical line marks the threshold selected by the robFTR rule with $r=5$, which requires five consecutive candidate thresholds with non-rejected AD tests before accepting a threshold.
   }
@@ -642,7 +647,7 @@ However, since the procedure relies on the first detected change point, it may r
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/permApprox/thresh_ttest_gof_cp_diag-1}
+\includegraphics[width=\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_ttest_gof_cp_diag-1}
   \caption{\textbf{GoF change point method.}
   Illustration of the same Student's $t$-test permutation example used in Section~\ref{sec:6perm:threshold:existing}. 
   The sequence of AD $p$-values is augmented with artificial small $p$-values (pink) to represent an initial region of poor model fit (also separated from true AD $p$-values by the vertical dotted line). The dashed horizontal line indicates the significance level $\alpha$ of the AD test. The vertical pink line marks the threshold selected by the GoF change point method.
@@ -673,17 +678,18 @@ The behavior of this method is illustrated in Figure~\ref{fig:6perm:thresh_rpc}.
 For the same permutation example considered previously, the RPC method selects the same threshold as the FTR rule. 
 The upper panel shows the sequence of AD $p$-values across candidate thresholds, while the lower panel displays the corresponding rejection proportions $r_i$. The selected threshold is the first one for which the rejection proportion among all higher thresholds falls below the significance level.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_ttest_rpc_ADp_diag-1.pdf}
+	\caption{
+		\textbf{Rejection proportion control (RPC) threshold selection.}
+		The upper panel shows AD $p$-values obtained from fitting a GPD to exceedances above each candidate threshold for the same permutation example as in the previous figures. The dashed horizontal line indicates the significance level $\alpha$ of the AD test, and the vertical line marks the threshold selected by the RPC rule. The lower panel displays the proportion of rejected AD tests among all thresholds greater than or equal to each candidate threshold. The RPC method selects the smallest threshold for which this rejection proportion falls below $\alpha$, here the vertical orange line in the upper panel.
+	}
+	\label{fig:6perm:thresh_rpc}
+\end{figure}
+
 Compared with the previously discussed rules, the RPC method is less sensitive to isolated early fluctuations in the sequence of GoF $p$-values, since the decision is based on the entire sequence of tests above each candidate threshold rather than on local patterns alone. On the other hand, the method can be sensitive to many rejected GoF tests at very high thresholds, where the variability of the test statistics increases due to the small number of exceedances. Consequently, choosing the minimum number of exceedances too small may prevent the RPC method from identifying a valid threshold.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/permApprox/thresh_ttest_rpc_ADp_diag-1.pdf}
-  \caption{
-  \textbf{Rejection proportion control (RPC) threshold selection.}
-  The upper panel shows AD $p$-values obtained from fitting a GPD to exceedances above each candidate threshold for the same permutation example as in the previous figures. The dashed horizontal line indicates the significance level $\alpha$ of the AD test, and the vertical line marks the threshold selected by the RPC rule. The lower panel displays the proportion of rejected AD tests among all thresholds greater than or equal to each candidate threshold. The RPC method selects the smallest threshold for which this rejection proportion falls below $\alpha$, here the vertical orange line in the upper panel.
-}
-\label{fig:6perm:thresh_rpc}
-\end{figure}
 
 %------------------------------------
 \subsubsection*{Shape-variation}
@@ -692,6 +698,14 @@ Compared with the previously discussed rules, the RPC method is less sensitive t
 An established heuristic in extreme value analysis is to select thresholds where the estimated shape parameter $\hat{\xi}$ remains stable as the threshold increases \citep{scarrott2012review, northrop2014improved}. 
 This idea is often implemented through visual inspection of so-called shape stability plots. To formalize this principle, we introduce a shape-variation rule that selects thresholds where the variability of $\hat{\xi}$ across neighboring candidate thresholds is minimal.
 
+
+\begin{figure}[!hb]
+	\centering
+	\includegraphics[width=\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_ttest_shape_var_ADp_diag-1.pdf}
+	\caption{\textbf{Shape-variation threshold selection.} The upper panel shows Anderson--Darling goodness-of-fit $p$-values obtained from fitting a GPD above each candidate threshold for the same permutation example as in the previous figures. The dashed horizontal line indicates the significance level $\alpha$ of the goodness-of-fit test. The lower panel displays the rolling variance of the corresponding estimated shape parameters. Among thresholds for which the goodness-of-fit test does not reject the GPD model (orange dots), the shape-variation rule selects the threshold with the smallest rolling variance. The selected threshold is indicated by the orange vertical line.}
+	\label{fig:6perm:thresh_shapevar}
+\end{figure}
+
 Let $\hat{\xi}_i$ denote the estimated shape parameter obtained from fitting the GPD at candidate threshold $u_i$. 
 For each candidate threshold we compute the rolling variance of the shape estimates within a window of neighboring thresholds. 
 Specifically, for a window size $w$, the variance is calculated using the estimates within a symmetric neighborhood around $u_i$, whenever sufficient observations are available.
@@ -699,15 +713,10 @@ Specifically, for a window size $w$, the variance is calculated using the estima
 In contrast to the GoF-based methods described above, the rolling variance is computed across all candidate thresholds, independent of the results of the GoF tests. The GoF criterion is applied only at the final selection step. 
 Among all candidate thresholds for which the GoF test (we use again the AD test) is not rejected, the shape-variation rule selects the threshold with the smallest rolling variance of $\hat{\xi}$. If multiple thresholds attain the same minimum variance, the largest of these thresholds is selected.
 
+
 The behavior of the method is illustrated in Figure~\ref{fig:6perm:thresh_shapevar}. 
 The upper panel shows the AD $p$-values across candidate thresholds, while the lower panel displays the rolling variance of the corresponding shape parameter estimates. The selected threshold corresponds to the smallest rolling variance among thresholds for which the goodness-of-fit test is not rejected.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/permApprox/thresh_ttest_shape_var_ADp_diag-1.pdf}
-	\caption{\textbf{Shape-variation threshold selection.} The upper panel shows Anderson--Darling goodness-of-fit $p$-values obtained from fitting a GPD above each candidate threshold for the same permutation example as in the previous figures. The dashed horizontal line indicates the significance level $\alpha$ of the goodness-of-fit test. The lower panel displays the rolling variance of the corresponding estimated shape parameters. Among thresholds for which the goodness-of-fit test does not reject the GPD model (orange dots), the shape-variation rule selects the threshold with the smallest rolling variance. The selected threshold is indicated by the orange vertical line.}
-\label{fig:6perm:thresh_shapevar}
-\end{figure}
 
 
 %====================================
@@ -734,18 +743,19 @@ Figure~\ref{fig:6perm:thresh_sim_weibull_smooth} illustrates an example of such 
 
 In this setting, all threshold selection methods identify thresholds near the beginning of the candidate threshold range and therefore far below the nominal transition point. This behavior reflects the gradual transition between the bulk and tail components: because the distribution changes smoothly at the threshold, the GPD approximation already provides a reasonable description of the upper tail for thresholds well below the nominal transition point. Consequently, the goodness-of-fit tests tend to accept the GPD model early, leading the threshold selection procedures to identify thresholds substantially smaller than the true threshold.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_sim_single_weib_gpd_smooth_hist_ADp_all-1.pdf}
+	\caption{
+		\textbf{Example of a simulated Weibull-GPD distribution with smooth transition.}
+		The upper panel shows the $n=1000$ simulated observations together with the density of the generating model consisting of a Weibull bulk and a GPD tail with smoothly matched densities at the true threshold (vertical line).
+		The lower panel displays Anderson--Darling (AD) $p$-values obtained when fitting a GPD to the exceedances above each candidate threshold. The dashed horizontal line indicates the significance level of the AD test. Threshold candidates are restricted so that at least 10 exceedances remain for fitting, which causes the candidate threshold range to end before the right boundary of the histogram. Colored markers indicate the thresholds selected by the different threshold detection methods.
+	}
+	\label{fig:6perm:thresh_sim_weibull_smooth}
+\end{figure}
+
 This example illustrates that when the transition between bulk and tail behavior is smooth, the notion of a single well-defined threshold becomes ambiguous. In such situations, goodness-of-fit based threshold selection methods may detect acceptable GPD fits well before the nominal transition between bulk and tail distributions.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/permApprox/thresh_sim_single_weib_gpd_smooth_hist_ADp_all-1.pdf}
-\caption{
-  \textbf{Example of a simulated Weibull-GPD distribution with smooth transition.}
-  The upper panel shows the $n=1000$ simulated observations together with the density of the generating model consisting of a Weibull bulk and a GPD tail with smoothly matched densities at the true threshold (vertical line).
-  The lower panel displays Anderson--Darling (AD) $p$-values obtained when fitting a GPD to the exceedances above each candidate threshold. The dashed horizontal line indicates the significance level of the AD test. Threshold candidates are restricted so that at least 10 exceedances remain for fitting, which causes the candidate threshold range to end before the right boundary of the histogram. Colored markers indicate the thresholds selected by the different threshold detection methods.
-}
-\label{fig:6perm:thresh_sim_weibull_smooth}
-\end{figure}
 
 %------------------------------------
 \subsubsection{Sharp bulk-tail transition}
@@ -771,23 +781,25 @@ Gamma-GPD     & $k=1.2,\ \theta=0.6$     & $\xi=-0.2,\ \sigma=1.3$ & 250, 1000 \
 \end{tabular}
 \end{table}
 
+
 Figure~\ref{fig:6perm:thresh_sim_four_methods} illustrates example realizations from these models. Panels (a)-(c) show simulated data from the Weibull-GPD, Log-normal-GPD, and Gamma-GPD models, respectively. 
 In each case, the upper plot displays the simulated observations together with the density of the generating model and the true threshold, while the lower plot shows the AD $p$-values obtained when fitting a GPD to the exceedances above each candidate threshold. The colored markers indicate the thresholds selected by the different detection methods.
+
+\begin{figure}[!htb]
+	\centering
+	\includegraphics[width=\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_sim_single_combined_four_panels-1.pdf}
+	\caption{
+		\textbf{Examples of simulated distributions with a sharp transition between bulk and tail components.}
+		\textbf{(a)-(c):} Weibull-GPD, Log-normal-GPD, and Gamma-GPD models with $k_0=1000$ starting exceedances.
+		\textbf{(d):} Gamma-GPD model with restricted threshold search ($k_0=250$).
+		In each panel, the upper plot shows the $n=1000$ simulated observations together with the density of the generating model and the true threshold (vertical line). The lower plot displays Anderson--Darling (AD) $p$-values obtained when fitting a GPD to the exceedances above each candidate threshold. The dashed horizontal line indicates the significance level of the AD test. Threshold candidates are restricted so that at least 10 exceedances remain for fitting, which causes the candidate threshold range to end before the right boundary of the histogram. Colored markers indicate the thresholds selected by the different threshold detection methods.
+	}
+	\label{fig:6perm:thresh_sim_four_methods}
+\end{figure}
 
 In panels (a)-(c), the threshold search starts with the smallest observed samples ($k_0=1000$), to evaluate the behavior of the methods across the complete range of observations. In practice, however, threshold selection is typically restricted to the upper part of the distribution in order to avoid fitting extreme value models to the bulk region. 
 Panel (d) illustrates this situation using the Gamma-GPD model. Here, the threshold search is restricted to the upper 25\% of the sample distribution by excluding the first 750 observations from the candidate threshold range ($k_0=250$). This setup more closely reflects practical applications, where threshold detection is typically performed only within the upper fraction of the distribution.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/permApprox/thresh_sim_single_combined_four_panels-1.pdf}
-\caption{
-  \textbf{Examples of simulated distributions with a sharp transition between bulk and tail components.}
-  \textbf{(a)-(c):} Weibull-GPD, Log-normal-GPD, and Gamma-GPD models with $k_0=1000$ starting exceedances.
-  \textbf{(d):} Gamma-GPD model with restricted threshold search ($k_0=250$).
-  In each panel, the upper plot shows the $n=1000$ simulated observations together with the density of the generating model and the true threshold (vertical line). The lower plot displays Anderson--Darling (AD) $p$-values obtained when fitting a GPD to the exceedances above each candidate threshold. The dashed horizontal line indicates the significance level of the AD test. Threshold candidates are restricted so that at least 10 exceedances remain for fitting, which causes the candidate threshold range to end before the right boundary of the histogram. Colored markers indicate the thresholds selected by the different threshold detection methods.
-}
-\label{fig:6perm:thresh_sim_four_methods}
-\end{figure}
 
 %------------------------------------
 \subsubsection{Simulation results with repeated samples}
@@ -804,7 +816,7 @@ In contrast, the FTR and robFTR methods, as well as the GoF-CP approach, exhibit
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/permApprox/thresh_sim_rep_jitter_box_all_exc1000_step1-1.pdf}
+\includegraphics[width=\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_sim_rep_jitter_box_all_exc1000_step1-1.pdf}
 \caption{
   \textbf{Threshold estimation accuracy for $k_0 = 1000$.}
   Distribution of estimation errors $\hat{u} - u_{\text{true}}$ across 100 simulated samples for Weibull-GPD, Log-normal-GPD, and Gamma-GPD models. 
@@ -818,7 +830,7 @@ Figure~\ref{fig:6perm:thresh_sim_rep_250exc} presents the corresponding results 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/permApprox/thresh_sim_rep_jitter_box_all_exc250_step1-1.pdf}
+\includegraphics[width=\textwidth]{../ch06_permapprox/explorations/threshold_selection/figures/01_compare_methods/thresh_sim_rep_jitter_box_all_exc250_step1-1.pdf}
 \caption{
   \textbf{Threshold estimation accuracy for $k_0 = 250$.}
   Distribution of estimation errors $\hat{u} - u_{\text{true}}$ across 100 simulated samples for Weibull-GPD, Log-normal-GPD, and Gamma-GPD models. 
@@ -840,6 +852,7 @@ This setting serves as a benchmark because the parametric \textit{t}-test is cor
 
 We generated two groups of normally distributed observations with equal group sizes $n \in \{25,50,75,100,250,500,750,1000\}$ and standard deviation $\sigma=1$. For each sample size, we considered effect sizes $d \in \{0.5,1,1.5,2\}$, corresponding to the absolute mean difference between the two groups. 
 
+\newpage
 The test statistic is given by the two-sample \textit{t}-statistic under the equal-variance assumption,
 \begin{equation}
 t = \frac{\bar{x}_1 - \bar{x}_2}{\sqrt{(s_1^2 + s_2^2)/n}}
@@ -865,7 +878,7 @@ The modified RPC-Min variant avoids this issue by always selecting a threshold, 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/permApprox/sim_ttest_thresh_combined_pvals_nexceed_by_n-1.pdf}
+\includegraphics[width=\textwidth]{../ch06_permapprox/simulations/perm_ttest/figures/04_thresh_methods//sim_ttest_thresh_combined_pvals_nexceed_by_n-1.pdf}
 \caption{
   \textbf{Comparison of threshold selection methods for permutation $p$-value approximation.}
   \textbf{Left:} Ratios of approximated permutation $p$-values to the reference $p$-values obtained from the parametric \textit{t}-test ($p_{\text{method}} / p_{\text{\textit{t}-test}}$). 
@@ -899,7 +912,7 @@ For larger $B$, the variability decreases up to $k_0 = 0.25B$ and increases ther
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{figures/permApprox/sim_ttest_nexc_pval_ratios_by_B-1.pdf}
+\includegraphics[width=\textwidth]{../ch06_permapprox/simulations/perm_ttest/figures/03_nexceed/sim_ttest_nexc_pval_ratios_by_B-1.pdf}
 \caption{
   \textbf{Influence of the number of starting exceedances $k_0$ on $p$-value approximation.}
   Ratios of approximated permutation $p$-values to the reference \textit{t}-test $p$-values ($p_{\text{method}} / p_{\text{\textit{t}-test}}$) for different numbers of permutations $B$. 
@@ -1013,7 +1026,7 @@ However, the figure also shows that no single constant $c$ yields good agreement
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{figures/permApprox/eps_rule_factor01_3n.pdf}
+  \includegraphics[width=\linewidth]{../ch06_permapprox/explorations/perm_ttest/figures/03_find_eps_rule/eps_rule_factor01_3n.pdf}
   \caption{\textbf{Linear $\varepsilon$ rule.}
   Constrained GPD $p$-values obtained using the rule $\varepsilon = 0.1\,|T_{\mathrm{obs}}|$ for Gaussian two-sample $t$-tests with different sample sizes ($n=50,100,500$). Colored points show the approximated $p$-values, while open circles indicate the corresponding $p$-values from the classical $t$-test. 
   Colors represent the underlying effect sizes $d \in \{0,0.5,1,1.5,2\}$. 
@@ -1039,21 +1052,23 @@ This formulation reduces the magnitude of the safety margin as the sample size i
 
 Figure~\ref{fig:6perm:eps_rule_n_squared} illustrates the resulting $p$-value approximations for three representative sample sizes ($n=50,100,500$). Across a range of parameter choices, the setting $c=1000$ and $p=2$ yielded $p$-value approximations closest to the corresponding $t$-test $p$-values and is shown in the figure. Compared with the purely linear rule, incorporating the factor $n^{-2}$ largely removes the dependence of the approximation on the sample size, leading to much more consistent behavior across different values of $n$.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{../ch06_permapprox/explorations/perm_ttest/figures/03_find_eps_rule/eps_rule_n_squared_3n.pdf}
+	\caption{\textbf{Sample-size scaled linear $\varepsilon$ rule.}
+		Constrained GPD $p$-values obtained using the rule $\varepsilon = |T_{\mathrm{obs}}|\,1000/n^2$ for Gaussian two-sample $t$-tests with sample sizes $n=50$, $100$, and $500$. 
+		Colored points show the approximated $p$-values, while open circles indicate the corresponding $p$-values from the classical $t$-test. 
+		Colors represent the true effect sizes $d \in \{0,0.5,1,1.5,2\}$. 
+		Incorporating the factor $n^{-2}$ substantially reduces the dependence of the approximation on the sample size. 
+		Nevertheless, the linear dependence on $|T_{\mathrm{obs}}|$ remains unable to reproduce the nonlinear relationship between the $t$-statistic and its $p$-value.
+	}
+	\label{fig:6perm:eps_rule_n_squared}
+\end{figure}
+
 However, the dependence of $\varepsilon$ on $|T_{\mathrm{obs}}|$ remains purely linear. 
 Consequently, the resulting approximations still fail to capture the pronounced curvature in the relationship between the $t$-statistic and its corresponding $p$-value. This observation motivates the introduction of nonlinear rules for the safety margin in the next step of the derivation.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{figures/permApprox/eps_rule_n_squared_3n.pdf}
-  \caption{\textbf{Sample-size scaled linear $\varepsilon$ rule.}
-  Constrained GPD $p$-values obtained using the rule $\varepsilon = |T_{\mathrm{obs}}|\,1000/n^2$ for Gaussian two-sample $t$-tests with sample sizes $n=50$, $100$, and $500$. 
-  Colored points show the approximated $p$-values, while open circles indicate the corresponding $p$-values from the classical $t$-test. 
-  Colors represent the true effect sizes $d \in \{0,0.5,1,1.5,2\}$. 
-  Incorporating the factor $n^{-2}$ substantially reduces the dependence of the approximation on the sample size. 
-  Nevertheless, the linear dependence on $|T_{\mathrm{obs}}|$ remains unable to reproduce the nonlinear relationship between the $t$-statistic and its $p$-value.
-  }
-  \label{fig:6perm:eps_rule_n_squared}
-\end{figure}
+
 
 %------------------------------------
 \subsubsection*{Logarithmic growth and saturation}
@@ -1103,6 +1118,23 @@ Our simulation studies showed that the parameter choices $\kappa_{\mathrm{factor
 
 To assess the behavior of the resulting rule, Figure~\ref{fig:6perm:eps_rule_log_sat} shows constrained GPD $p$-values obtained with the logarithmic saturation rule for three representative sample sizes.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{../ch06_permapprox/explorations/perm_ttest/figures/03_find_eps_rule/eps_rule_log_sat_pp.pdf}
+	\caption{
+		\textbf{Logarithmic saturation $\varepsilon$ rule.}
+		Results for Gaussian two-sample $t$-tests with sample sizes $n=50$, $100$, and $500$. 
+		\textbf{(a)} $p$-values plotted against the observed statistic $|t_{\mathrm{obs}}|$. 
+		Colored dots represent constrained GPD approximations and open black circles represent the corresponding $t$-test $p$-values. 
+		\textbf{(b)} Comparison of approximated and $t$-test $p$-values, where the colored dots represent p-values and the dashed line denotes the identity. 
+		In all panels, colors indicate the effect size ($d \in \{0,0.5,1,1.5,2\}$).
+		Dashed circles indicate the region where a correction is needed.
+		The $p$-values are shown on a $\log_{10}$ scale with tick labels in the original $p$-value scale.
+	}
+	\label{fig:6perm:eps_rule_log_sat}
+\end{figure}
+
+
 The upper panels (a) display the approximated $p$-values as a function of the observed statistic. Compared with the linear constructions depicted in Figure~\ref{fig:6perm:eps_rule_n_squared}, the logarithmic saturation rule captures the curvature of the $t$-test $p$-values much more accurately across the full range of test statistics. The lower panels (b) compare the approximated $p$-values directly with the corresponding $t$-test $p$-values.
 
 Overall, the approximated $p$-values follow the $t$-test reference values closely, confirming that the logarithmic saturation rule substantially improves the approximation of the permutation tail. However, for test statistics in an intermediate range the approximated $p$-values tend to fall slightly below the corresponding $t$-test values. 
@@ -1110,21 +1142,6 @@ In the lower panels, this behavior appears as points located above the dashed id
 
 Since our goal is to avoid underestimation of the reference $p$-values, this observation indicates that an additional correction is required for moderate test statistics.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{figures/permApprox/eps_rule_log_sat_pp.pdf}
-  \caption{
-  \textbf{Logarithmic saturation $\varepsilon$ rule.}
-  Results for Gaussian two-sample $t$-tests with sample sizes $n=50$, $100$, and $500$. 
-  \textbf{(a)} $p$-values plotted against the observed statistic $|t_{\mathrm{obs}}|$. 
-  Colored dots represent constrained GPD approximations and open black circles represent the corresponding $t$-test $p$-values. 
-  \textbf{(b)} Comparison of approximated and $t$-test $p$-values, where the colored dots represent p-values and the dashed line denotes the identity. 
-  In all panels, colors indicate the effect size ($d \in \{0,0.5,1,1.5,2\}$).
-  Dashed circles indicate the region where a correction is needed.
-  The $p$-values are shown on a $\log_{10}$ scale with tick labels in the original $p$-value scale.
-  }
-  \label{fig:6perm:eps_rule_log_sat}
-\end{figure}
 
 %====================================
 \subsection{Lift for intermediate statistics}
@@ -1165,23 +1182,23 @@ Figure~\ref{fig:6perm:eps_rule_lls} summarizes the effect of the lift.
 The upper panels (a) shows the resulting $\varepsilon$ functions as a function of the observed statistic. 
 Compared with the purely logarithmic rule, the lifted version introduces a localized increase of the safety margin for intermediate statistics while leaving the behavior for very small and very large values of $|T_{\mathrm{obs}}|$ largely unchanged. 
 
+\begin{figure}[!htb]
+	\centering
+	\includegraphics[width=\linewidth]{../ch06_permapprox/explorations/perm_ttest/figures/03_find_eps_rule/eps_rule_lls.pdf}
+	\caption{
+		\textbf{Lifted log-saturation $\varepsilon$ rule.}
+		Results for Gaussian two-sample $t$-tests with sample sizes $n=50$, $100$, and $500$. 
+		\textbf{(a)} $\varepsilon$-rules as functions of the observed statistic $|t_{\mathrm{obs}}|$, comparing the lifted log-saturation rule with the logarithmic saturation rule. 
+		\textbf{(b)} Resulting $p$-values plotted against the observed statistic $|t_{\mathrm{obs}}|$, where colored dots represent constrained GPD approximations and open black circles denote the corresponding $t$-test $p$-values. 
+		\textbf{(c)} Comparison of approximated and $t$-test $p$-values, where colors indicate the effect size ($d \in \{0,0.5,1,1.5,2\}$) and the dashed line denotes the identity. 
+		The $p$-values are shown on a $\log_{10}$ scale with tick labels in the original $p$-value scale.
+	}
+	\label{fig:6perm:eps_rule_lls}
+\end{figure}
+
 The middle and lower panels (b) and (c) illustrate the resulting constrained GPD $p$-values and their comparison with the corresponding $t$-test $p$-values. 
 With the lift component, the approximated $p$-values now closely follow the curvature of the $t$-test reference values across the entire range of statistics. 
 For larger sample sizes, the approximated $p$-values tend to lie slightly above the $t$-test values, resulting in a mildly conservative behavior, which is preferable to systematically producing smaller values.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{figures/permApprox/eps_rule_lls.pdf}
-  \caption{
-  \textbf{Lifted log-saturation $\varepsilon$ rule.}
-  Results for Gaussian two-sample $t$-tests with sample sizes $n=50$, $100$, and $500$. 
-  \textbf{(a)} $\varepsilon$-rules as functions of the observed statistic $|t_{\mathrm{obs}}|$, comparing the lifted log-saturation rule with the logarithmic saturation rule. 
-  \textbf{(b)} Resulting $p$-values plotted against the observed statistic $|t_{\mathrm{obs}}|$, where colored dots represent constrained GPD approximations and open black circles denote the corresponding $t$-test $p$-values. 
-  \textbf{(c)} Comparison of approximated and $t$-test $p$-values, where colors indicate the effect size ($d \in \{0,0.5,1,1.5,2\}$) and the dashed line denotes the identity. 
-  The $p$-values are shown on a $\log_{10}$ scale with tick labels in the original $p$-value scale.
-  }
-  \label{fig:6perm:eps_rule_lls}
-\end{figure}
 
 %====================================
 \subsection{Permutation-based cap}
@@ -1221,7 +1238,7 @@ Figure~\ref{fig:6perm:eps_rule_lls_perm} shows that in the Gaussian simulation s
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{figures/permApprox/eps_rule_lls_perm.pdf}
+  \includegraphics[width=\linewidth]{../ch06_permapprox/explorations/perm_ttest/figures/03_find_eps_rule/eps_rule_lls_perm.pdf}
   \caption{\textbf{Lifted log-saturation rule with permutation-based cap.}
   Constrained GPD $p$-values obtained using the lifted log-saturation rule with permutation-based cap for Gaussian two-sample $t$-tests with sample sizes $n=50$, $100$, and $500$. 
   Colored points represent the constrained GPD approximations, while open black circles denote the corresponding $t$-test $p$-values. 
@@ -1261,7 +1278,7 @@ The left panel shows the constrained GPD $p$-values obtained when the rule is ap
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{figures/permApprox/eps_rule_wilcox.pdf}
+  \includegraphics[width=\linewidth]{../ch06_permapprox/explorations/perm_wilcox/figures/01_test_eps_rule/eps_rule_wilcox.pdf}
   \caption{\textbf{Effect of standardization on constrained permutation $p$-values for the Wilcoxon test.}
   Data were generated from exponential distributions with means $1$ and $1+d$ ($d \in \{0,0.5,1,1.5,2\}$), using equal group sizes ($n=100$) and $200$ tests per effect size ($1000$ in total).
   Colored points show constrained GPD $p$-values, while open circles indicate reference $p$-values obtained from the asymptotic Wilcoxon rank-sum test (normal approximation without continuity correction).
@@ -1271,6 +1288,7 @@ The left panel shows the constrained GPD $p$-values obtained when the rule is ap
   \label{fig:6perm:eps_comparison_wilcox}
 \end{figure}
 
+\newpage
 To address this issue, we derive the $\varepsilon$-rule on a standardized scale and subsequently map it back to the scale of the original test statistic. 
 For test $j$, let
 \begin{equation}
@@ -1667,7 +1685,7 @@ In addition, Figure~\ref{fig:6perm:sim_unconstrained_error_shape} shows the dist
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/sim_GPD_unconstr_heat_shape_rmse-1.pdf}
+  \includegraphics[width=\textwidth]{../ch06_permapprox/simulations/gpd_fit/figures/02_unconstrained/sim_GPD_unconstr_heat_shape_rmse-1.pdf}
   \caption{Root mean squared error (RMSE) of the estimated GPD shape parameter $\hat{\xi}$ across sample sizes $n$, estimation methods, and true shape values $\xi_0\in \{-0.6, -0.4, -0.2, 0.2, 0.4, 0.6\}$. 
   The color scale represents absolute RMSE values, ranging from the minimum to the maximum observed across all scenarios. Lighter colors correspond to lower RMSE and thus higher estimation accuracy. The starred method (LME*) corresponds to the default estimator in \texttt{permApprox}.
   This figure is adapted from \citep{peschel2026permapprox}.}
@@ -1676,7 +1694,7 @@ In addition, Figure~\ref{fig:6perm:sim_unconstrained_error_shape} shows the dist
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/sim_GPD_unconstr_heat_scale_rmse-1.pdf}
+  \includegraphics[width=\textwidth]{../ch06_permapprox/simulations/gpd_fit/figures/02_unconstrained/sim_GPD_unconstr_heat_scale_rmse-1.pdf}
   \caption{Root mean squared error (RMSE) of the estimated GPD scale parameter $\hat{\sigma}$ across sample sizes $n$, estimation methods, and true shape values $\xi_0\in \{-0.6, -0.4, -0.2, 0.2, 0.4, 0.6\}$. 
   The color scale represents absolute RMSE values, ranging from the minimum to the maximum observed across all scenarios. Lighter colors correspond to lower RMSE and thus higher estimation accuracy. The starred method (LME*) corresponds to the default estimator in \texttt{permApprox}. 
   This figure is adapted from \citep{peschel2026permapprox}.}
@@ -1685,7 +1703,7 @@ In addition, Figure~\ref{fig:6perm:sim_unconstrained_error_shape} shows the dist
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/sim_GPD_unconstr_abs_error_shape_by_n-2.pdf}
+  \includegraphics[width=\textwidth]{../ch06_permapprox/simulations/gpd_fit/figures/02_unconstrained/sim_GPD_unconstr_abs_error_shape_by_n-2.pdf}
   \caption{Absolute estimation errors of the GPD shape parameter ($|\hat{\xi} - \xi_0|$) for $\xi_0 = -0.4$ across sample sizes. 
   Boxplots summarize results across 500 replicates per setting, with colors indicating the estimation methods. The starred method (LME*) corresponds to the default estimator in \texttt{permApprox}.
   This figure is adapted from \citep{peschel2026permapprox}.}
@@ -1752,7 +1770,7 @@ The selected tolerance values for each method are summarized in Table~\ref{tab:6
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{figures/permApprox/tol_calibration_dgpd_vs_rep_all_methods-1.pdf}
+\includegraphics[width=\linewidth]{../ch06_permapprox/explorations/gpd_fit/figures/01_tol_calibration/tol_calibration_dgpd_vs_rep_all_methods-1.pdf}
 \caption{
 \textbf{Influence of the tolerance parameter on constrained GPD fitting.}
 Fitted densities at the evaluation point ($X_{\mathrm{eval}} = 7$) above the true boundary ($-\sigma/\xi=5$) across simulation repetitions and tolerance values ($10^{-6}$–$10^{-13}$). Each point represents one repetition, colored by tolerance and shaped by estimation method. Highlighted points indicate the selected tolerance values for each method.
@@ -1787,6 +1805,7 @@ ZSE      & --- (no optimization) \\
 
 We next evaluate the robustness of the estimation methods under the support constraint introduced in Section~\ref{sec:6perm:gpd_tail_modeling}. In contrast to the unconstrained setting, the focus is no longer on parameter recovery, but on the stability and numerical behavior of the estimators when the fitted distribution is forced to extrapolate beyond the observed data.
 
+\newpage
 To this end, data were generated from a bounded GPD with parameters $\sigma_0 = 1$ and $\xi_0 = -0.2$, implying a true upper endpoint at 
 \begin{equation}
 s_0 = -\frac{\sigma_0}{\xi_0} = 5.
@@ -1822,7 +1841,7 @@ although the differences are generally small. The corresponding standard deviati
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/sim_GPD_evalpoint_dgpd_active_by_n-4.pdf}
+  \includegraphics[width=\textwidth]{../ch06_permapprox/simulations/gpd_fit/figures/05_eval_point/sim_GPD_evalpoint_dgpd_active_by_n-4.pdf}
   \caption{
     \textbf{Stability of constrained GPD fits at the evaluation point.}
     Fitted densities $f_{\widehat{\mathrm{GPD}}}(x_{\mathrm{eval}})$ at $x_{\mathrm{eval}} = 7$ ($\varepsilon = 2$) across sample sizes $n$ and estimation methods. 
@@ -1835,7 +1854,7 @@ although the differences are generally small. The corresponding standard deviati
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/sim_GPD_evalpoint_heat_sd_dgpd-1.pdf}
+  \includegraphics[width=\textwidth]{../ch06_permapprox/simulations/gpd_fit/figures/05_eval_point/sim_GPD_evalpoint_heat_sd_dgpd-1.pdf}
   \caption{
   Standard deviation of the fitted density values \(f_{\widehat{\mathrm{GPD}}}(x_{\mathrm{eval}})\) across 500 replicates per setting, shown for $\varepsilon \in \{1, 2, 3\}\;\;(\Rightarrow\; x_{\mathrm{eval}} \in \{6, 7, 8\})$. 
   Color intensity reflects standard deviation (SD) of the density: $\sqrt(\mathrm{Var}(f_{\widehat{\mathrm{GPD}}}(x_{\mathrm{eval}})))$, with darker shades indicating higher variability. The starred method (LME*) is the default in \texttt{permApprox}.
@@ -1851,6 +1870,18 @@ Overall, these results highlight that robustness under support constraints is pr
 \label{sec:6perm:param_est:runtime}
 %====================================
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{../ch06_permapprox/explorations/gpd_fit/figures/02_runtime/gpd_runtime_runtime_gpd_methods-1.pdf}
+	\caption{
+		\textbf{Runtime comparison of GPD estimation methods.}
+		Runtime distributions across sample sizes ($n = 200, 1000$) and boundary settings (with vs.\ without support constraint). Each box represents 50 runs per method and scenario. The starred method (LME*) denotes the default estimator in \texttt{permApprox}.
+		This figure is adapted from \citep{peschel2026permapprox}.
+	}
+	\label{fig:6perm:runtime_gpd_methods}
+\end{figure}
+
+
 In addition to statistical accuracy and robustness under support constraints, computational efficiency is an important criterion for selecting a default estimation method, particularly in the context of large-scale permutation testing where GPD fitting is performed repeatedly.
 
 To assess the runtime of the considered methods, we benchmarked all estimators for sample sizes $n \in \{200, 1000\}$ and for both unconstrained and constrained settings. Each configuration was evaluated 50 times per method, and runtimes were recorded in milliseconds (Figure~\ref{fig:6perm:runtime_gpd_methods}).
@@ -1861,16 +1892,6 @@ The remaining methods exhibit comparable runtime, with the fastest method depend
 
 Taken together, these results indicate that substantial differences in computational cost exist between estimators, particularly for methods based on nonlinear least squares. This aspect is especially relevant for the \texttt{permApprox} workflow, where GPD fitting is applied repeatedly across many tests. Consequently, methods with high computational cost may become prohibitive in large-scale applications, even if their statistical performance is competitive.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{figures/permApprox/gpd_runtime_runtime_gpd_methods-1.pdf}
-  \caption{
-  \textbf{Runtime comparison of GPD estimation methods.}
-  Runtime distributions across sample sizes ($n = 200, 1000$) and boundary settings (with vs.\ without support constraint). Each box represents 50 runs per method and scenario. The starred method (LME*) denotes the default estimator in \texttt{permApprox}.
-  This figure is adapted from \citep{peschel2026permapprox}.
-  }
-  \label{fig:6perm:runtime_gpd_methods}
-\end{figure}
 
 %====================================
 \subsection{Decision for a default estimation method}
@@ -1918,7 +1939,7 @@ For all approaches, tail modeling is applied only when the empirical $p$-value i
     The classical GPD tail approximation of \citet{knijnenburg2009fewer}. Since the original specification does not clearly define whether one- or two-parameter maximum likelihood estimation is used, we use the one-dimensional version due to its superior numerical stability. For threshold detection, the failure to reject (FTR) procedure with Anderson–Darling (AD) test is used, starting from the top 250 exceedances.
     
     \item \textbf{GPD (Knijnenburg, pow3):} 
-    A variant of the above approach in which all test statistics are raised to the third power prior to fitting, as suggested by \citet{knijnenburg2009fewer} to mitigate issues arising from bounded support and negative shape parameters.
+    A variant of the above approach in which all test statistics are raised to the third power prior to fitting, as suggested by \citet{knijnenburg2009fewer} to mitigate issues arising from bounded support and negative shape parameters.\\~\\
 
     \item \textbf{GPD (Winkler, +obs):}
     \citet{winkler2016faster} compare GPD tail fits both \emph{with} and \emph{without} including the observed test statistic in the permutation distribution. We only evaluate the ``+obs'' variant here as candidate to strictly avoid zero $p$-values. The authors use MOM for parameter estimation, which performs very poorly in some scenarios in our simulations (Section~\ref{sec:6perm:param_est:sim_unconstrained}). We use the standard one-parameter maximum likelihood estimate (MLE1D) instead. For threshold detection, they also use FTR with AD test, but start with the upper quartile of the permutation distribution.
@@ -1949,7 +1970,7 @@ In contrast, the proposed \texttt{permApprox} workflow strictly avoids zero $p$-
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/sim_ttest_papprox_ratios_by_n-1.pdf}
+  \includegraphics[width=\textwidth]{../ch06_permapprox/simulations/perm_ttest/figures/05_p_approx_methods/sim_ttest_papprox_ratios_by_n-1.pdf}
   \caption{\textbf{Two-sample t-test with Gaussian data:} Ratios of approximated to ground-truth $p$-values: $p_{\text{method}} / p_{t\text{-test}}$, stratified by sample size $n$. The horizontal dashed line at 1 indicates perfect agreement with the \textit{t}-test reference. Effect size and number of permutations are fixed to $d=1$ and $B=1000$, respectively. Points indicate individual replicates (1000 per setting). Counts of exact zeros are shown below each group as ``\texttt{0s}=x'' in the corresponding color. For plotting only, zero $p$-values are mapped to a small constant floor so they appear at ``0'' on the $y$-axis. The y-axis is on a log$_{10}$ scale, while tick labels show the original ratios. This figure is adapted from \citep{peschel2026permapprox}}
   \label{fig:6perm:ttest_ratios_by_n}
 \end{figure}
@@ -1974,9 +1995,9 @@ The power-transformed variant largely avoids zero estimates but exhibits pronoun
 Both the ``Winkler,\,+obs'' approach and the Gamma approximation avoid zeros by construction, but yield even more conservative $p$-values.
 In contrast, \texttt{permApprox} produces smooth approximations that closely track the Wilcoxon $p$-values across all effect sizes, without introducing zeros.
 
-\begin{figure}[H]
+\begin{figure}[!htb]
   \centering
-  \includegraphics[width=\textwidth]{figures/permApprox/sim_wilcox_two_panel.pdf}
+  \includegraphics[width=\textwidth]{../ch06_permapprox/simulations/perm_wilcox/figures/02_p_approx_methods/sim_wilcox_two_panel.pdf}
   \caption{\textbf{Wilcoxon rank-sum test with exponential data:} Comparison of $p$-value approximations to the Wilcoxon reference.
   \textbf{(a)} Illustrative simulation scenario with 1000 tests across five effect sizes ($d \in \{0, 0.5, 1, 1.5, 2\}$; 200 tests per effect size) and $B=1000$ permutations at $n=250$ samples per group. The x-axis shows the observed Mann-Whitney $U$ statistic, and points represent individual tests. The y-axis displays $p$-values on a log$_{10}$ scale, while tick labels show the original $p$-values.
   \textbf{(b)} Simulation study with 1000 independent replicates per sample size (1 test per replicate) for $d=1$, $B=1000$. The x-axis indicates the per-group sample size, and the y-axis shows ratios of approximated to Wilcoxon $p$-values ($p_{\text{method}} / p_{\text{Wilcoxon}}$) on a log$_{10}$ scale (tick labels show the original ratios). The horizontal dashed line at 1 indicates agreement with the Wilcoxon reference. Points represent individual replicates (1000 per setting).

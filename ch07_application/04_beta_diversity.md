@@ -1,6 +1,10 @@
 Between-sample dissimilarity
 ================
-Compiled at 2026-06-12 08:19:33 UTC
+Compiled at 2026-07-06 19:17:05 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "7eead4d7-01e8-4990-84ab-a0f2c7355f9f")
+```
 
 ## Load packages
 
@@ -61,6 +65,93 @@ transformation.
 
 ### Euclidean distance after multiplicative replacement and CLR transformation
 
+    ## Warning in zCompositions::multRepl(rel_abund_mat, label = 0, dl = detection_limit_mat, : Column no. 1 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 3 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 5 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 6 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 7 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 12 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 13 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 15 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 17 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 18 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 19 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 20 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 22 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 23 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 25 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 26 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 27 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 28 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 30 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 33 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 34 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 35 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 36 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 37 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 38 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 39 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 40 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 42 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 43 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 44 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 45 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 46 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 48 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 50 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 51 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 54 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 55 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 58 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 59 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 60 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 61 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 64 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 66 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 67 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 69 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 70 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 71 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 72 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 73 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 74 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 76 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 77 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 78 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 81 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 84 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 85 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 86 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 87 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 88 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 90 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 91 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 92 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 93 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Column no. 94 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Col
+
+    ## Warning in zCompositions::multRepl(rel_abund_mat, label = 0, dl = detection_limit_mat, : Row no. 80 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 102 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 112 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 145 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 147 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 157 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 164 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 265 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 366 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 368 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 397 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 399 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 403 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 410 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 416 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 436 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 471 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 480 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 533 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+    ## Row no. 551 containing >90% zeros/unobserved values found (see arguments z.warning and z.delete. Check out with zPatterns()).
+
     ## # A tibble: 1 × 7
     ##   replacement_method      input_scale        detection_limit replacement_fraction replacement_value n_zeros_replaced zero_fraction
     ##   <chr>                   <chr>                        <dbl>                <dbl>             <dbl>            <int>         <dbl>
@@ -76,7 +167,7 @@ transformation.
 
 ### Uncolored PCoA plots
 
-![](figures/04_beta_diversity/beta_PCoA_uncolored-1.png)<!-- -->
+![](figures/04_beta_diversity/PCoA_uncolored-1.png)<!-- -->
 
 The Bray-Curtis PCoA (PCo1: 29.5%, PCo2: 8.9%) displays the
 characteristic arch shape common to PCoA on compositional count data,
@@ -98,7 +189,7 @@ ignored.
     ##        Country            Sex      C-section    BF duration   EBF duration        Smoking       Siblings 
     ##      "Country"          "Sex"    "C-section"  "BF duration" "EBF duration"      "Smoking"     "Siblings"
 
-![](figures/04_beta_diversity/beta_PCoA_colored-1.png)<!-- -->![](figures/04_beta_diversity/beta_PCoA_colored-2.png)<!-- -->![](figures/04_beta_diversity/beta_PCoA_colored-3.png)<!-- -->![](figures/04_beta_diversity/beta_PCoA_colored-4.png)<!-- -->![](figures/04_beta_diversity/beta_PCoA_colored-5.png)<!-- -->![](figures/04_beta_diversity/beta_PCoA_colored-6.png)<!-- -->![](figures/04_beta_diversity/beta_PCoA_colored-7.png)<!-- -->
+![](figures/04_beta_diversity/thesis_PCoA_colored-1.png)<!-- -->![](figures/04_beta_diversity/thesis_PCoA_colored-2.png)<!-- -->![](figures/04_beta_diversity/thesis_PCoA_colored-3.png)<!-- -->![](figures/04_beta_diversity/thesis_PCoA_colored-4.png)<!-- -->![](figures/04_beta_diversity/thesis_PCoA_colored-5.png)<!-- -->![](figures/04_beta_diversity/thesis_PCoA_colored-6.png)<!-- -->![](figures/04_beta_diversity/thesis_PCoA_colored-7.png)<!-- -->
 
 None of the variables examined produce visually discernible separation
 in either ordination. Specifically:
@@ -125,7 +216,7 @@ These heatmaps are mainly diagnostic. For several hundred samples, they
 become visually dense, but they are useful for checking whether strong
 blocks or outlying samples occur.
 
-![](figures/04_beta_diversity/beta_heatmap_bray-1.png)<!-- -->
+![](figures/04_beta_diversity/heatmap_bray-1.png)<!-- -->
 
 The Bray-Curtis distance heatmap reveals a block of samples in the
 upper-left cluster (after hierarchical reordering) that are
@@ -137,7 +228,7 @@ reveal a single metadata variable that cleanly aligns with this block,
 so the driver of this cluster is not apparent from the variables
 available here.
 
-![](figures/04_beta_diversity/beta_heatmap_euclid-1.png)<!-- -->
+![](figures/04_beta_diversity/heatmap_euclid-1.png)<!-- -->
 
 The CLR heatmap is considerably more homogeneous: distances are more
 uniformly distributed with less pronounced block structure, which is
@@ -168,24 +259,24 @@ remain available for tests of the other variables.
 ### PERMANOVA
 
     ## # A tibble: 14 × 12
-    ##    analysis  distance    variable  n_samples n_groups statistic_obs p_empirical statistic_adonis2 r2_adonis2 p_adonis2 n_exceed n_perm
-    ##    <chr>     <chr>       <fct>         <int>    <int>         <dbl>       <dbl>             <dbl>      <dbl>     <dbl>    <int>  <dbl>
-    ##  1 PERMANOVA Bray-Curtis Country         592        3          4.54       0.001              4.54    0.0152      0.001        0    999
-    ##  2 PERMANOVA Bray-Curtis Sex             592        2          1.36       0.184              1.36    0.00230     0.163      183    999
-    ##  3 PERMANOVA Bray-Curtis C-section       589        2          3.69       0.011              3.69    0.00624     0.005       10    999
-    ##  4 PERMANOVA Bray-Curtis BF durat…       580        3         14.3        0.001             14.3     0.0473      0.001        0    999
-    ##  5 PERMANOVA Bray-Curtis EBF dura…       554        2         19.6        0.001             19.6     0.0343      0.001        0    999
-    ##  6 PERMANOVA Bray-Curtis Smoking         592        2          5.70       0.002              5.70    0.00957     0.001        1    999
-    ##  7 PERMANOVA Bray-Curtis Siblings        503        3          2.23       0.021              2.23    0.00884     0.02        20    999
-    ##  8 PERMANOVA Aitchison   Country         592        3          2.58       0.001              2.58    0.00868     0.001        0    999
-    ##  9 PERMANOVA Aitchison   Sex             592        2          1.45       0.034              1.45    0.00245     0.03        33    999
-    ## 10 PERMANOVA Aitchison   C-section       589        2          2.48       0.001              2.48    0.00420     0.001        0    999
-    ## 11 PERMANOVA Aitchison   BF durat…       580        3          6.36       0.001              6.36    0.0216      0.001        0    999
-    ## 12 PERMANOVA Aitchison   EBF dura…       554        2         10.2        0.001             10.2     0.0181      0.001        0    999
-    ## 13 PERMANOVA Aitchison   Smoking         592        2          3.09       0.001              3.09    0.00521     0.001        0    999
-    ## 14 PERMANOVA Aitchison   Siblings        503        3          1.58       0.006              1.58    0.00626     0.006        5    999
+    ##    analysis  distance    variable     n_samples n_groups statistic_obs p_empirical statistic_adonis2 r2_adonis2 p_adonis2 n_exceed n_perm
+    ##    <chr>     <chr>       <fct>            <int>    <int>         <dbl>       <dbl>             <dbl>      <dbl>     <dbl>    <int>  <dbl>
+    ##  1 PERMANOVA Bray-Curtis Country            592        3          4.54       0.001              4.54    0.0152      0.001        0    999
+    ##  2 PERMANOVA Bray-Curtis Sex                592        2          1.36       0.184              1.36    0.00230     0.163      183    999
+    ##  3 PERMANOVA Bray-Curtis C-section          589        2          3.69       0.011              3.69    0.00624     0.005       10    999
+    ##  4 PERMANOVA Bray-Curtis BF duration        580        3         14.3        0.001             14.3     0.0473      0.001        0    999
+    ##  5 PERMANOVA Bray-Curtis EBF duration       554        2         19.6        0.001             19.6     0.0343      0.001        0    999
+    ##  6 PERMANOVA Bray-Curtis Smoking            592        2          5.70       0.002              5.70    0.00957     0.001        1    999
+    ##  7 PERMANOVA Bray-Curtis Siblings           503        3          2.23       0.021              2.23    0.00884     0.02        20    999
+    ##  8 PERMANOVA Aitchison   Country            592        3          2.58       0.001              2.58    0.00868     0.001        0    999
+    ##  9 PERMANOVA Aitchison   Sex                592        2          1.45       0.034              1.45    0.00245     0.03        33    999
+    ## 10 PERMANOVA Aitchison   C-section          589        2          2.48       0.001              2.48    0.00420     0.001        0    999
+    ## 11 PERMANOVA Aitchison   BF duration        580        3          6.36       0.001              6.36    0.0216      0.001        0    999
+    ## 12 PERMANOVA Aitchison   EBF duration       554        2         10.2        0.001             10.2     0.0181      0.001        0    999
+    ## 13 PERMANOVA Aitchison   Smoking            592        2          3.09       0.001              3.09    0.00521     0.001        0    999
+    ## 14 PERMANOVA Aitchison   Siblings           503        3          1.58       0.006              1.58    0.00626     0.006        5    999
 
-![](figures/04_beta_diversity/beta_permanova_perm_dist-1.png)<!-- -->
+![](figures/04_beta_diversity/permanova_perm_dist-1.png)<!-- -->
 
 **Mean and median of permutation distributions**
 
@@ -231,7 +322,7 @@ remain available for tests of the other variables.
     ## Not selected for fitting : 1
     ## 
     ## Final p-values:
-    ##   min = 3.907e-97, median = 5.948e-05, max = 1.840e-01
+    ##   min = 0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000391, median = 0.0000595, max = 0.184
     ## 
     ## Use summary() for detailed fit diagnostics.
 
@@ -263,11 +354,11 @@ remain available for tests of the other variables.
     ## ---------------
     ## Empirical p-values:
     ##   empirical:
-    ##     min = 1.000e-03, median = 1.000e-03, mean = 1.900e-02, max = 1.840e-01
+    ##     min = 0.001, median = 0.001, mean = 0.019, max = 0.184
     ## 
     ## Final p-values (unadjusted):
     ##   unadjusted:
-    ##     min = 3.907e-97, median = 5.948e-05, mean = 1.779e-02, max = 1.840e-01
+    ##     min = 0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000391, median = 0.0000595, mean = 0.0178, max = 0.184
 
     ## # A tibble: 14 × 9
     ##    distance    variable     n_samples statistic_obs n_exceed n_perm p_empirical p_permapprox method_used
@@ -313,11 +404,11 @@ remain available for tests of the other variables.
     ## 6 Siblings              1.58       0.006     1.80e- 3
     ## 7 Sex                   1.45       0.034     3.51e- 2
 
-![](figures/04_beta_diversity/beta_permanova_permapprox_perm_dist-1.png)<!-- -->
+![](figures/04_beta_diversity/permanova_permapprox_perm_dist-1.png)<!-- -->
 
 **Selected variables**
 
-![](figures/04_beta_diversity/beta_permanova_permapprox_perm_dist_sel-1.png)<!-- -->
+![](figures/04_beta_diversity/thesis_permanova_permapprox_perm_dist_sel-1.png)<!-- -->
 
 ### PERMDISP
 
@@ -356,7 +447,7 @@ remain available for tests of the other variables.
     ## Not selected for fitting : 2
     ## 
     ## Final p-values:
-    ##   min = 2.140e-26, median = 1.634e-02, max = 4.340e-01
+    ##   min = 0.0000000000000000000000000214, median = 0.0163, max = 0.434
     ## 
     ## Use summary() for detailed fit diagnostics.
 
@@ -378,7 +469,7 @@ remain available for tests of the other variables.
     ## 13 Aitchison   Smoking            592        15.7          0    999       0.001     2.63e- 4 gpd        
     ## 14 Aitchison   Siblings           503         2.63        83    999       0.084     8.03e- 2 gpd
 
-![](figures/04_beta_diversity/beta_permdisp_permapprox_perm_dist-1.png)<!-- -->
+![](figures/04_beta_diversity/permdisp_permapprox_perm_dist-1.png)<!-- -->
 
 ## Within-group dispersion
 
@@ -391,9 +482,9 @@ that requires an ordination plot to visualise directly.
 Panels are annotated with permApprox-refined p-values for PERMANOVA
 (PERM) and PERMDISP (DISP).
 
-![](figures/04_beta_diversity/beta_beta_centroid_dist-1.png)<!-- -->
+![](figures/04_beta_diversity/beta_centroid_dist-1.png)<!-- -->
 
-![](figures/04_beta_diversity/beta_beta_centroid_dist_sel-1.png)<!-- -->
+![](figures/04_beta_diversity/thesis_beta_centroid_dist_sel-1.png)<!-- -->
 
 ## Files written
 
@@ -403,13 +494,13 @@ These files have been written to the target directory,
     ## # A tibble: 10 × 4
     ##    path                                          type         size modification_time  
     ##    <fs::path>                                    <fct> <fs::bytes> <dttm>             
-    ##  1 beta_clr_summary.csv                          file          232 2026-06-12 08:19:38
-    ##  2 beta_data_summary.csv                         file          131 2026-06-12 08:19:38
-    ##  3 beta_diversity_objects.rds                    file        3.06M 2026-06-12 08:19:37
-    ##  4 beta_pcoa_coordinates.csv                     file      137.82K 2026-06-12 08:19:39
+    ##  1 beta_clr_summary.csv                          file          232 2026-07-06 19:17:08
+    ##  2 beta_data_summary.csv                         file          131 2026-07-06 19:17:08
+    ##  3 beta_diversity_objects.rds                    file        3.06M 2026-07-06 19:17:08
+    ##  4 beta_pcoa_coordinates.csv                     file      137.82K 2026-07-06 19:17:10
     ##  5 permanova_permapprox_results_multrepl_clr.rds file       76.12K 2026-06-11 14:47:17
     ##  6 permanova_results_multrepl_clr.rds            file      103.83K 2026-06-11 14:46:06
-    ##  7 permanova_table.tex                           file        2.23K 2026-06-12 08:20:37
+    ##  7 permanova_table.tex                           file        2.23K 2026-07-06 19:17:56
     ##  8 permdisp_permapprox_results_multrepl_clr.rds  file       74.98K 2026-06-11 19:17:16
     ##  9 permdisp_results_multrepl_clr.rds             file      105.39K 2026-06-11 15:31:32
-    ## 10 permdisp_table.tex                            file        2.26K 2026-06-12 08:20:42
+    ## 10 permdisp_table.tex                            file        2.26K 2026-07-06 19:18:00

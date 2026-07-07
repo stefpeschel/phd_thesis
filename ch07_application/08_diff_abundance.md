@@ -1,6 +1,6 @@
 Differential abundance analysis
 ================
-Compiled at 2026-06-16 17:59:36 UTC
+Compiled at 2026-07-06 19:29:09 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "8400abc1-adab-467f-99ae-0f1d4d512bda")
@@ -161,7 +161,7 @@ duration are excluded from this two-group comparison.
     ## 10 Gemella                  0.431   1.59  test            
     ## # ℹ 107 more rows
 
-![](figures/08_diff_abundance/DA_dacomp_reference_score_plot-1.png)<!-- -->
+![](figures/08_diff_abundance/thesis_dacomp_reference_score_plot-1.png)<!-- -->
 
 ## dacomp permutation tests
 
@@ -240,15 +240,15 @@ tail approximation is fitted to the right tail.
     ## ---------------
     ## Empirical p-values:
     ##   empirical:
-    ##     min = 9.990e-04, median = 3.177e-01, mean = 4.097e-01, max = 1.000e+00
+    ##     min = 0.000999, median = 0.318, mean = 0.41, max =    1
     ## 
     ## Final p-values (unadjusted):
     ##   unadjusted:
-    ##     min = 0.000e+00, median = 3.177e-01, mean = 4.098e-01, max = 1.000e+00
+    ##     min = 0, median = 0.318, mean = 0.41, max =    1
     ## 
     ## Final p-values (adjusted, BH):
     ##   adjusted:
-    ##     min = 0.000e+00, median = 6.084e-01, mean = 5.682e-01, max = 1.000e+00
+    ##     min = 0, median = 0.608, mean = 0.568, max =    1
     ##   Rejections at alpha = 0.05: 9
 
     ## Skipping cached constrained permApprox fit: permapprox_nperm=1e+03_constraint=support_at_obs_exceed0=250_alternative=greater_seed=42.rds
@@ -281,27 +281,27 @@ tail approximation is fitted to the right tail.
     ## ---------------
     ## Empirical p-values:
     ##   empirical:
-    ##     min = 9.990e-04, median = 3.177e-01, mean = 4.097e-01, max = 1.000e+00
+    ##     min = 0.000999, median = 0.318, mean = 0.41, max =    1
     ## 
     ## Final p-values (unadjusted):
     ##   unadjusted:
-    ##     min = 2.276e-96, median = 3.177e-01, mean = 4.098e-01, max = 1.000e+00
+    ##     min = 0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000228, median = 0.318, mean = 0.41, max =    1
     ## 
     ## Final p-values (adjusted, BH):
     ##   adjusted:
-    ##     min = 2.344e-94, median = 6.084e-01, mean = 5.682e-01, max = 1.000e+00
+    ##     min = 0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000234, median = 0.608, mean = 0.568, max =    1
     ##   Rejections at alpha = 0.05: 9
 
     ## # A tibble: 7 × 10
-    ##   line                   method                 setting              n_perm elapsed_s_total  seed result_file elapsed_s elapsed_min elapsed_h
-    ##   <chr>                  <chr>                  <chr>                 <dbl>           <dbl> <dbl> <chr>           <dbl>       <dbl>     <dbl>
-    ## 1 dacomp only            dacomp                 dacomp                  1e3            1.69    42 dacomp_res…      1.69        0.03     0    
-    ## 2 dacomp only            dacomp                 dacomp                  1e4           16.9     42 dacomp_res…     16.9         0.28     0.005
-    ## 3 dacomp only            dacomp                 dacomp                  1e5          160.      42 dacomp_res…    160.          2.67     0.045
-    ## 4 dacomp only            dacomp                 dacomp                  1e6         1676.      42 dacomp_res…   1676.         27.9      0.466
-    ## 5 dacomp only            dacomp                 dacomp                  1e7        20964.      42 dacomp_res…  20964.        349.       5.82 
-    ## 6 dacomp + permApprox(C) dacomp + permApprox(C) support_at_obs, exc…    1e3            8.89    42 permapprox…      8.89        0.15     0.002
-    ## 7 dacomp + permApprox(U) dacomp + permApprox(U) unconstrained, exce…    1e3           10.8     42 permapprox…     10.8         0.18     0.003
+    ##   line                   method                 setting                 n_perm elapsed_s_total  seed result_file elapsed_s elapsed_min elapsed_h
+    ##   <chr>                  <chr>                  <chr>                    <dbl>           <dbl> <dbl> <chr>           <dbl>       <dbl>     <dbl>
+    ## 1 dacomp only            dacomp                 dacomp                     1e3            1.69    42 dacomp_res…      1.69        0.03     0    
+    ## 2 dacomp only            dacomp                 dacomp                     1e4           16.9     42 dacomp_res…     16.9         0.28     0.005
+    ## 3 dacomp only            dacomp                 dacomp                     1e5          160.      42 dacomp_res…    160.          2.67     0.045
+    ## 4 dacomp only            dacomp                 dacomp                     1e6         1676.      42 dacomp_res…   1676.         27.9      0.466
+    ## 5 dacomp only            dacomp                 dacomp                     1e7        20964.      42 dacomp_res…  20964.        349.       5.82 
+    ## 6 dacomp + permApprox(C) dacomp + permApprox(C) support_at_obs, exceed…    1e3            8.89    42 permapprox…      8.89        0.15     0.002
+    ## 7 dacomp + permApprox(U) dacomp + permApprox(U) unconstrained, exceed0…    1e3           10.8     42 permapprox…     10.8         0.18     0.003
 
 ## Runtime comparison
 
@@ -320,33 +320,38 @@ unconstrained and constrained permApprox tail approximations.
 | dacomp + permApprox(U) |  1e+03 |     10.83 |        0.18 |     0.003 |
 
     ## # A tibble: 7 × 10
-    ##   line                   method                 setting              n_perm elapsed_s_total  seed result_file elapsed_s elapsed_min elapsed_h
-    ##   <fct>                  <chr>                  <chr>                 <dbl>           <dbl> <dbl> <chr>           <dbl>       <dbl>     <dbl>
-    ## 1 dacomp only            dacomp                 dacomp                  1e3            1.69    42 dacomp_res…      1.69        0.03     0    
-    ## 2 dacomp only            dacomp                 dacomp                  1e4           16.9     42 dacomp_res…     16.9         0.28     0.005
-    ## 3 dacomp only            dacomp                 dacomp                  1e5          160.      42 dacomp_res…    160.          2.67     0.045
-    ## 4 dacomp only            dacomp                 dacomp                  1e6         1676.      42 dacomp_res…   1676.         27.9      0.466
-    ## 5 dacomp only            dacomp                 dacomp                  1e7        20964.      42 dacomp_res…  20964.        349.       5.82 
-    ## 6 dacomp + permApprox(C) dacomp + permApprox(C) support_at_obs, exc…    1e3            8.89    42 permapprox…      8.89        0.15     0.002
-    ## 7 dacomp + permApprox(U) dacomp + permApprox(U) unconstrained, exce…    1e3           10.8     42 permapprox…     10.8         0.18     0.003
+    ##   line                   method                 setting                 n_perm elapsed_s_total  seed result_file elapsed_s elapsed_min elapsed_h
+    ##   <fct>                  <chr>                  <chr>                    <dbl>           <dbl> <dbl> <chr>           <dbl>       <dbl>     <dbl>
+    ## 1 dacomp only            dacomp                 dacomp                     1e3            1.69    42 dacomp_res…      1.69        0.03     0    
+    ## 2 dacomp only            dacomp                 dacomp                     1e4           16.9     42 dacomp_res…     16.9         0.28     0.005
+    ## 3 dacomp only            dacomp                 dacomp                     1e5          160.      42 dacomp_res…    160.          2.67     0.045
+    ## 4 dacomp only            dacomp                 dacomp                     1e6         1676.      42 dacomp_res…   1676.         27.9      0.466
+    ## 5 dacomp only            dacomp                 dacomp                     1e7        20964.      42 dacomp_res…  20964.        349.       5.82 
+    ## 6 dacomp + permApprox(C) dacomp + permApprox(C) support_at_obs, exceed…    1e3            8.89    42 permapprox…      8.89        0.15     0.002
+    ## 7 dacomp + permApprox(U) dacomp + permApprox(U) unconstrained, exceed0…    1e3           10.8     42 permapprox…     10.8         0.18     0.003
 
-![](figures/08_diff_abundance/DA_runtime_plot-1.png)<!-- -->
+    ## Warning: The `trans` argument of `sec_axis()` is deprecated as of ggplot2 3.5.0.
+    ## ℹ Please use the `transform` argument instead.
+    ## This warning is displayed once per session.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
+
+![](figures/08_diff_abundance/runtime_plot-1.png)<!-- -->
 
 ## Differential abundance results
 
     ## # A tibble: 117 × 10
-    ##    taxon_id        mean_rel_non_ebf mean_rel_ebf mean_clr_non_ebf mean_clr_ebf log2_fc clr_difference prevalence_non_ebf prevalence_ebf taxon
-    ##    <chr>                      <dbl>        <dbl>            <dbl>        <dbl>   <dbl>          <dbl>              <dbl>          <dbl> <chr>
-    ##  1 Phascolarctoba…       0.000165    0.0000261             -0.904       -0.855  -2.61          0.0493             0.0223         0.0213 Phas…
-    ##  2 Veillonella           0.00496     0.00423                1.85         1.31   -0.229        -0.541              0.620          0.507  Veil…
-    ##  3 Negativicoccus        0.000115    0.0000477             -0.810       -0.780  -1.25          0.0309             0.0503         0.0453 Nega…
-    ##  4 Dialister             0.0000800   0.0000530             -0.517       -0.446  -0.585         0.0714             0.190          0.2    Dial…
-    ##  5 Megasphaera           0.0000359   0.000284              -0.869       -0.825   2.95          0.0441             0.0447         0.0213 Mega…
-    ##  6 Anaeroglobus          0.0000223   0.00000560            -0.964       -0.894  -1.82          0.0698             0.0168         0.008  Anae…
-    ##  7 Megamonas             0.00000938  0.000000895           -0.984       -0.906  -2.45          0.0780             0.0112         0.008  Mega…
-    ##  8 Streptococcus         0.0810      0.0334                 6.31         5.67   -1.28         -0.640              1              0.989  Stre…
-    ##  9 Lactococcus           0.00802     0.0000543              0.429       -0.529  -7.18         -0.957              0.374          0.181  Lact…
-    ## 10 Gemella               0.000881    0.000475               0.497        0.516  -0.892         0.0196             0.447          0.424  Geme…
+    ##    taxon_id           mean_rel_non_ebf mean_rel_ebf mean_clr_non_ebf mean_clr_ebf log2_fc clr_difference prevalence_non_ebf prevalence_ebf taxon
+    ##    <chr>                         <dbl>        <dbl>            <dbl>        <dbl>   <dbl>          <dbl>              <dbl>          <dbl> <chr>
+    ##  1 Phascolarctobacte…       0.000165    0.0000261             -0.904       -0.855  -2.61          0.0493             0.0223         0.0213 Phas…
+    ##  2 Veillonella              0.00496     0.00423                1.85         1.31   -0.229        -0.541              0.620          0.507  Veil…
+    ##  3 Negativicoccus           0.000115    0.0000477             -0.810       -0.780  -1.25          0.0309             0.0503         0.0453 Nega…
+    ##  4 Dialister                0.0000800   0.0000530             -0.517       -0.446  -0.585         0.0714             0.190          0.2    Dial…
+    ##  5 Megasphaera              0.0000359   0.000284              -0.869       -0.825   2.95          0.0441             0.0447         0.0213 Mega…
+    ##  6 Anaeroglobus             0.0000223   0.00000560            -0.964       -0.894  -1.82          0.0698             0.0168         0.008  Anae…
+    ##  7 Megamonas                0.00000938  0.000000895           -0.984       -0.906  -2.45          0.0780             0.0112         0.008  Mega…
+    ##  8 Streptococcus            0.0810      0.0334                 6.31         5.67   -1.28         -0.640              1              0.989  Stre…
+    ##  9 Lactococcus              0.00802     0.0000543              0.429       -0.529  -7.18         -0.957              0.374          0.181  Lact…
+    ## 10 Gemella                  0.000881    0.000475               0.497        0.516  -0.892         0.0196             0.447          0.424  Geme…
     ## # ℹ 107 more rows
 
     ## # A tibble: 7 × 5
@@ -539,26 +544,25 @@ how the GPD tail approximation can resolve smaller p-values from the
 same empirical permutation sample.
 
     ## # A tibble: 351 × 26
-    ##    taxon_id              statistic    p_raw   p_adj is_reference method n_perm constraint exceed0 method_used mean_rel_non_ebf mean_rel_ebf
-    ##    <chr>                     <dbl>    <dbl>   <dbl> <lgl>        <chr>   <dbl> <chr>        <dbl> <chr>                  <dbl>        <dbl>
-    ##  1 Phascolarctobacterium    0.290  0.784    1       TRUE         dacomp   1000 <NA>            NA <NA>              0.000165    0.0000261  
-    ##  2 Veillonella              3.28   0.0539   0.158   FALSE        dacomp   1000 <NA>            NA <NA>              0.00496     0.00423    
-    ##  3 Negativicoccus           0.141  0.765    1       TRUE         dacomp   1000 <NA>            NA <NA>              0.000115    0.0000477  
-    ##  4 Dialister                0.0972 1        1       TRUE         dacomp   1000 <NA>            NA <NA>              0.0000800   0.0000530  
-    ##  5 Megasphaera              0.956  0.543    1       TRUE         dacomp   1000 <NA>            NA <NA>              0.0000359   0.000284   
-    ##  6 Anaeroglobus             0.477  1        1       TRUE         dacomp   1000 <NA>            NA <NA>              0.0000223   0.00000560 
-    ##  7 Megamonas                0.477  1        1       TRUE         dacomp   1000 <NA>            NA <NA>              0.00000938  0.000000895
-    ##  8 Streptococcus           16.7    0.000999 0.00677 FALSE        dacomp   1000 <NA>            NA <NA>              0.0810      0.0334     
-    ##  9 Lactococcus             28.8    0.000999 0.00677 FALSE        dacomp   1000 <NA>            NA <NA>              0.00802     0.0000543  
-    ## 10 Gemella                  0.632  0.461    1       FALSE        dacomp   1000 <NA>            NA <NA>              0.000881    0.000475   
+    ##    taxon_id   statistic   p_raw   p_adj is_reference method n_perm constraint exceed0 method_used mean_rel_non_ebf mean_rel_ebf mean_clr_non_ebf
+    ##    <chr>          <dbl>   <dbl>   <dbl> <lgl>        <chr>   <dbl> <chr>        <dbl> <chr>                  <dbl>        <dbl>            <dbl>
+    ##  1 Phascolar…    0.290  7.84e-1 1       TRUE         dacomp   1000 <NA>            NA <NA>              0.000165    0.0000261             -0.904
+    ##  2 Veillonel…    3.28   5.39e-2 0.158   FALSE        dacomp   1000 <NA>            NA <NA>              0.00496     0.00423                1.85 
+    ##  3 Negativic…    0.141  7.65e-1 1       TRUE         dacomp   1000 <NA>            NA <NA>              0.000115    0.0000477             -0.810
+    ##  4 Dialister     0.0972 1   e+0 1       TRUE         dacomp   1000 <NA>            NA <NA>              0.0000800   0.0000530             -0.517
+    ##  5 Megasphae…    0.956  5.43e-1 1       TRUE         dacomp   1000 <NA>            NA <NA>              0.0000359   0.000284              -0.869
+    ##  6 Anaeroglo…    0.477  1   e+0 1       TRUE         dacomp   1000 <NA>            NA <NA>              0.0000223   0.00000560            -0.964
+    ##  7 Megamonas     0.477  1   e+0 1       TRUE         dacomp   1000 <NA>            NA <NA>              0.00000938  0.000000895           -0.984
+    ##  8 Streptoco…   16.7    9.99e-4 0.00677 FALSE        dacomp   1000 <NA>            NA <NA>              0.0810      0.0334                 6.31 
+    ##  9 Lactococc…   28.8    9.99e-4 0.00677 FALSE        dacomp   1000 <NA>            NA <NA>              0.00802     0.0000543              0.429
+    ## 10 Gemella       0.632  4.61e-1 1       FALSE        dacomp   1000 <NA>            NA <NA>              0.000881    0.000475               0.497
     ## # ℹ 341 more rows
-    ## # ℹ 14 more variables: mean_clr_non_ebf <dbl>, mean_clr_ebf <dbl>, log2_fc <dbl>, clr_difference <dbl>, prevalence_non_ebf <dbl>,
-    ## #   prevalence_ebf <dbl>, taxon <chr>, method_label <chr>, panel_label <fct>, p_plot_raw <dbl>, neglog10_p_raw <dbl>, significant <lgl>,
-    ## #   direction <fct>, neglog10_p_display <dbl>
+    ## # ℹ 13 more variables: mean_clr_ebf <dbl>, log2_fc <dbl>, clr_difference <dbl>, prevalence_non_ebf <dbl>, prevalence_ebf <dbl>, taxon <chr>,
+    ## #   method_label <chr>, panel_label <fct>, p_plot_raw <dbl>, neglog10_p_raw <dbl>, significant <lgl>, direction <fct>, neglog10_p_display <dbl>
 
     ## Warning: Removed 42 rows containing missing values or values outside the scale range (`geom_point()`).
 
-![](figures/08_diff_abundance/DA_volcano_plot_raw-1.png)<!-- -->
+![](figures/08_diff_abundance/volcano_plot_raw-1.png)<!-- -->
 
 ## Permutation distributions
 
@@ -569,18 +573,18 @@ plot. The red vertical line marks the observed dacomp statistic used for
 the right-tail GPD fit.
 
     ## # A tibble: 8 × 6
-    ##   taxon_id                     taxon                        statistic_obs p_dacomp_1e7 p_permapprox_constrained label                        
-    ##   <chr>                        <fct>                                <dbl>        <dbl>                    <dbl> <chr>                        
-    ## 1 Streptococcus                Streptococcus                         16.7 0.0000115                    4.59e-11 "T_obs = 16.66\np_emp = 1.15…
-    ## 2 Lactococcus                  Lactococcus                           28.8 0.0000001000                 1.91e-26 "T_obs = 28.84\np_emp = 1.00…
-    ## 3 Enterococcus                 Enterococcus                          75.6 0.0000001000                 2.28e-96 "T_obs = 75.64\np_emp = 1.00…
-    ## 4 Intestinibacter              Intestinibacter                       48.9 0.0000001000                 9.02e-16 "T_obs = 48.86\np_emp = 1.00…
-    ## 5 [Clostridium]_innocuum_group [Clostridium]_innocuum_group          32.2 0.0000146                    1.92e- 8 "T_obs = 32.17\np_emp = 1.46…
-    ## 6 Bifidobacterium              Bifidobacterium                       36.8 0.0000001000                 1.70e- 6 "T_obs = 36.76\np_emp = 1.00…
-    ## 7 [Ruminococcus]_gnavugroup    [Ruminococcus]_gnavugroup             32.2 0.0000001000                 2.90e- 8 "T_obs = 32.23\np_emp = 1.00…
-    ## 8 Blautia                      Blautia                               20.8 0.000202                     7.12e- 6 "T_obs = 20.75\np_emp = 2.02…
+    ##   taxon_id                     taxon                        statistic_obs p_dacomp_1e7 p_permapprox_constrained label                           
+    ##   <chr>                        <fct>                                <dbl>        <dbl>                    <dbl> <chr>                           
+    ## 1 Streptococcus                Streptococcus                         16.7 0.0000115                    4.59e-11 "T_obs = 16.66\np_emp = 1.15e-0…
+    ## 2 Lactococcus                  Lactococcus                           28.8 0.0000001000                 1.91e-26 "T_obs = 28.84\np_emp = 1.00e-0…
+    ## 3 Enterococcus                 Enterococcus                          75.6 0.0000001000                 2.28e-96 "T_obs = 75.64\np_emp = 1.00e-0…
+    ## 4 Intestinibacter              Intestinibacter                       48.9 0.0000001000                 9.02e-16 "T_obs = 48.86\np_emp = 1.00e-0…
+    ## 5 [Clostridium]_innocuum_group [Clostridium]_innocuum_group          32.2 0.0000146                    1.92e- 8 "T_obs = 32.17\np_emp = 1.46e-0…
+    ## 6 Bifidobacterium              Bifidobacterium                       36.8 0.0000001000                 1.70e- 6 "T_obs = 36.76\np_emp = 1.00e-0…
+    ## 7 [Ruminococcus]_gnavugroup    [Ruminococcus]_gnavugroup             32.2 0.0000001000                 2.90e- 8 "T_obs = 32.23\np_emp = 1.00e-0…
+    ## 8 Blautia                      Blautia                               20.8 0.000202                     7.12e- 6 "T_obs = 20.75\np_emp = 2.02e-0…
 
-![](figures/08_diff_abundance/DA_permutation_distribution_plot-1.png)<!-- -->
+![](figures/08_diff_abundance/thesis_permutation_distribution_plot-1.png)<!-- -->
 
 ## Rarefied count diagnostics
 
@@ -606,13 +610,13 @@ distributions easier to compare.
     ## 10 s023779  non-EBF Blautia                                   0 Blautia                      Blautia             
     ## # ℹ 4,422 more rows
 
-![](figures/08_diff_abundance/DA_rarefied_count_boxplots-1.png)<!-- -->
+![](figures/08_diff_abundance/rarefied_count_boxplots-1.png)<!-- -->
 
 The following version uses the same log-scale display, but includes zero
 counts in the boxplot summaries. Zero counts are displayed at the small
 plotting value labelled as 0 on the y-axis.
 
-![](figures/08_diff_abundance/DA_rarefied_count_boxplots_with_zeros-1.png)<!-- -->
+![](figures/08_diff_abundance/thesis_rarefied_count_boxplots_with_zeros-1.png)<!-- -->
 
 ## Files written
 
@@ -622,14 +626,14 @@ These files have been written to the target directory,
     ## # A tibble: 38 × 4
     ##    path                                   type         size modification_time  
     ##    <fs::path>                             <fct> <fs::bytes> <dttm>             
-    ##  1 dacomp_reference_score_data.csv        file         7.2K 2026-06-16 17:59:39
+    ##  1 dacomp_reference_score_data.csv        file         7.2K 2026-07-06 19:29:12
     ##  2 dacomp_reference_selection.rds         file       87.06K 2026-06-12 18:51:01
-    ##  3 dacomp_reference_summary.csv           file           60 2026-06-16 17:59:39
+    ##  3 dacomp_reference_summary.csv           file           60 2026-07-06 19:29:12
     ##  4 dacomp_res_nperm=1e+03_seed=42.rds     file      277.51K 2026-06-12 18:51:05
     ##  5 dacomp_res_nperm=1e+04_seed=42.rds     file        1.69M 2026-06-12 18:51:07
     ##  6 dacomp_res_nperm=1e+05_seed=42.rds     file       15.16M 2026-06-12 18:51:10
     ##  7 dacomp_res_nperm=1e+06_seed=42.rds     file      145.45M 2026-06-12 18:51:22
     ##  8 dacomp_res_nperm=1e+07_seed=42.rds     file        1.43G 2026-06-12 18:56:48
-    ##  9 dacomp_runtime.csv                     file          345 2026-06-16 17:59:40
+    ##  9 dacomp_runtime.csv                     file          345 2026-07-06 19:29:14
     ## 10 dacomp_runtime_nperm=1e+03_seed=42.rds file          224 2026-06-12 18:58:06
     ## # ℹ 28 more rows

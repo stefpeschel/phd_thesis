@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params$name, "/DD_"),
+  fig.path = paste0('figures/', params$name, "/"),
   echo = FALSE)
 ```
 
@@ -2023,7 +2023,7 @@ facet_complete_constrained_labeller <- setNames(
 pvalue_plot_complete_clr_constrained_df
 ```
 
-```{r pvalues_complete_clr_waddr_permapprox_constrained_only, fig.width=10, fig.height=3.5, dpi=250}
+```{r thesis_pvalues_complete_clr_waddr_permapprox_constrained_only, fig.width=10, fig.height=3.5, dpi=250}
 zero_repl_constrained_plot <- 1e-60
 log_breaks_constrained_plot <- c(
   1e-3,

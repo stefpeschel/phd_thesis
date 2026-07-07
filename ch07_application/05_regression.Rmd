@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params$name, "/regression_"),
+  fig.path = paste0('figures/', params$name, "/"),
   echo = FALSE)
 ```
 
@@ -495,7 +495,7 @@ coef_heatmap_df %>%
   write_csv(path_target("regression_coefficient_heatmap_data.csv"))
 ```
 
-```{r coefficient_heatmap_top20, fig.width=10, fig.height=6}
+```{r thesis_coefficient_heatmap_top20, fig.width=10, fig.height=6}
 top_taxa_df <- coef_heatmap_df %>%
   group_by(taxon) %>%
   summarise(

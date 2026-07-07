@@ -1,6 +1,6 @@
 Network comparison between non-EBF and EBF groups
 ================
-Compiled at 2026-06-28 21:22:21 UTC
+Compiled at 2026-07-07 17:44:35 UTC
 
 This document compares genus-level microbial association networks
 between infants without exclusive breastfeeding and infants with at
@@ -161,23 +161,21 @@ networks without permutation testing.
 
 #### Association Histogram
 
-![](figures/11_network_comparison/net_ebf_spieceasi_multRepl_association_histogram-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_multRepl_association_histogram-1.png)<!-- -->
 
 #### Degree Distribution
 
-![](figures/11_network_comparison/net_ebf_spieceasi_multRepl_degree_distribution-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_multRepl_degree_distribution-1.png)<!-- -->
 
 #### Graphlet Correlation Matrix
 
-![](figures/11_network_comparison/net_ebf_spieceasi_multRepl_gcm-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_multRepl_gcm-1.png)<!-- -->
 
 #### Network Plot
 
-![](figures/11_network_comparison/net_ebf_spieceasi_multRepl_network_plot_different_layouts-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_multRepl_network_plot_different_layouts-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_ebf_spieceasi_multRepl_network_plot_same_layout-1.png)<!-- -->
-
-![](figures/11_network_comparison/net_ebf_spieceasi_multRepl_network_plot_nolabs-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_multRepl_network_plot_same_layout-1.png)<!-- -->
 
 ### SPIEC-EASI MB with BayesMult replacement
 
@@ -321,23 +319,21 @@ networks without permutation testing.
 
 #### Association Histogram
 
-![](figures/11_network_comparison/net_ebf_spieceasi_bayesMult_association_histogram-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_bayesMult_association_histogram-1.png)<!-- -->
 
 #### Degree Distribution
 
-![](figures/11_network_comparison/net_ebf_spieceasi_bayesMult_degree_distribution-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_bayesMult_degree_distribution-1.png)<!-- -->
 
 #### Graphlet Correlation Matrix
 
-![](figures/11_network_comparison/net_ebf_spieceasi_bayesMult_gcm-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_bayesMult_gcm-1.png)<!-- -->
 
 #### Network Plot
 
-![](figures/11_network_comparison/net_ebf_spieceasi_bayesMult_network_plot_different_layouts-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_bayesMult_network_plot_different_layouts-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_ebf_spieceasi_bayesMult_network_plot_same_layout-1.png)<!-- -->
-
-![](figures/11_network_comparison/net_ebf_spieceasi_bayesMult_network_plot_nolabs-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spieceasi_bayesMult_network_plot_same_layout-1.png)<!-- -->
 
 ### SPIEC-EASI SLR
 
@@ -347,35 +343,35 @@ networks without permutation testing.
     ## Component sizes
     ## ```````````````
     ## non-EBF:           
-    ## size: 78  1
-    ##    #:  1 39
+    ## size: 75  1
+    ##    #:  1 42
     ## EBF:           
-    ## size: 57  1
-    ##    #:  1 60
+    ## size: 43  1
+    ##    #:  1 74
     ## ______________________________
     ## Global network properties
     ## `````````````````````````
     ## Largest connected component (LCC):
     ##                           non-EBF      EBF
-    ## Relative LCC size         0.66667  0.48718
-    ## Clustering coefficient    0.40312  0.47277
-    ## Modularity                0.20599  0.26959
-    ## Positive edge percentage 40.86022 35.63830
-    ## Edge density              0.12388  0.11779
-    ## Natural connectivity      0.02447  0.02765
+    ## Relative LCC size         0.64103  0.36752
+    ## Clustering coefficient    0.32705  0.25031
+    ## Modularity                0.24999  0.31571
+    ## Positive edge percentage 43.54839 49.00000
+    ## Edge density              0.11171  0.11074
+    ## Natural connectivity      0.02249  0.03151
     ## Vertex connectivity       1.00000  1.00000
     ## Edge connectivity         1.00000  1.00000
-    ## Average dissimilarity*    0.96370  0.96557
-    ## Average path length**     1.58757  1.72050
+    ## Average dissimilarity*    0.96721  0.96729
+    ## Average path length**     1.65614  1.95873
     ## 
     ## Whole network:
     ##                           non-EBF      EBF
-    ## Number of components     40.00000 61.00000
-    ## Clustering coefficient    0.40312  0.47277
-    ## Modularity                0.20599  0.26959
-    ## Positive edge percentage 40.86022 35.63830
-    ## Edge density              0.05482  0.02770
-    ## Natural connectivity      0.01425  0.01116
+    ## Number of components     43.00000 75.00000
+    ## Clustering coefficient    0.32705  0.25031
+    ## Modularity                0.24999  0.31571
+    ## Positive edge percentage 43.54839 49.00000
+    ## Edge density              0.04568  0.01474
+    ## Natural connectivity      0.01261  0.00974
     ## -----
     ## *: Dissimilarity = 1 - edge weight
     ## **: Path length = Units with average dissimilarity
@@ -386,12 +382,12 @@ networks without permutation testing.
     ## - Algorithm: cluster_fast_greedy
     ## ```````````````````````````````` 
     ## non-EBF:                         
-    ## name:  0  1  2  3  4 5  6
-    ##    #: 39 14 14 19 16 4 11
+    ## name:  0  1  2  3  4  5 6
+    ##    #: 42 10 20 12 15 10 8
     ## 
-    ## EBF:                     
-    ## name:  0  1  2  3 4 5
-    ##    #: 60 16 14 14 8 5
+    ## EBF:                      
+    ## name:  0 1 2 3 4 5 6 7
+    ##    #: 74 9 5 8 5 9 4 3
     ## 
     ## ______________________________
     ## Hubs
@@ -400,11 +396,11 @@ networks without permutation testing.
     ## ```````````````````````````````````````````````
     ##                       non-EBF                      EBF
     ##  [Clostridium]_innocuum_group 24_Enterobacteriaceae(F)
-    ##                   Bacteroides              Actinomyces
-    ##     Clostridium_sensu_strict1              Bacteroides
+    ##     Clostridium_sensu_strict1              Collinsella
     ##                   Collinsella             Enterococcus
-    ##               Intestinibacter            Lactobacillus
-    ##                 Lactobacillus          Parabacteroides
+    ##               Intestinibacter     Escherichia-Shigella
+    ##                 Lactobacillus                   Rothia
+    ##                   Veillonella           Staphylococcus
     ## 
     ## ______________________________
     ## Centrality measures
@@ -413,59 +409,59 @@ networks without permutation testing.
     ## ````````````````````````````````````````````````
     ## Degree (unnormalized):
     ##                               non-EBF    EBF
-    ##  [Clostridium]_innocuum_group      34      5
-    ##                 Lactobacillus      32     19
-    ##                   Collinsella      28     14
-    ##                   Veillonella      23     17
-    ##               Intestinibacter      22      6
+    ##                 Lactobacillus      31      7
+    ##  [Clostridium]_innocuum_group      24      2
+    ##                   Collinsella      22     11
+    ##                   Veillonella      21      9
+    ##     Clostridium_sensu_strict1      21      4
     ##                                ______ ______
-    ##                   Bacteroides      22     25
-    ##                 Lactobacillus      32     19
-    ##               Parabacteroides      15     18
-    ##                   Veillonella      23     17
-    ##      24_Enterobacteriaceae(F)      19     17
+    ##                  Enterococcus      14     11
+    ##                   Collinsella      22     11
+    ##                Staphylococcus      19     10
+    ##      24_Enterobacteriaceae(F)      14     10
+    ##                   Veillonella      21      9
     ## 
     ## Betweenness centrality (unnormalized):
     ##                               non-EBF    EBF
-    ##  [Clostridium]_innocuum_group     456      2
-    ##                   Veillonella     250    236
-    ##                   Collinsella     209    154
-    ##     Clostridium_sensu_strict1     205      6
-    ##                   Lactococcus     190      0
+    ##  [Clostridium]_innocuum_group     351     10
+    ##                 Lactobacillus     287     74
+    ##                   Veillonella     260     76
+    ##     Clostridium_sensu_strict1     243      3
+    ##               Intestinibacter     199     50
     ##                                ______ ______
-    ##                   Bacteroides     158    288
-    ##                   Veillonella     250    236
-    ##                 Lactobacillus     182    205
-    ##                   Collinsella     209    154
-    ##                   Haemophilus      37    153
+    ##                   Haemophilus      61    191
+    ##                   Collinsella     195    123
+    ##               Corynebacterium       0    107
+    ##                  Enterococcus      72     86
+    ##                Staphylococcus     133     84
     ## 
     ## Closeness centrality (unnormalized):
     ##                                non-EBF      EBF
-    ##  [Clostridium]_innocuum_group 75.86798  36.7894
-    ##                 Lactobacillus 73.43842 49.79928
-    ##                   Collinsella 71.03585 47.13828
-    ##                   Veillonella 67.73297 47.31812
-    ##     Clostridium_sensu_strict1 66.97151 39.89734
+    ##                 Lactobacillus  71.6015 29.40797
+    ##  [Clostridium]_innocuum_group 66.55582 22.21426
+    ##                   Collinsella 64.73923 33.34388
+    ##                   Veillonella 64.39971 32.13712
+    ##     Clostridium_sensu_strict1 64.27635 26.07069
     ##                                 ______   ______
-    ##                   Bacteroides 66.85874  54.1571
-    ##                 Lactobacillus 73.43842 49.79928
-    ##               Parabacteroides 61.47668 49.49084
-    ##      24_Enterobacteriaceae(F)  63.6727 48.81493
-    ##                   Veillonella 67.73297 47.31812
+    ##                  Enterococcus 57.65808 33.87378
+    ##                Staphylococcus  61.9653 33.39001
+    ##                   Haemophilus 55.45173 33.35287
+    ##                   Collinsella 64.73923 33.34388
+    ##      24_Enterobacteriaceae(F) 57.62057 33.30351
     ## 
     ## Eigenvector centrality (unnormalized):
     ##                               non-EBF     EBF
-    ##  [Clostridium]_innocuum_group 0.27386 0.07984
-    ##                 Lactobacillus 0.27102 0.26205
-    ##                   Collinsella 0.22694 0.21662
-    ##                   Bacteroides 0.20486 0.33162
-    ##     Clostridium_sensu_strict1 0.19118 0.14055
+    ##                 Lactobacillus 0.31908 0.14776
+    ##     Clostridium_sensu_strict1 0.23195 0.12099
+    ##  [Clostridium]_innocuum_group 0.22585 0.03845
+    ##                   Collinsella 0.21798 0.29322
+    ##               Intestinibacter 0.21439 0.08847
     ##                                ______  ______
-    ##                   Bacteroides 0.20486 0.33162
-    ##                 Lactobacillus 0.27102 0.26205
-    ##               Parabacteroides  0.1557 0.26127
-    ##      24_Enterobacteriaceae(F) 0.15953 0.25205
-    ##                   Actinomyces 0.12664 0.23331
+    ##                  Enterococcus 0.14851 0.29987
+    ##                   Collinsella 0.21798 0.29322
+    ##      24_Enterobacteriaceae(F) 0.14412 0.28402
+    ##          Escherichia-Shigella 0.15767 0.28265
+    ##                        Rothia  0.1081 0.25476
 
 #### Low-Rank Heatmaps
 
@@ -475,27 +471,25 @@ networks without permutation testing.
     ## 1 non-EBF    117           117  0.323
     ## 2 EBF        117           117  0.253
 
-![](figures/11_network_comparison/net_ebf_slr_low_rank_heatmaps-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_slr_low_rank_heatmaps-1.png)<!-- -->
 
 #### Association Histogram
 
-![](figures/11_network_comparison/net_ebf_slr_association_histogram-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_slr_association_histogram-1.png)<!-- -->
 
 #### Degree Distribution
 
-![](figures/11_network_comparison/net_ebf_slr_degree_distribution-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_slr_degree_distribution-1.png)<!-- -->
 
 #### Graphlet Correlation Matrix
 
-![](figures/11_network_comparison/net_ebf_slr_gcm-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_slr_gcm-1.png)<!-- -->
 
 #### Network Plot
 
-![](figures/11_network_comparison/net_ebf_slr_network_plot_different_layouts-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_slr_network_plot_different_layouts-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_ebf_slr_network_plot_same_layout-1.png)<!-- -->
-
-![](figures/11_network_comparison/net_ebf_slr_network_plot_nolabs-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_slr_network_plot_same_layout-1.png)<!-- -->
 
 ### SPRING
 
@@ -631,23 +625,21 @@ The filtering reduced the data set to 65 taxa in each group.
 
 #### Association Histogram
 
-![](figures/11_network_comparison/net_ebf_spring_association_histogram-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spring_association_histogram-1.png)<!-- -->
 
 #### Degree Distribution
 
-![](figures/11_network_comparison/net_ebf_spring_degree_distribution-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spring_degree_distribution-1.png)<!-- -->
 
 #### Graphlet Correlation Matrix
 
-![](figures/11_network_comparison/net_ebf_spring_gcm-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spring_gcm-1.png)<!-- -->
 
 #### Network Plot
 
-![](figures/11_network_comparison/net_ebf_spring_network_plot_different_layouts-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spring_network_plot_different_layouts-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_ebf_spring_network_plot_same_layout-1.png)<!-- -->
-
-![](figures/11_network_comparison/net_ebf_spring_network_plot_nolabs-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_spring_network_plot_same_layout-1.png)<!-- -->
 
 ### rhoshrink with multRepl
 
@@ -779,23 +771,21 @@ The filtering reduced the data set to 65 taxa in each group.
 
 #### Association Histogram
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_multRepl_association_histogram-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_multRepl_association_histogram-1.png)<!-- -->
 
 #### Degree Distribution
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_multRepl_degree_distribution-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_multRepl_degree_distribution-1.png)<!-- -->
 
 #### Graphlet Correlation Matrix
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_multRepl_gcm-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_multRepl_gcm-1.png)<!-- -->
 
 #### Network Plot
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_multRepl_network_plot_different_layouts-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_multRepl_network_plot_different_layouts-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_multRepl_network_plot_same_layout-1.png)<!-- -->
-
-![](figures/11_network_comparison/net_ebf_rhoshrink_multRepl_network_plot_nolabs-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_multRepl_network_plot_same_layout-1.png)<!-- -->
 
 ### rhoshrink with bayesMult replacement
 
@@ -927,23 +917,21 @@ The filtering reduced the data set to 65 taxa in each group.
 
 #### Association Histogram
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_bayesMult_association_histogram-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_bayesMult_association_histogram-1.png)<!-- -->
 
 #### Degree Distribution
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_bayesMult_degree_distribution-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_bayesMult_degree_distribution-1.png)<!-- -->
 
 #### Graphlet Correlation Matrix
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_bayesMult_gcm-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_bayesMult_gcm-1.png)<!-- -->
 
 #### Network Plot
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_bayesMult_network_plot_different_layouts-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_bayesMult_network_plot_different_layouts-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_ebf_rhoshrink_bayesMult_network_plot_same_layout-1.png)<!-- -->
-
-![](figures/11_network_comparison/net_ebf_rhoshrink_bayesMult_network_plot_nolabs-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_rhoshrink_bayesMult_network_plot_same_layout-1.png)<!-- -->
 
 ### corshrink with multiplicative replacement
 
@@ -1075,23 +1063,21 @@ The filtering reduced the data set to 65 taxa in each group.
 
 #### Association Histogram
 
-![](figures/11_network_comparison/net_ebf_corshrink_multRepl_association_histogram-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_multRepl_association_histogram-1.png)<!-- -->
 
 #### Degree Distribution
 
-![](figures/11_network_comparison/net_ebf_corshrink_multRepl_degree_distribution-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_multRepl_degree_distribution-1.png)<!-- -->
 
 #### Graphlet Correlation Matrix
 
-![](figures/11_network_comparison/net_ebf_corshrink_multRepl_gcm-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_multRepl_gcm-1.png)<!-- -->
 
 #### Network Plot
 
-![](figures/11_network_comparison/net_ebf_corshrink_multRepl_network_plot_different_layouts-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_multRepl_network_plot_different_layouts-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_ebf_corshrink_multRepl_network_plot_same_layout-1.png)<!-- -->
-
-![](figures/11_network_comparison/net_ebf_corshrink_multRepl_network_plot_nolabs-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_multRepl_network_plot_same_layout-1.png)<!-- -->
 
 ### corshrink with bayesMult replacement
 
@@ -1223,23 +1209,21 @@ The filtering reduced the data set to 65 taxa in each group.
 
 #### Association Histogram
 
-![](figures/11_network_comparison/net_ebf_corshrink_bayesMult_association_histogram-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_bayesMult_association_histogram-1.png)<!-- -->
 
 #### Degree Distribution
 
-![](figures/11_network_comparison/net_ebf_corshrink_bayesMult_degree_distribution-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_bayesMult_degree_distribution-1.png)<!-- -->
 
 #### Graphlet Correlation Matrix
 
-![](figures/11_network_comparison/net_ebf_corshrink_bayesMult_gcm-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_bayesMult_gcm-1.png)<!-- -->
 
 #### Network Plot
 
-![](figures/11_network_comparison/net_ebf_corshrink_bayesMult_network_plot_different_layouts-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_bayesMult_network_plot_different_layouts-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_ebf_corshrink_bayesMult_network_plot_same_layout-1.png)<!-- -->
-
-![](figures/11_network_comparison/net_ebf_corshrink_bayesMult_network_plot_nolabs-1.png)<!-- -->
+![](figures/11_network_comparison/ebf_corshrink_bayesMult_network_plot_same_layout-1.png)<!-- -->
 
 ## Comparison Of Global Network Properties
 
@@ -1249,29 +1233,26 @@ construction methods shown in the thesis.
 ### Relative LCC Size
 
     ## # A tibble: 2 × 8
-    ##   group   SPIEC-EASI MB bayesMul…¹ `SPIEC-EASI SLR` SPRING `corshrink multRepl` `corshrink bayesMult` `rhoshrink multRepl` `rhoshrink bayesMult`
-    ##   <chr>                      <dbl>            <dbl>  <dbl>                <dbl>                 <dbl>                <dbl>                 <dbl>
-    ## 1 non-EBF                    0.983            0.667  0.938                0.145                 0.068                0.128                 0.068
-    ## 2 EBF                        0.513            0.487  0.892                0.265                 0.65                 0.214                 0.402
-    ## # ℹ abbreviated name: ¹​`SPIEC-EASI MB bayesMult`
+    ##   group   `SPIEC-EASI MB bayesMult` `SPIEC-EASI SLR` SPRING `corshrink multRepl` `corshrink bayesMult` `rhoshrink multRepl` `rhoshrink bayesMult`
+    ##   <chr>                       <dbl>            <dbl>  <dbl>                <dbl>                 <dbl>                <dbl>                 <dbl>
+    ## 1 non-EBF                     0.983            0.641  0.938                0.145                 0.068                0.128                 0.068
+    ## 2 EBF                         0.513            0.368  0.892                0.265                 0.65                 0.214                 0.402
 
 ### Density
 
     ## # A tibble: 2 × 8
-    ##   group   SPIEC-EASI MB bayesMul…¹ `SPIEC-EASI SLR` SPRING `corshrink multRepl` `corshrink bayesMult` `rhoshrink multRepl` `rhoshrink bayesMult`
-    ##   <chr>                      <dbl>            <dbl>  <dbl>                <dbl>                 <dbl>                <dbl>                 <dbl>
-    ## 1 non-EBF                    0.033            0.055  0.041                0.008                 0.005                0.006                 0.004
-    ## 2 EBF                        0.014            0.028  0.046                0.012                 0.023                0.01                  0.017
-    ## # ℹ abbreviated name: ¹​`SPIEC-EASI MB bayesMult`
+    ##   group   `SPIEC-EASI MB bayesMult` `SPIEC-EASI SLR` SPRING `corshrink multRepl` `corshrink bayesMult` `rhoshrink multRepl` `rhoshrink bayesMult`
+    ##   <chr>                       <dbl>            <dbl>  <dbl>                <dbl>                 <dbl>                <dbl>                 <dbl>
+    ## 1 non-EBF                     0.033            0.046  0.041                0.008                 0.005                0.006                 0.004
+    ## 2 EBF                         0.014            0.015  0.046                0.012                 0.023                0.01                  0.017
 
 ### Natural Connectivity
 
     ## # A tibble: 2 × 8
-    ##   group   SPIEC-EASI MB bayesMul…¹ `SPIEC-EASI SLR` SPRING `corshrink multRepl` `corshrink bayesMult` `rhoshrink multRepl` `rhoshrink bayesMult`
-    ##   <chr>                      <dbl>            <dbl>  <dbl>                <dbl>                 <dbl>                <dbl>                 <dbl>
-    ## 1 non-EBF                    0.011            0.014  0.018                0.01                  0.009                0.01                  0.009
-    ## 2 EBF                        0.01             0.011  0.019                0.012                 0.011                0.012                 0.011
-    ## # ℹ abbreviated name: ¹​`SPIEC-EASI MB bayesMult`
+    ##   group   `SPIEC-EASI MB bayesMult` `SPIEC-EASI SLR` SPRING `corshrink multRepl` `corshrink bayesMult` `rhoshrink multRepl` `rhoshrink bayesMult`
+    ##   <chr>                       <dbl>            <dbl>  <dbl>                <dbl>                 <dbl>                <dbl>                 <dbl>
+    ## 1 non-EBF                     0.011            0.013  0.018                0.01                  0.009                0.01                  0.009
+    ## 2 EBF                         0.01             0.01   0.019                0.012                 0.011                0.012                 0.011
 
 ## Select Network For Permutation Testing
 
@@ -1281,9 +1262,9 @@ in the parameter chunk to switch the network and the folder used for all
 permutation-related files.
 
     ## # A tibble: 1 × 5
-    ##   selected_method     selected_label           n_taxa_group1 n_taxa_group2 output_dir                                                           
-    ##   <chr>               <chr>                            <int>         <int> <chr>                                                                
-    ## 1 corshrink_bayesMult corshrink with bayesMult           117           117 G:/PhD/projects/phd_thesis/ch07_application/data/11_network_comparis…
+    ##   selected_method     selected_label           n_taxa_group1 n_taxa_group2 output_dir                                                            
+    ##   <chr>               <chr>                            <int>         <int> <chr>                                                                 
+    ## 1 corshrink_bayesMult corshrink with bayesMult           117           117 G:/PhD/projects/phd_thesis/ch07_application/data/11_network_compariso…
 
 ## Generate Or Reuse Permuted Association Matrices
 
@@ -1960,7 +1941,7 @@ refinement, and constrained `permApprox` refinement.
     ## 11 eigenvector empirical       117 0.02   0.293  0.531     1     1
     ## 12 eigenvector unconstrained   117 0.0205 0.293  0.531     1     1
 
-![](figures/11_network_comparison/net_netcompare_centrality_raw_pvalue_comparison-1.png)<!-- -->
+![](figures/11_network_comparison/netcompare_centrality_raw_pvalue_comparison-1.png)<!-- -->
 
 ### Combined netCompare Summary
 
@@ -2172,7 +2153,7 @@ selected network and the same stored permutation association matrices.
     ## Raw p-values      6786 0.00e+00 0.199000 0.467000 0.477002 0.753000 1.000000         549
     ## Adjusted p-values 6786 0.00e+00 0.793684 0.933725 0.870240 0.998090 1.000000           9
 
-![](figures/11_network_comparison/net_plot_diffnet_noConstr_BH-1.png)<!-- -->
+![](figures/11_network_comparison/plot_diffnet_noConstr_BH-1.png)<!-- -->
 
 **Include only tests being non-zero in both groups**s
 
@@ -2231,7 +2212,7 @@ selected network and the same stored permutation association matrices.
     ## Raw p-values      6786 0.00e+00 0.199000 0.467000 0.477002 0.753000 1.000000         549
     ## Adjusted p-values 6786 0.00e+00 0.793684 0.933725 0.870240 0.998090 1.000000           9
 
-![](figures/11_network_comparison/net_plot_diffnet_noConstr_BH_zo-1.png)<!-- -->
+![](figures/11_network_comparison/plot_diffnet_noConstr_BH_zo-1.png)<!-- -->
 
 ### permApprox Refinement With Constraint
 
@@ -2292,7 +2273,7 @@ selected network and the same stored permutation association matrices.
     ## Raw p-values      6786 5.12e-07 0.199000 0.467000 0.476998 0.753000 1.000000         549
     ## Adjusted p-values 6786 0.002206 0.793684 0.933725 0.870268 0.998090 1.000000           9
 
-![](figures/11_network_comparison/net_plot_diffnet_constr_BH-1.png)<!-- -->
+![](figures/11_network_comparison/plot_diffnet_constr_BH-1.png)<!-- -->
 
 **Include only tests being non-zero in both groups**
 
@@ -2350,11 +2331,13 @@ selected network and the same stored permutation association matrices.
     ## Raw p-values      6786 5.12e-07 0.199000 0.467000 0.476998 0.753000 1.000000         549
     ## Adjusted p-values 6786 0.002206 0.793684 0.933725 0.870268 0.998090 1.000000           9
 
-![](figures/11_network_comparison/net_plot_diffnet_constr_BH_zo-1.png)<!-- -->
+![](figures/11_network_comparison/plot_diffnet_constr_BH_zo-1.png)<!-- -->
 
 ### Raw P-Value Comparison
 
-![](figures/11_network_comparison/net_diffnet_raw_pvalue_comparison-1.png)<!-- -->
+We use a significance level of 5% here.
+
+![](figures/11_network_comparison/thesis_diffnet_raw_pvalue_comparison-1.png)<!-- -->
 
     ## # A tibble: 3 × 9
     ##   method            n n_zero         min min_positive   q25 median   q75   max
@@ -2366,48 +2349,86 @@ selected network and the same stored permutation association matrices.
     ## # A tibble: 1 × 4
     ##   n_colored_associations min_abs_difference max_abs_difference n_unique_colors
     ##                    <int>              <dbl>              <dbl>           <int>
-    ## 1                      9             0.0816              0.197               5
+    ## 1                      6             0.0816              0.197               5
 
-    ## # A tibble: 9 × 6
-    ##   taxon1                              taxon2         association_difference p_empirical p_unconstrained p_constrained
-    ##   <chr>                               <chr>                           <dbl>       <dbl>           <dbl>         <dbl>
-    ## 1 Gemella                             Streptococcus                  0.177        0.001        0          0.000000650
-    ## 2 Hungatella                          Cutibacterium                 -0.0816       0.001        3.45e-13   0.000000512
-    ## 3 Haemophilus                         Staphylococcus                 0.165        0.001        4.63e- 7   0.0000453  
-    ## 4 Haemophilus                         Streptococcus                  0.177        0.001        1.80e- 6   0.00000180 
-    ## 5 Haemophilus                         Gemella                        0.197        0.001        2.80e- 6   0.00000280 
-    ## 6 Leuconostoc                         Staphylococcus                -0.124        0.001        4.73e- 6   0.00000473 
-    ## 7 Staphylococcus                      Streptococcus                  0.173        0.001        1.56e- 5   0.0000635  
-    ## 8 Scardovia                           Cutibacterium                 -0.156        0.001        1.67e- 5   0.0000167  
-    ## 9 [Eubacterium]_coprostanoligenegroup Lactococcus                    0.146        0.001        4.40e- 5   0.0000440
+    ## # A tibble: 6 × 6
+    ##   taxon1      taxon2         association_difference p_empirical p_unconstrained p_constrained
+    ##   <chr>       <chr>                           <dbl>       <dbl>           <dbl>         <dbl>
+    ## 1 Gemella     Streptococcus                  0.177        0.001        0          0.000000650
+    ## 2 Hungatella  Cutibacterium                 -0.0816       0.001        3.45e-13   0.000000512
+    ## 3 Haemophilus Staphylococcus                 0.165        0.001        4.63e- 7   0.0000453  
+    ## 4 Haemophilus Streptococcus                  0.177        0.001        1.80e- 6   0.00000180 
+    ## 5 Haemophilus Gemella                        0.197        0.001        2.80e- 6   0.00000280 
+    ## 6 Leuconostoc Staphylococcus                -0.124        0.001        4.73e- 6   0.00000473
 
 ## Network plots
 
-![](figures/11_network_comparison/net_thesis_ebf_network_plot_same_layout-1.png)<!-- -->
+Here we plot the networks for the comparison based on correlation
+shrinkage with bayesian multiplicative replacement
 
-![](figures/11_network_comparison/net_thesis_ebf_diffnet_plot_same_layout-1.png)<!-- -->
+### Association networks for corshrink with bayesMult
 
-![](figures/11_network_comparison/net_thesis_ebf_degree_distribution_side_by_side-1.png)<!-- -->
+![](figures/11_network_comparison/thesis_ebf_network_plot_same_layout-1.png)<!-- -->
+
+### Association networks for the other methods with same layout
+
+#### SpiecEasi multRepl
+
+![](figures/11_network_comparison/nolabs_ebf_spieceasi_multRepl_network_plot-1.png)<!-- -->
+
+#### SpiecEasi bayesMult
+
+![](figures/11_network_comparison/nolabs_ebf_spieceasi_bayesMult_network_plot-1.png)<!-- -->
+
+#### SpiecEasi SLR
+
+![](figures/11_network_comparison/nolabs_ebf_slr_network_plot-1.png)<!-- -->
+
+#### SPRING
+
+![](figures/11_network_comparison/nolabs_ebf_spring_network_plot-1.png)<!-- -->
+
+#### rhoShrink with multRepl
+
+![](figures/11_network_comparison/nolabs_ebf_rhoshrink_multRepl_network_plot-1.png)<!-- -->
+
+#### rhoShrink with bayesMult
+
+![](figures/11_network_comparison/nolabs_ebf_rhoshrink_bayesMult_network_plot-1.png)<!-- -->
+
+#### corShrink with multRepl
+
+![](figures/11_network_comparison/nolabs_ebf_corshrink_multRepl_network_plot-1.png)<!-- -->
+
+#### corShrink with bayesMult
+
+![](figures/11_network_comparison/nolabs_ebf_corshrink_bayesMult_network_plot-1.png)<!-- -->
+
+### Differential network for corshrink with bayesMult
+
+![](figures/11_network_comparison/thesis_ebf_diffnet_plot_same_layout-1.png)<!-- -->
+
+![](figures/11_network_comparison/thesis_ebf_degree_distribution_side_by_side-1.png)<!-- -->
 
 ## Heatmaps for labelled taxa
 
-![](figures/11_network_comparison/net_thesis_labelled_taxa_clr_heatmap-1.png)<!-- -->
+![](figures/11_network_comparison/thesis_labelled_taxa_clr_heatmap-1.png)<!-- -->
 
-![](figures/11_network_comparison/net_labelled_taxa_relative_abundance_heatmap-1.png)<!-- -->
+![](figures/11_network_comparison/labelled_taxa_relative_abundance_heatmap-1.png)<!-- -->
 
 ## Files Written
 
-    ## # A tibble: 366 × 4
+    ## # A tibble: 367 × 4
     ##    path                             type         size modification_time  
     ##    <fs::path>                       <fct> <fs::bytes> <dttm>             
     ##  1 comp_ebf_main.rds                file      180.95K 2026-06-25 10:03:18
     ##  2 counts_ebf_rel_bayesMult.rds     file      722.02K 2026-06-27 08:17:18
-    ##  3 diffnet_significant_BH_table.tex file           1K 2026-06-28 21:24:34
+    ##  3 diffnet_significant_BH_table.tex file          791 2026-07-07 17:46:16
     ##  4 net_ebf_corshrink_bayesMult.rds  file        1.08M 2026-06-27 11:00:00
     ##  5 net_ebf_corshrink_multRepl.rds   file      620.74K 2026-06-27 13:50:38
     ##  6 net_ebf_main.rds                 file        20.8M 2026-06-27 11:05:31
     ##  7 net_ebf_rhoshrink_bayesMult.rds  file        1.49M 2026-06-27 10:43:59
     ##  8 net_ebf_rhoshrink_multRepl.rds   file      916.18K 2026-06-27 12:11:52
     ##  9 net_ebf_slr_r2.rds               file       75.55M 2026-06-27 08:36:00
-    ## 10 net_ebf_spieceasi.rds            file        20.8M 2026-06-26 10:59:56
-    ## # ℹ 356 more rows
+    ## 10 net_ebf_slr_r5.rds               file        73.9M 2026-07-05 22:03:00
+    ## # ℹ 357 more rows

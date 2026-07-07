@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params, "/overview_"),
+  fig.path = paste0('figures/', params, "/"),
   echo = FALSE)
 ```
 
@@ -162,7 +162,7 @@ data.frame(depth = sample_sums(phylo_asv)) %>%
   theme_bw()
 ```
 
-```{r seq-depth, fig.width=7, fig.height=3}
+```{r thesis_seq_depth, fig.width=7, fig.height=3}
 data.frame(depth = sample_sums(phylo_asv)) %>%
   ggplot(aes(x = depth)) +
   geom_histogram(bins = 40, fill = "gray", colour = "white") +

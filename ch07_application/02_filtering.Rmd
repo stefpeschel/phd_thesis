@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params, "/filter_"),
+  fig.path = paste0('figures/', params, "/"),
   echo = FALSE)
 ```
 
@@ -38,6 +38,10 @@ library(ggtext)
 library(patchwork)
 
 conflicts_prefer(dplyr::filter)
+
+# Load global functions
+application_path <- rprojroot::find_root(rprojroot::has_file("README.md"))
+source(file.path(application_path, "functions.R"))
 ```
 
 ```{r directories}
@@ -320,7 +324,7 @@ data.frame(
   theme_bw()
 ```
 
-```{r prevalence_asv, fig.width=7, fig.height=2.5}
+```{r thesis_prevalence_asv, fig.width=7, fig.height=2.5}
 data.frame(
   prevalence   = rowSums(otutab_asv > 0) / ncol(otutab_asv),
   total_counts = rowSums(otutab_asv)
@@ -540,7 +544,7 @@ saveRDS(
 ```
 
 
-```{r zero_fraction_plot, fig.width=7, fig.height=2.5, dpi = 200}
+```{r thesis_zero_fraction_plot, fig.width=7, fig.height=2.5, dpi = 200}
 count_mat <- get_sample_by_taxa(phylo_genus_prev01)
 
 tibble(

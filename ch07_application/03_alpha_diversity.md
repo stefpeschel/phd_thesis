@@ -1,6 +1,10 @@
 Within-sample diversity
 ================
-Compiled at 2026-06-11 10:23:39 UTC
+Compiled at 2026-07-06 19:13:40 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "41b33e9b-a351-49eb-bdc8-cdeddd77796c")
+```
 
 ## Load packages
 
@@ -354,13 +358,13 @@ sample) to assess how strongly each is confounded by sequencing depth.
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](figures/03_alpha_diversity/alpha_richness_vs_libsize_asv-1.png)<!-- -->
+![](figures/03_alpha_diversity/richness_vs_libsize_asv-1.png)<!-- -->
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](figures/03_alpha_diversity/alpha_observed_vs_breakaway_asv-1.png)<!-- -->
+![](figures/03_alpha_diversity/observed_vs_breakaway_asv-1.png)<!-- -->
 
-![](figures/03_alpha_diversity/alpha_freq_spectrum_asv-1.png)<!-- -->
+![](figures/03_alpha_diversity/freq_spectrum_asv-1.png)<!-- -->
 
 ## Compute richness (on genus level)
 
@@ -368,6 +372,13 @@ sample) to assess how strongly each is confounded by sequencing depth.
 
 Computing richness the common way (not model-based) using the
 `estimate_richness` function from `phyloseq` package.
+
+    ## Warning in estimate_richness(phylo_genus): The data you have provided does not have
+    ## any singletons. This is highly suspicious. Results of richness
+    ## estimates (for example) are probably unreliable, or wrong, if you have already
+    ## trimmed low-abundance taxa from the data.
+    ## 
+    ## We recommended that you find the un-trimmed data and retry.
 
     ##         Observed Chao1 se.chao1 ACE   se.ACE   Shannon   Simpson InvSimpson   Fisher
     ## s025647       40    40        0  40 2.641023 1.8370941 0.7583242   4.137775 4.564899
@@ -378,6 +389,10 @@ Computing richness the common way (not model-based) using the
     ## s028386       22    22        0  22 1.809068 1.2379658 0.6065971   2.541923 2.329049
 
 ### Breakaway richness
+
+    ## Warning in build_frequency_count_tables(otutab_genus): More columns then rows. You probably need to transpose your data.
+
+    ## Warning in poisson_model(input_data, cutoff = cutoff): Cut-off was too low: no data available for estimation
 
     ##         SampleID richness
     ## s025647  s025647 40.07097
@@ -397,7 +412,7 @@ Computing richness the common way (not model-based) using the
     ## 5  s022897        22140       25  25.00990
     ## 6  s028386        29475       22  22.01301
 
-![](figures/03_alpha_diversity/alpha_seq_depth-1.png)<!-- -->
+![](figures/03_alpha_diversity/seq_depth-1.png)<!-- -->
 
 **Spearman correlation between library size and each richness metric:**
 
@@ -409,9 +424,9 @@ Computing richness the common way (not model-based) using the
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](figures/03_alpha_diversity/alpha_richness_vs_libsize-1.png)<!-- -->
+![](figures/03_alpha_diversity/richness_vs_libsize-1.png)<!-- -->
 
-![](figures/03_alpha_diversity/alpha_observed_vs_breakaway-1.png)<!-- -->
+![](figures/03_alpha_diversity/observed_vs_breakaway-1.png)<!-- -->
 
 Breakaway estimates closely track observed richness. The frequency
 spectrum below explains why: unseen-species estimators such as breakaway
@@ -419,7 +434,7 @@ extrapolate unobserved diversity from the ratio of rare taxa
 (singletons, doubletons, …). At genus level, read counts are aggregated
 across ASVs, so genera with very few reads are rare.
 
-![](figures/03_alpha_diversity/alpha_freq_spectrum_genus-1.png)<!-- -->
+![](figures/03_alpha_diversity/thesis_freq_spectrum_genus-1.png)<!-- -->
 
 Legend: Dots = mean across 592 samples; bars = 0b11 SD.
 
@@ -495,11 +510,11 @@ test statistic is marked by a red vertical line. If the cached result
 does not contain the full permutation distribution, a smaller
 distribution with 9999 fresh permutations is generated for the plot.
 
-![](figures/03_alpha_diversity/alpha_perm_distributions_richness-1.png)<!-- -->
+![](figures/03_alpha_diversity/perm_distributions_richness-1.png)<!-- -->
 
-![](figures/03_alpha_diversity/alpha_perm_distributions_shannon-1.png)<!-- -->
+![](figures/03_alpha_diversity/perm_distributions_shannon-1.png)<!-- -->
 
-![](figures/03_alpha_diversity/alpha_perm_distributions_gini-1.png)<!-- -->
+![](figures/03_alpha_diversity/perm_distributions_gini-1.png)<!-- -->
 
 ## Plots
 
@@ -509,7 +524,7 @@ distribution with 9999 fresh permutations is generated for the plot.
     ##     Germany Switzerland     Austria 
     ##         197         222         173
 
-![](figures/03_alpha_diversity/alpha_Country_2m-1.png)<!-- -->
+![](figures/03_alpha_diversity/Country_2m-1.png)<!-- -->
 
 ### Sex
 
@@ -517,7 +532,7 @@ distribution with 9999 fresh permutations is generated for the plot.
     ## Female   Male 
     ##    294    298
 
-![](figures/03_alpha_diversity/alpha_sex_2m-1.png)<!-- -->
+![](figures/03_alpha_diversity/sex_2m-1.png)<!-- -->
 
 ### C-section
 
@@ -525,7 +540,7 @@ distribution with 9999 fresh permutations is generated for the plot.
     ##  No Yes 
     ## 468 121
 
-![](figures/03_alpha_diversity/alpha_cesarean_2m-1.png)<!-- -->
+![](figures/03_alpha_diversity/cesarean_2m-1.png)<!-- -->
 
 ### Breast feeding
 
@@ -533,7 +548,7 @@ distribution with 9999 fresh permutations is generated for the plot.
     ##   0   1 >=2 
     ##  36  88 456
 
-![](figures/03_alpha_diversity/alpha_breastfeed_2m-1.png)<!-- -->
+![](figures/03_alpha_diversity/breastfeed_2m-1.png)<!-- -->
 
 ### Exclusive breast feeding duration
 
@@ -541,7 +556,7 @@ distribution with 9999 fresh permutations is generated for the plot.
     ##   0   1 >=2 
     ## 179   0 375
 
-![](figures/03_alpha_diversity/alpha_breast_excl_2m-1.png)<!-- -->
+![](figures/03_alpha_diversity/thesis_breast_excl_2m-1.png)<!-- -->
 
 ### Smoke during pregnancy
 
@@ -549,7 +564,7 @@ distribution with 9999 fresh permutations is generated for the plot.
     ##  No Yes 
     ## 529  63
 
-![](figures/03_alpha_diversity/alpha_pregsmoke_2m-1.png)<!-- -->
+![](figures/03_alpha_diversity/pregsmoke_2m-1.png)<!-- -->
 
 ### Number of siblings
 
@@ -557,7 +572,7 @@ distribution with 9999 fresh permutations is generated for the plot.
     ##   0   1  >1 
     ##  46 200 257
 
-![](figures/03_alpha_diversity/alpha_sibsnumb_2m-1.png)<!-- -->
+![](figures/03_alpha_diversity/sibsnumb_2m-1.png)<!-- -->
 
 ## Model-based analysis
 
@@ -606,7 +621,7 @@ varies substantially across samples.
     ##      Estimates Standard Errors p-values
     ## [1,]  24.26414       0.2710555        0
 
-![](figures/03_alpha_diversity/alpha_observed_vs_predicted_richness_int_libsize-1.png)<!-- -->
+![](figures/03_alpha_diversity/observed_vs_predicted_richness_int_libsize-1.png)<!-- -->
 
 Since the intercept-only model has no covariates, all samples receive
 the same predicted value (the grand mean), so the points form a
@@ -646,6 +661,8 @@ the 484 samples with complete covariate data.
 
 #### Richness
 
+    ## Warning in poisson_model(input_data, cutoff = cutoff): Cut-off was too low: no data available for estimation
+
     ##                     Estimates Standard Errors     p-values
     ## (Intercept)        22.7682153       0.2920787 0.000000e+00
     ## CountryGermany      3.9133662       0.4913796 1.554312e-15
@@ -669,13 +686,13 @@ Extract predicted richness values (conditional on covariates):
     ## s023716  s023716          22.02520           25.14165         0.5
     ## s021517  s021517          34.05488           26.98887         0.5
 
-![](figures/03_alpha_diversity/alpha_observed_vs_predicted_richness_libsize-1.png)<!-- -->
+![](figures/03_alpha_diversity/observed_vs_predicted_richness_libsize-1.png)<!-- -->
 
-![](figures/03_alpha_diversity/alpha_observed_vs_predicted_richness_libsize_combined-1.png)<!-- -->
+![](figures/03_alpha_diversity/observed_vs_predicted_richness_libsize_combined-1.png)<!-- -->
 
 Observed vs. predicted richness (with covariates):
 
-![](figures/03_alpha_diversity/alpha_observed_vs_predicted_richness-1.png)<!-- -->
+![](figures/03_alpha_diversity/observed_vs_predicted_richness-1.png)<!-- -->
 
 #### Shannon
 
@@ -726,7 +743,7 @@ are responsible — that is addressed by the individual p-values in
 
     ## `height` was translated to `width`.
 
-![](figures/03_alpha_diversity/alpha_betta_forest_combined-1.png)<!-- -->
+![](figures/03_alpha_diversity/thesis_betta_forest_combined-1.png)<!-- -->
 
 ##### Investigating the C-section effect: confounding by breastfeeding duration
 
@@ -737,7 +754,7 @@ breastfeeding duration, and shorter breastfeeding is associated with
 higher Shannon diversity (the dominant effect in the model). The
 following two plots investigate this.
 
-![](figures/03_alpha_diversity/alpha_cesarean_breastfeed_confounding-1.png)<!-- -->
+![](figures/03_alpha_diversity/thesis_cesarean_breastfeed_confounding-1.png)<!-- -->
 
 The left panel shows that C-section infants are less likely to be
 breastfed for ≥ 2 months compared to vaginally born infants. Since
@@ -768,4 +785,4 @@ These files have been written to the target directory,
     ## 11 perm_results_Prenatal_smoke.rds file       10.08M 2026-06-09 10:59:28
     ## 12 perm_results_Sex.rds            file       11.26M 2026-06-09 10:59:28
     ## 13 perm_results_Siblings.rds       file       19.81M 2026-06-09 10:59:28
-    ## 14 perm_table.tex                  file        2.94K 2026-06-11 10:24:12
+    ## 14 perm_table.tex                  file        2.94K 2026-07-06 19:14:05

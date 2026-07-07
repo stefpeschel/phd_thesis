@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params$name, "/comp_equi_"),
+  fig.path = paste0('figures/', params$name, "/"),
   echo = FALSE)
 ```
 
@@ -842,7 +842,7 @@ ggplot(
 
 As we will use `EBF duration` as grouping variable in later analyses, we generate an isolated plot for this variable here, which will be shown in the thesis chapter.
 
-```{r taxon_contrast_top10_selected, fig.width=7, fig.height=3}
+```{r thesis_taxon_contrast_top10_selected, fig.width=7, fig.height=3}
 top10_taxon_contrasts %>%
   #filter(contrast %in% diagnostic_contrasts) %>%
   filter(contrast == "EBF duration") %>%

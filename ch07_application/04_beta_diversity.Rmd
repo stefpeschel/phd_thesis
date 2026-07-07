@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
   fig.width = 8, 
   fig.height = 5, 
   dpi = 250,
-  fig.path = paste0('figures/', params, "/beta_"),
+  fig.path = paste0('figures/', params, "/"),
   echo = FALSE)
 ```
 
@@ -455,7 +455,7 @@ variables_to_plot <- vapply(var_map, `[[`, character(1), "label")
 variables_to_plot
 ```
 
-```{r PCoA_colored, fig.width=10, fig.height=5}
+```{r thesis_PCoA_colored, fig.width=10, fig.height=5}
 if (length(variables_to_plot) > 0) {
   for (var in variables_to_plot) {
     p_bray_var <- plot_pcoa(
@@ -976,7 +976,7 @@ ggplot(perm_dist_df, aes(x = perm_stats)) +
 
 **Selected variables**
 
-```{r permanova_permapprox_perm_dist_sel, fig.width=8, fig.height=4}
+```{r thesis_permanova_permapprox_perm_dist_sel, fig.width=8, fig.height=4}
 perm_dist_df %>%
   filter(variable %in% c("C-section", "BF duration", "EBF duration")) %>%
   ggplot(aes(x = perm_stats)) +
@@ -1287,7 +1287,7 @@ ggplot(centroid_df_all, aes(x = group, y = dist_to_centroid, fill = "lightgray")
   )
 ```
 
-```{r beta_centroid_dist_sel, fig.width=8, fig.height=5}
+```{r thesis_beta_centroid_dist_sel, fig.width=8, fig.height=5}
 plot_vars <- c("C-section", "BF duration", "EBF duration")
 
 centroid_df_plot <- centroid_df %>%

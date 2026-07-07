@@ -1,6 +1,6 @@
 Data overview
 ================
-Compiled at 2026-06-10 12:15:31 UTC
+Compiled at 2026-07-06 18:40:46 UTC
 
 ``` r
 here::i_am(paste0(params$name, ".Rmd"), uuid = "939f7706-3574-435a-aaeb-5ae9ac700dc9")
@@ -405,13 +405,13 @@ NA
 
 ## Metadata balance across groups
 
-![](figures/01_overview/overview_metadata-balance-1.png)<!-- -->
+![](figures/01_overview/metadata-balance-1.png)<!-- -->
 
 ## Sequencing depth
 
-![](figures/01_overview/overview_seq-depth_text-1.png)<!-- -->
+![](figures/01_overview/seq-depth_text-1.png)<!-- -->
 
-![](figures/01_overview/overview_seq-depth-1.png)<!-- -->
+![](figures/01_overview/thesis_seq_depth-1.png)<!-- -->
 
 ## Files written
 
@@ -421,4 +421,4 @@ These files have been written to the target directory,
     ## # A tibble: 1 × 4
     ##   path                           type         size modification_time  
     ##   <fs::path>                     <fct> <fs::bytes> <dttm>             
-    ## 1 tbl_sample_characteristics.tex file        1.26K 2026-06-10 12:15:34
+    ## 1 tbl_sample_characteristics.tex file        1.26K 2026-07-06 18:40:48

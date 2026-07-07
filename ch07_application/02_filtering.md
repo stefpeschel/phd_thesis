@@ -1,6 +1,10 @@
 Taxonomic aggregation and filtering
 ================
-Compiled at 2026-06-25 18:11:22 UTC
+Compiled at 2026-07-06 18:49:07 UTC
+
+``` r
+here::i_am(paste0(params$name, ".Rmd"), uuid = "7426994c-47c1-4984-bc1e-aeb070dbe32b")
+```
 
 ## Load packages
 
@@ -36,13 +40,13 @@ Compiled at 2026-06-25 18:11:22 UTC
 
 ## Phylum-level relative abundance by covariate
 
-![](figures/02_filtering/filter_phylum-by-covariate-1.png)<!-- -->
+![](figures/02_filtering/phylum-by-covariate-1.png)<!-- -->
 
 ## ASV prevalence vs. total abundance
 
-![](figures/02_filtering/filter_prevalence_text_asv-1.png)<!-- -->
+![](figures/02_filtering/prevalence_text_asv-1.png)<!-- -->
 
-![](figures/02_filtering/filter_prevalence_asv-1.png)<!-- -->
+![](figures/02_filtering/thesis_prevalence_asv-1.png)<!-- -->
 
 ## Most abundant genera
 
@@ -103,7 +107,7 @@ proportion of zero entries.
 
 ### 10% filter
 
-![](figures/02_filtering/filter_zero_fraction_plot-1.png)<!-- -->
+![](figures/02_filtering/thesis_zero_fraction_plot-1.png)<!-- -->
 
 ## Files written
 
@@ -113,13 +117,13 @@ These files have been written to the target directory,
     ## # A tibble: 10 × 4
     ##    path                               type         size modification_time  
     ##    <fs::path>                         <fct> <fs::bytes> <dttm>             
-    ##  1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-06-25 18:12:00
-    ##  2 bact_phylo_2m_genus_prev05.rds     file        47.3K 2026-06-25 18:12:00
-    ##  3 bact_phylo_2m_genus_prev10.rds     file        42.6K 2026-06-25 18:12:00
-    ##  4 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-06-25 18:12:00
-    ##  5 prevalence_filtering.csv           file          246 2026-06-25 18:11:59
-    ##  6 prevalence_filtering.tex           file          663 2026-06-25 18:11:59
-    ##  7 taxonomic_overview.csv             file          123 2026-06-25 18:11:49
-    ##  8 taxonomic_overview.tex             file          556 2026-06-25 18:11:49
-    ##  9 top_genera.csv                     file          283 2026-06-25 18:11:59
-    ## 10 top_genera.tex                     file          809 2026-06-25 18:11:59
+    ##  1 bact_phylo_2m_genus_prev01.rds     file        56.5K 2026-07-06 18:49:54
+    ##  2 bact_phylo_2m_genus_prev05.rds     file        47.3K 2026-07-06 18:49:55
+    ##  3 bact_phylo_2m_genus_prev10.rds     file        42.6K 2026-07-06 18:49:55
+    ##  4 bact_phylo_2m_genus_unfiltered.rds file        67.5K 2026-07-06 18:49:55
+    ##  5 prevalence_filtering.csv           file          246 2026-07-06 18:49:54
+    ##  6 prevalence_filtering.tex           file          663 2026-07-06 18:49:54
+    ##  7 taxonomic_overview.csv             file          123 2026-07-06 18:49:44
+    ##  8 taxonomic_overview.tex             file          556 2026-07-06 18:49:44
+    ##  9 top_genera.csv                     file          283 2026-07-06 18:49:54
+    ## 10 top_genera.tex                     file          808 2026-07-06 18:49:54
