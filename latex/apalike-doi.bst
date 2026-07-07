@@ -240,10 +240,34 @@ FUNCTION {format.names}
   while$
 }
 
+% Maximum number of authors printed in the bibliography before abbreviation.
+% Change #6 below if you prefer a different cutoff.
+FUNCTION {format.author.names}
+{ 's :=
+  s num.names$ 'numnames :=
+  numnames #10 >
+    { #1 'nameptr :=
+      #6 'namesleft :=
+        { namesleft #0 > }
+        { s nameptr "{vv~}{ll}{, jj}{, f.}" format.name$ 't :=
+          nameptr #1 >
+            { ", " * t * }
+            't
+          if$
+          nameptr #1 + 'nameptr :=
+          namesleft #1 - 'namesleft :=
+        }
+      while$
+      ", et~al." *
+    }
+    { s format.names }
+  if$
+}
+
 FUNCTION {format.authors}
 { author empty$
     { "" }
-    { author format.names }
+    { author format.author.names }
   if$
 }
 
