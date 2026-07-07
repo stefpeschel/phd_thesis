@@ -40,7 +40,7 @@ The resulting data are organized into a count matrix.
 In this thesis, $n$ denotes the number of samples and $p$ the number of taxa (features), so that the count matrix is defined as
 \begin{equation}
 \label{eq:micro:count_matrix}
-    X = (x_{ki}) \in \mathbb{N}_0^{n \times p}, 
+    \mathbf{X} = (x_{ki}) \in \mathbb{N}_0^{n \times p}, 
     \quad k = 1, \dots, n, \; i = 1, \dots, p.
 \end{equation}
 Here, $x_{ki}$ denotes the number of reads assigned to taxon $i$ in sample $k$. 
@@ -59,7 +59,7 @@ First, a sample metadata table contains clinical, environmental, or \text{experi
 Second, each feature (taxon) is accompanied by a taxonomic annotation that assigns it to hierarchical ranks such as phylum, class, order, family, genus, and species. 
 This taxonomic table reflects the biological classification derived from sequence similarity or reference databases and enables aggregation of counts at different taxonomic levels.
 
-The count matrix $X \in \mathbb{N}_0^{n \times p}$ constitutes the primary statistical object underlying microbiome data analysis. Its properties are fundamentally shaped by the sequencing process, the aggregation of reads into features, and the compositional constraint imposed by finite library sizes. While the count matrix forms the basis for most quantitative analyses, metadata and taxonomic structure play a crucial role in interpretation, aggregation, and group comparisons.
+The count matrix $\mathbf{X} \in \mathbb{N}_0^{n \times p}$ constitutes the primary statistical object underlying microbiome data analysis. Its properties are fundamentally shaped by the sequencing process, the aggregation of reads into features, and the compositional constraint imposed by finite library sizes. While the count matrix forms the basis for most quantitative analyses, metadata and taxonomic structure play a crucial role in interpretation, aggregation, and group comparisons.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Characteristics of microbiome data}
@@ -89,7 +89,7 @@ For each sample $k$, the total number of reads
 is determined primarily by technical and experimental factors such as sequencing platform capacity, degree of multiplexing, PCR amplification efficiency, and DNA extraction efficiency, rather than by the absolute microbial load in the underlying biological environment \citep{nearing2021identifying}. 
 Consequently, the observed counts $x_{ki}$ reflect the relative allocation of sequencing effort across taxa rather than their absolute abundances.
 
-Conditional on the sample-specific library size $m_k$, the count vector $x_k = (x_{k1}, \dots, x_{kp})^\top$ satisfies the constant-sum constraint
+Conditional on the sample-specific library size $m_k$, the count vector $\mathbf{x}_k = (x_{k1}, \dots, x_{kp})^\top$ satisfies the constant-sum constraint
 \begin{equation}
 \sum_{i=1}^{p} x_{ki} = m_k,
 \end{equation}
@@ -97,13 +97,13 @@ which restricts it to a $(p-1)$-dimensional affine subspace of $\mathbb{R}^{p}$.
 This restriction is referred to as \emph{closure} and forms the foundation of compositional data analysis \citep{aitchison1982statistical,gloor2016its}. 
 Importantly, closure is induced by the sampling mechanism itself and does not result from any subsequent normalization procedure.
 
-Closure implies that the components of $x_k$ cannot vary independently. 
+Closure implies that the components of $\mathbf{x}_k$ cannot vary independently. 
 Conditional on $m_k$, an increase in one component must be accompanied by a decrease in at least one other component, even if the corresponding taxa are biologically unrelated.
 As a result, the count vector is identifiable only up to a positive scaling factor: absolute abundances cannot be recovered from sequencing data without additional external information. 
 Inference is therefore restricted to relative quantities.
 
 From a statistical perspective, compositionality implies that standard multivariate methods developed for unconstrained Euclidean data cannot be applied without modification. 
-Because the components of $x_k$ satisfy a linear constraint, the data exhibit inherent dependence induced by the constant-sum restriction. 
+Because the components of $\mathbf{x}_k$ satisfy a linear constraint, the data exhibit inherent dependence induced by the constant-sum restriction. 
 In particular, naive covariance and correlation estimates computed directly from raw counts may reflect this structural dependence rather than genuine biological associations. 
 Thus, apparent negative correlations between taxa may arise purely as a mathematical consequence of closure rather than genuine biological interaction.
 
@@ -154,7 +154,7 @@ Approaches for handling library size variability are discussed in the preprocess
 %====================================
 
 Beyond compositionality and heterogeneous library sizes, microbiome count data are characterized by pronounced sparsity and a high prevalence of zero counts. 
-In typical datasets, a substantial proportion of entries in the count matrix $X$ are equal to zero.
+In typical datasets, a substantial proportion of entries in the count matrix $\mathbf{X}$ are equal to zero.
 
 Sparsity reflects both the ecological structure of microbial communities and limitations of the measurement process.
 Abundance distributions are typically highly uneven: a small number of taxa account for a large fraction of the total reads, whereas many taxa occur at low abundance or only in a subset of samples. 
@@ -387,20 +387,20 @@ The trimmed mean of M-values (TMM) normalization implemented in \texttt{edgeR} \
 
 The geometric mean of pairwise ratios (GMPR) method was proposed specifically for sparse sequencing data with many zero counts \citep{chen2018gmpr}. Instead of relying on a pseudo-reference based on feature-wise geometric means, which can be problematic when many features contain zeros, GMPR estimates sample-specific size factors from median pairwise ratios between samples. This construction makes the method more robust in sparse microbiome count matrices, where many taxa are absent or unobserved in a large fraction of samples. 
 
-The assumptions underlying RLE and TMM were originally developed for gene-expression data and may be difficult to justify in microbiome studies when a substantial proportion of taxa changes jointly between groups or when compositional effects dominate the observed counts.
+The assumptions underlying the RLE and TMM approaches were originally developed for gene-expression data and may be difficult to justify in microbiome studies when a substantial proportion of taxa changes jointly between groups or when compositional effects dominate the observed counts.
 
 %====================================
 \subsection{Rarefaction}
 \label{sec:2micro:norm:rarefaction}
 %====================================
 
-The scaling-based methods discussed above adjust for heterogeneous library sizes by multiplying all counts in a sample by a sample-specific factor. Rarefaction follows a different principle. Instead of rescaling the observed counts, it equalizes library sizes by randomly subsampling reads from each sample to a common target depth $m_{\mathrm{rare}}$, usually without replacement \citep{mcmurdie2014waste}. The target depth is often chosen as the smallest observed library size $m_{\min}=\min_k m_k$ or as a larger quantile of the library-size distribution. In the latter case, samples with library sizes below the chosen target must be excluded from the rarefied data set. Conditional on the observed count vector $x_k=(x_{k1},\ldots,x_{kp})^\top$, the rarefied count vector can be viewed as a random draw from the observed reads and satisfies
+The scaling-based methods discussed above adjust for heterogeneous library sizes by multiplying all counts in a sample by a sample-specific factor. Rarefaction follows a different principle. Instead of rescaling the observed counts, it equalizes library sizes by randomly subsampling reads from each sample to a common target depth $m_{\mathrm{rare}}$, usually without replacement \citep{mcmurdie2014waste}. The target depth is often chosen as the smallest observed library size $m_{\min}=\min_k m_k$ or as a larger quantile of the library-size distribution. In the latter case, samples with library sizes below the chosen target must be excluded from the rarefied data set. Conditional on the observed count vector $\mathbf{x}_k=(x_{k1},\ldots,x_{kp})^\top$, the rarefied count vector can be viewed as a random draw from the observed reads and satisfies
 \begin{equation}
 \sum_{i=1}^p \tilde{x}^{\mathrm{rare}}_{ki} = m_{\mathrm{rare}}.
 \end{equation}
 More explicitly, this subsampling step can be described by a multivariate hypergeometric distribution,
 \begin{equation}
-\tilde{x}^{\mathrm{rare}}_k \sim \operatorname{MultivariateHypergeometric}\left(m_{\mathrm{rare}},x_{k1},\ldots,x_{kp}\right).
+\tilde{\mathbf{x}}^{\mathrm{rare}}_k \sim \operatorname{MultivariateHypergeometric}\left(m_{\mathrm{rare}},x_{k1},\ldots,x_{kp}\right).
 \end{equation}
 
 Rarefaction directly enforces equal library sizes and is therefore particularly intuitive for analyses based on ecological dissimilarities or observed diversity measures, where unequal sampling effort can otherwise dominate comparisons between samples. At the same time, rarefaction modifies the observed count matrix in a fundamentally different way than deterministic rescaling: it discards reads from samples with library size larger than $m_{\mathrm{rare}}$, introduces additional sampling variability, and may turn originally non-zero low counts into zeros.
@@ -474,7 +474,7 @@ A simple strategy is to replace only entries equal to zero by a small positive v
 To preserve ratios among non-zero components while maintaining the compositional structure, \citet{martin-fernandez2003dealing} proposed multiplicative replacement. In contrast to global offset addition, multiplicative replacement does not add a constant to all components. Instead, zero components are replaced by small positive values and the originally non-zero components are adjusted proportionally so that the constant-sum constraint is preserved.
 Although the notation below is written for a generic non-negative composition, in the default CLR-based pipeline of this thesis the vector entering multiplicative replacement is the relative abundance vector obtained after total sum scaling.
 
-For sample $x_k=(x_{k1},\ldots,x_{kp})$ with sample total
+For sample $\mathbf{x}_k=(x_{k1},\ldots,x_{kp})^\top$ with sample total
 \begin{equation}
 C_k=\sum_{i=1}^p x_{ki},
 \label{eq:2micro:sample_total_multiplicative_replacement}
@@ -517,26 +517,26 @@ In practice, nonparametric multiplicative replacement for rounded or left-censor
 
 \begin{table}[!htb]
 \centering
-\caption{Illustration of ratio preservation and subcompositional coherence for the composition $x=(x_1,x_2,x_3)$ with subcomposition $\operatorname{sub}(x)=(x_2,x_3)$. The table compares global offset addition, zero-only replacement, and multiplicative replacement. The replacement value in each case is $\delta = 0.1$. Global offset addition changes the ratio $x_2/x_3$ and alters the relative structure of the subcomposition. In contrast, zero-only replacement and multiplicative replacement preserve the ratio among originally non-zero components. Multiplicative replacement additionally preserves the compositional total by proportionally adjusting the non-zero components.}
+\caption{Illustration of ratio preservation and subcompositional coherence for the composition $\mathbf{x}=(x_1,x_2,x_3)^\top$ with subcomposition $\operatorname{sub}(\mathbf{x})=(x_2,x_3)^\top$. The table compares global offset addition, zero-only replacement, and multiplicative replacement. The replacement value in each case is $\delta = 0.1$. Global offset addition changes the ratio $x_2/x_3$ and alters the relative structure of the subcomposition. In contrast, zero-only replacement and multiplicative replacement preserve the ratio among originally non-zero components. Multiplicative replacement additionally preserves the compositional total by proportionally adjusting the non-zero components.}
 \label{tab:zero_replacement}
 \small
 \setlength{\tabcolsep}{8pt}
 \renewcommand{\arraystretch}{1.15}
 \begin{tabular}{l|ccc|cc|c}
-\textbf{Method} & ${x_1}$ & ${x_2}$ & ${x_3}$ & ${\sum x}$ & ${\sum \operatorname{sub}(x)}$ & ${x_2/x_3}$  \\
+\textbf{Method} & ${x_1}$ & ${x_2}$ & ${x_3}$ & ${\sum \mathbf{x}}$ & ${\sum \operatorname{sub}(\mathbf{x})}$ & ${x_2/x_3}$  \\
 \hline\hline
 \textbf{Original vector} & $0$ & $0.2$ & $0.8$ & $1$ & $1$ & $0.25$\\
 \hline
 \textbf{Global offset addition} & $0.1$ & $0.3$ & $0.9$ & $1.3$ & $1.2$ & $0.333$ \\
-Renormalize $x$ to sum $1$ & $0.077$ & $0.231$ & $0.692$ & $1$ & ~ & $0.333$ \\
-Renormalize sub($x$) to sum $1$ & ~ & $0.25$ & $0.75$ & ~ & $1$ & $0.333$ \\
+Renormalize $\mathbf{x}$ to sum $1$ & $0.077$ & $0.231$ & $0.692$ & $1$ & ~ & $0.333$ \\
+Renormalize sub($\mathbf{x}$) to sum $1$ & ~ & $0.25$ & $0.75$ & ~ & $1$ & $0.333$ \\
 \hline
 \textbf{Zero-only replacement} & $0.1$ & $0.2$ & $0.8$ & $1.1$ & $1$ & $0.25$ \\
-Renormalize $x$ to sum $1$ & $0.091$ & $0.182$ & $0.727$ & $1$ & ~ & $0.25$  \\
-Renormalize sub($x$) to sum $1$ & ~ & $0.2$ & $0.8$ & ~ & $1$ & $0.25$ \\
+Renormalize $\mathbf{x}$ to sum $1$ & $0.091$ & $0.182$ & $0.727$ & $1$ & ~ & $0.25$  \\
+Renormalize sub($\mathbf{x}$) to sum $1$ & ~ & $0.2$ & $0.8$ & ~ & $1$ & $0.25$ \\
 \hline
 \textbf{Multiplicative replacement} & $0.1$ & $0.18$ & $0.72$ & $1$ & $0.9$& $0.25$ \\
-Renormalize sub($x$) to sum $1$ & ~ & $0.2$ & $0.8$ & ~ & $1$ & $0.25$ \\
+Renormalize sub($\mathbf{x}$) to sum $1$ & ~ & $0.2$ & $0.8$ & ~ & $1$ & $0.25$ \\
 \end{tabular}
 \end{table}
 
@@ -641,7 +641,7 @@ Because closure induces a constant-sum constraint, the components of a compositi
 Standard summaries such as means, variances, correlations, and regression coefficients computed directly on proportions are therefore generally subcompositionally incoherent \citep{aitchison1982statistical,aitchison1986statistical}. 
 
 For each sample $k$, let
-$x_k = (x_{k1}, \dots, x_{kp})^\top$
+$\mathbf{x}_k = (x_{k1}, \dots, x_{kp})^\top$
 denote its composition after closure to a constant sum. 
 Forming ratios between two components removes the influence of the total sum. 
 For taxa $i$ and $j$ in sample $k$, the ratio is given by
@@ -666,7 +666,7 @@ The additive log-ratio (ALR) transformation expresses each component relative to
 For sample $k$, it is defined as
 \begin{equation}
 \label{eq:2micro:ALR}
-\text{ALR}(x_k)_i = \log \frac{x_{ki}}{x_{kp}},
+\text{ALR}(\mathbf{x}_k)_i = \log \frac{x_{ki}}{x_{kp}},
 \qquad i = 1,\dots,p-1.
 \end{equation}
 
@@ -683,19 +683,19 @@ To avoid the asymmetry induced by selecting a single reference, Aitchison propos
 For sample $k$, it is defined as
 \begin{equation}
 \label{eq:2micro:CLR}
-\text{CLR}(x_k)_i = \log \frac{x_{ki}}{g(x_k)},
+\text{CLR}(\mathbf{x}_k)_i = \log \frac{x_{ki}}{g(\mathbf{x}_k)},
 \qquad i = 1,\dots,p,
 \end{equation}
 where the geometric mean is
 \begin{equation}
 \label{eq:2micro:geometric_mean}
-g(x_k) = \left( \prod_{i=1}^{p} x_{ki} \right)^{1/p}.
+g(\mathbf{x}_k) = \left( \prod_{i=1}^{p} x_{ki} \right)^{1/p}.
 \end{equation}
 
 The geometric mean treats all taxa symmetrically, so that each CLR coordinate represents a component relative to the geometric mean of all components in the sample.
 The CLR transformation satisfies
 \begin{equation}
-\sum_{i=1}^{p} \text{CLR}(x_k)_i = 0,
+\sum_{i=1}^{p} \text{CLR}(\mathbf{x}_k)_i = 0,
 \end{equation}
 so that CLR-transformed data lie in a $(p-1)$-dimensional subspace of $\mathbb{R}^{p}$. 
 Consequently, the CLR covariance matrix is singular. 
@@ -749,12 +749,12 @@ The following subsections therefore investigate several approaches, including gl
 
 A common way to make the CLR transformation applicable to sparse microbiome data is to first replace zeros by small positive values and subsequently apply the standard CLR transformation to the resulting strictly positive composition. Among the replacement strategies introduced in Section~\ref{sec:2micro:zeros:replacement}, multiplicative replacement is particularly compatible with the log-ratio interpretation of the CLR transformation, because it preserves ratios among originally non-zero components.
 
-Let $x_k^\ast$ denote the multiplicatively replaced version of sample $x_k$. The CLR transformation is then given by
+Let $\mathbf{x}_k^\ast$ denote the multiplicatively replaced version of sample $\mathbf{x}_k$. The CLR transformation is then given by
 \begin{equation}
-\operatorname{CLR}(x_k^\ast)_i=\log\left(\frac{x_{ki}^\ast}{g(x_k^\ast)}\right),
+\operatorname{CLR}(\mathbf{x}_k^\ast)_i=\log\left(\frac{x_{ki}^\ast}{g(\mathbf{x}_k^\ast)}\right),
 \label{eq:2micro:clr_after_mult_replacement}
 \end{equation}
-where $g(x_k^\ast)$ denotes the geometric mean of the components of $x_k^\ast$.
+where $g(\mathbf{x}_k^\ast)$ denotes the geometric mean of the components of $\mathbf{x}_k^\ast$.
 
 The relevance of multiplicative replacement becomes clear from the relationship between CLR coordinate differences and pairwise log-ratios. If $x_{ki}>0$ and $x_{kj}>0$, multiplicative replacement changes both components by the same sample-specific factor, so that
 \begin{equation}
@@ -763,7 +763,7 @@ The relevance of multiplicative replacement becomes clear from the relationship 
 \end{equation}
 Since differences between CLR coordinates are pairwise log-ratios,
 \begin{equation}
-\operatorname{CLR}(x_k^\ast)_i-\operatorname{CLR}(x_k^\ast)_j
+\operatorname{CLR}(\mathbf{x}_k^\ast)_i-\operatorname{CLR}(\mathbf{x}_k^\ast)_j
 =
 \log\left(\frac{x_{ki}^\ast}{x_{kj}^\ast}\right),
 \label{eq:2micro:clr_difference_logratio}
@@ -779,17 +779,17 @@ At the same time, multiplicative replacement is still a replacement procedure an
 
 The modified centered log-ratio transformation (mCLR) was proposed in the context of sparse microbial graphical modeling, in particular for the SPRING framework of \citet{yoon2019microbial}. In contrast to replacement-based approaches, mCLR does not replace zero counts by positive values before transformation. Instead, it computes the geometric mean only over the positive components of each sample and leaves zero components unchanged.
 
-For a sample $x_k=(x_{k1},\ldots,x_{kp})^\top$, let $P_k=\{i:x_{ki}>0\}$ denote the index set of positive components, and let $x_k^+=(x_{ki}:i\in P_k)^\top$ denote the corresponding positive subvector. The ordinary geometric mean of the positive components is
+For a sample $\mathbf{x}_k=(x_{k1},\ldots,x_{kp})^\top$, let $P_k=\{i:x_{ki}>0\}$ denote the index set of positive components, and let $\mathbf{x}_k^+=(x_{ki}:i\in P_k)^\top$ denote the corresponding positive subvector. The ordinary geometric mean of the positive components is
 \begin{equation}
-g(x_k^+)=\left(\prod_{i\in P_k}x_{ki}\right)^{1/|P_k|}.
+g(\mathbf{x}_k^+)=\left(\prod_{i\in P_k}x_{ki}\right)^{1/|P_k|}.
 \label{eq:2micro:positive_geometric_mean}
 \end{equation}
 The mCLR transformation is defined as
 \begin{equation}
-\operatorname{mCLR}(x_k)_i=
+\operatorname{mCLR}(\mathbf{x}_k)_i=
 \begin{cases}
 0, & x_{ki}=0,\\
-\log\left(\frac{x_{ki}}{g(x_k^+)}\right)+\varepsilon_k, & x_{ki}>0,
+\log\left(\frac{x_{ki}}{g(\mathbf{x}_k^+)}\right)+\varepsilon_k, & x_{ki}>0,
 \end{cases}
 \label{eq:2micro:mclr}
 \end{equation}
@@ -797,16 +797,16 @@ where $\varepsilon_k>0$ is a sample-specific shift constant chosen such that all
 
 The main advantage of mCLR is that it avoids explicit zero replacement and preserves the distinction between zero and non-zero components. Moreover, for two positive components $x_{ki}>0$ and $x_{kj}>0$, both the positive-part geometric mean and the common sample-specific shift cancel when coordinate differences are formed:
 \begin{equation}
-\log\left(\frac{x_{ki}}{g(x_k^+)}\right)
+\log\left(\frac{x_{ki}}{g(\mathbf{x}_k^+)}\right)
 -
-\log\left(\frac{x_{kj}}{g(x_k^+)}\right)
+\log\left(\frac{x_{kj}}{g(\mathbf{x}_k^+)}\right)
 =
 \log\left(\frac{x_{ki}}{x_{kj}}\right).
 \label{eq:2micro:mclr_positive_logratio}
 \end{equation}
 Thus, mCLR preserves log-ratios between components that are both positive within the same sample.
 
-However, this within-sample property does not imply that mCLR is generally interchangeable with the standard CLR transformation. The reference $g(x_k^+)$ depends on the sample-specific zero pattern, zeros remain fixed at zero, and the shift $\varepsilon_k$ is also sample-specific. Consequently, the transformed value of a taxon depends not only on its own count, but also on the sample-specific set of positive components and on the corresponding shift. This can affect distances between samples, marginal distributions of transformed taxa, and regression-type or group-comparison analyses.
+However, this within-sample property does not imply that mCLR is generally interchangeable with the standard CLR transformation. The reference $g(\mathbf{x}_k^+)$ depends on the sample-specific zero pattern, zeros remain fixed at zero, and the shift $\varepsilon_k$ is also sample-specific. Consequently, the transformed value of a taxon depends not only on its own count, but also on the sample-specific set of positive components and on the corresponding shift. This can affect distances between samples, marginal distributions of transformed taxa, and regression-type or group-comparison analyses.
 
 For this reason, mCLR is best understood as a method-specific transformation rather than as a general zero-handling strategy for CLR-based analyses. It is appropriate when the downstream method explicitly defines or assumes this representation, as in SPRING, where mCLR is combined with a semi-parametric rank-based graphical modeling approach that can handle a large amount of zeros in the data. In this thesis, mCLR is therefore discussed as a method-specific alternative to replacement-based CLR, but it is not used when a standard CLR or Aitchison interpretation is required.
 
@@ -817,28 +817,28 @@ For this reason, mCLR is best understood as a method-specific transformation rat
 
 The geometric mean is the central reference quantity in the CLR transformation. This makes extensions of the geometric mean to data containing zeros an intuitively appealing starting point for adapting CLR-based transformations to sparse data. A formal extension of the geometric mean was proposed by \citet{delacruz2019geometric}. This extension was not originally introduced as a CLR transformation, but as a modification of the geometric mean that remains well-defined when some components are zero. Since the standard CLR transformation is undefined in the presence of zeros because both the geometric mean and the component-wise logarithms cannot be evaluated in the usual way, it is natural to ask whether such an extended geometric mean can contribute to handling zeros in CLR-based analyses.
 
-Using the notation from Equation~\eqref{eq:2micro:positive_geometric_mean}, let $x_k^+$ denote the positive subvector of sample $k$, and let $g(x_k^+)$ be the ordinary geometric mean of its positive components. For a candidate offset $\delta>0$, the extended geometric mean of the full sample is defined as
+Using the notation from Equation~\eqref{eq:2micro:positive_geometric_mean}, let $\mathbf{x}_k^+$ denote the positive subvector of sample $k$, and let $g(\mathbf{x}_k^+)$ be the ordinary geometric mean of its positive components. For a candidate offset $\delta>0$, the extended geometric mean of the full sample is defined as
 \begin{equation}
-\tilde{g}_{\delta}(x_k)=\exp\left(\frac{1}{p}\sum_{i=1}^p\log(x_{ki}+\delta)\right)-\delta.
+\tilde{g}_{\delta}(\mathbf{x}_k)=\exp\left(\frac{1}{p}\sum_{i=1}^p\log(x_{ki}+\delta)\right)-\delta.
 \label{eq:2micro:extended_geometric_mean}
 \end{equation}
-The subtraction of $\delta$ maps the shifted geometric mean back to the original scale and is the defining feature of the extended geometric mean. Analogously, the extended geometric mean of the positive part is denoted by $\tilde{g}_{\delta}(x_k^+)$.
+The subtraction of $\delta$ maps the shifted geometric mean back to the original scale and is the defining feature of the extended geometric mean. Analogously, the extended geometric mean of the positive part is denoted by $\tilde{g}_{\delta}(\mathbf{x}_k^+)$.
 
 Following \citet{delacruz2019geometric}, the offset is chosen such that the extended geometric mean remains close to the ordinary geometric mean when evaluated on the positive components only. For a tolerance parameter $\epsilon>0$, the sample-specific offset is defined as
 \begin{equation}
-\delta_k=\sup\left\{\delta>0:\left|\tilde{g}_{\delta}(x_k^+)-g(x_k^+)\right|\leq \epsilon\, g(x_k^+)\right\}.
+\delta_k=\sup\left\{\delta>0:\left|\tilde{g}_{\delta}(\mathbf{x}_k^+)-g(\mathbf{x}_k^+)\right|\leq \epsilon\, g(\mathbf{x}_k^+)\right\}.
 \label{eq:2micro:extended_geometric_mean_delta}
 \end{equation}
-Thus, $\delta_k$ is the supremum of offsets for which the extended geometric mean of the positive components deviates from $g(x_k^+)$ by at most the relative tolerance $\epsilon$. Smaller values of $\epsilon$ enforce closer agreement with the ordinary geometric mean and lead to smaller offsets, whereas larger values allow stronger regularization. The construction therefore provides a principled way to choose an offset whose effect on the geometric mean of the observed positive components is controlled.
+Thus, $\delta_k$ is the supremum of offsets for which the extended geometric mean of the positive components deviates from $g(\mathbf{x}_k^+)$ by at most the relative tolerance $\epsilon$. Smaller values of $\epsilon$ enforce closer agreement with the ordinary geometric mean and lead to smaller offsets, whereas larger values allow stronger regularization. The construction therefore provides a principled way to choose an offset whose effect on the geometric mean of the observed positive components is controlled.
 
-However, solving the geometric-mean problem does not by itself solve the zero problem of the CLR transformation. Even if $\tilde{g}_{\delta}(x_k)$ is well-defined, the expression $\log(x_{ki}/\tilde{g}_{\delta}(x_k))$ remains undefined for components with $x_{ki}=0$. A zero-aware CLR-type transformation therefore still requires a modification of the components entering the logarithm. In the microbiome context, \citet{mishra2025variational} used the offset obtained from the geometric mean extension as an additive replacement before applying a CLR-type transformation. In the notation used here, this can be written as
+However, solving the geometric-mean problem does not by itself solve the zero problem of the CLR transformation. Even if $\tilde{g}_{\delta}(\mathbf{x}_k)$ is well-defined, the expression $\log(x_{ki}/\tilde{g}_{\delta}(\mathbf{x}_k))$ remains undefined for components with $x_{ki}=0$. A zero-aware CLR-type transformation therefore still requires a modification of the components entering the logarithm. In the microbiome context, \citet{mishra2025variational} used the offset obtained from the geometric mean extension as an additive replacement before applying a CLR-type transformation. In the notation used here, this can be written as
 \begin{equation}
-\operatorname{clr}_{\delta_k}^{(+)}(x_k)_i=
-\log\left(\frac{x_{ki}+\delta_k}{\tilde{g}_{\delta_k}(x_k)+\delta_k}\right),
+\operatorname{clr}_{\delta_k}^{(+)}(\mathbf{x}_k)_i=
+\log\left(\frac{x_{ki}+\delta_k}{\tilde{g}_{\delta_k}(\mathbf{x}_k)+\delta_k}\right),
 \qquad i=1,\ldots,p.
 \label{eq:2micro:offset_based_clr}
 \end{equation}
-Since $\tilde{g}_{\delta_k}(x_k)+\delta_k$ is the ordinary geometric mean of the shifted vector $x_k+\delta_k$, Equation~\eqref{eq:2micro:offset_based_clr} is equivalent to applying the standard CLR transformation after adding $\delta_k$ to all components. This yields a finite CLR vector in the zero-sum subspace of $\mathbb{R}^p$ and avoids undefined logarithms.
+Since $\tilde{g}_{\delta_k}(\mathbf{x}_k)+\delta_k$ is the ordinary geometric mean of the shifted vector $\mathbf{x}_k+\delta_k$, Equation~\eqref{eq:2micro:offset_based_clr} is equivalent to applying the standard CLR transformation after adding $\delta_k$ to all components. This yields a finite CLR vector in the zero-sum subspace of $\mathbb{R}^p$ and avoids undefined logarithms.
 
 The drawback of this construction is that the offset is added not only to zero components, but also to components that were already observed. Consequently, ratios among originally non-zero components are changed. For two positive components $x_{ki}>0$ and $x_{kj}>0$, the original log-ratio is
 \begin{equation}
@@ -865,7 +865,7 @@ The preceding subsections introduced different ways of making CLR-based transfor
 
 The following toy example illustrates how multiplicative replacement and additive offset replacement can lead to different results in common downstream analyses, including distance-based analysis, differential distribution analysis, feature-level group contrasts, and association or proportionality analysis. The example is deliberately small and is intended as a diagnostic illustration rather than as a performance comparison. To focus on the effect of zero handling, all samples in the toy data have the same total count. In real microbiome analyses, where sequencing depths usually differ between samples, counts should first be brought to a common compositional scale before zero replacement so that the replacement value has the same relative influence in each sample.
 
-Consider the small count data set in Table~\ref{tab:toy_zero_example_original}. The first two samples belong to group $A$, the last two samples belong to group $B$. Taxon 2 is doubled in group $B$ compared with group $A$, taxon 3 is decreased accordingly because all samples have the same total count, and taxon 1 contains zeros. In the following, let $X=(x_{ki})$ denote the count table in Table~\ref{tab:toy_zero_example_original}, where $x_k=(x_{k1},x_{k2},x_{k3})$ is the count vector of sample $k$. The corresponding group labels are denoted by $g=(g_1,\ldots,g_4)$, with $g_k\in\{A,B\}$. For simplicity, let $\delta=1$, where $\delta$ denotes the small positive replacement or offset value used in the two transformations. Superscript $(M)$ denotes values after multiplicative replacement, whereas superscript $(+)$ denotes values after additive offset replacement.
+Consider the small count data set in Table~\ref{tab:toy_zero_example_original}. The first two samples belong to group $A$, the last two samples belong to group $B$. Taxon 2 is doubled in group $B$ compared with group $A$, taxon 3 is decreased accordingly because all samples have the same total count, and taxon 1 contains zeros. In the following, let $\mathbf{X}=(x_{ki})$ denote the count table in Table~\ref{tab:toy_zero_example_original}, where $\mathbf{x}_k=(x_{k1},x_{k2},x_{k3})^\top$ is the count vector of sample $k$. The corresponding group labels are denoted by $\mathbf{g}=(g_1,\ldots,g_4)^\top$, with $g_k\in\{A,B\}$. For simplicity, let $\delta=1$, where $\delta$ denotes the small positive replacement or offset value used in the two transformations. Superscript $(M)$ denotes values after multiplicative replacement, whereas superscript $(+)$ denotes values after additive offset replacement.
 
 \begin{table}[ht]
 \centering
@@ -958,9 +958,9 @@ The same transformed values would also enter a simple feature-level \textbf{diff
 \begin{equation}
 \Delta_2^{(M)}
 =
-\frac{1}{2}\sum_{k:g_k=B}\operatorname{CLR}(x_k^{(M)})_2
+\frac{1}{2}\sum_{k:g_k=B}\operatorname{CLR}(\mathbf{x}_k^{(M)})_2
 -
-\frac{1}{2}\sum_{k:g_k=A}\operatorname{CLR}(x_k^{(M)})_2
+\frac{1}{2}\sum_{k:g_k=A}\operatorname{CLR}(\mathbf{x}_k^{(M)})_2
 \approx 0.476
 \label{eq:2micro:mult_replacement_da_contrast_example}
 \end{equation}
@@ -968,9 +968,9 @@ after multiplicative replacement, whereas after additive offset replacement it i
 \begin{equation}
 \Delta_2^{(+)}
 =
-\frac{1}{2}\sum_{k:g_k=B}\operatorname{CLR}(x_k^{(+)})_2
+\frac{1}{2}\sum_{k:g_k=B}\operatorname{CLR}(\mathbf{x}_k^{(+)})_2
 -
-\frac{1}{2}\sum_{k:g_k=A}\operatorname{CLR}(x_k^{(+)})_2
+\frac{1}{2}\sum_{k:g_k=A}\operatorname{CLR}(\mathbf{x}_k^{(+)})_2
 \approx 0.406.
 \label{eq:2micro:additive_offset_da_contrast_example}
 \end{equation}

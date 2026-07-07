@@ -2,6 +2,8 @@
 
 This folder contains the microbiome application analysis for Chapter 7 of the thesis. The analysis uses gut microbiota data from the PASTURE birth cohort, focusing on samples collected at 2 months of age from infants in Germany, Switzerland, and Austria.
 
+All figures used in the main body of the thesis have filenames beginning with the prefix `thesis_`.
+
 The workflow is written as a sequence of R Markdown files. Each file can be rendered separately, but later files may depend on data objects created by earlier files.
 
 ## Folder Structure

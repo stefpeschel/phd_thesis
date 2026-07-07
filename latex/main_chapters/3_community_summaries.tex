@@ -195,12 +195,12 @@ Within-sample diversity, as introduced in the previous section, summarizes each 
 
 In ecology, \emph{beta diversity} describes variation in community composition among sampling units \citep{whittaker1960vegetation,anderson2011navigating}. Since microbiome data also represent communities of co-occurring organisms observed across samples, the same conceptual framework is commonly applied in microbiome studies. In practice, beta diversity is typically represented through pairwise dissimilarities between samples. In this thesis, we use the term between-sample dissimilarity when referring to the statistical object underlying these analyses, namely a pairwise matrix derived from the taxon profiles of all samples.
 
-Let $x_k=(x_{k1},\ldots,x_{kp})^\top$ and $x_l=(x_{l1},\ldots,x_{lp})^\top$ denote the taxon profiles of two samples $k$ and $l$. A dissimilarity or distance function $d(\cdot,\cdot)$ assigns a non-negative value $d(x_k,x_l)$ to this pair, where smaller values indicate more similar microbial communities and larger values indicate stronger differences. Applying $d$ to all sample pairs yields an $n \times n$ dissimilarity matrix $D=(d_{kl})$, with entries $d_{kl}=d(x_k,x_l)$. For the measures considered here, $D$ is symmetric and has zeros on the diagonal.
+Let $\mathbf{x}_k=(x_{k1},\ldots,x_{kp})^\top$ and $\mathbf{x}_l=(x_{l1},\ldots,x_{lp})^\top$ denote the taxon profiles of two samples $k$ and $l$. A dissimilarity or distance function $d(\cdot,\cdot)$ assigns a non-negative value $d(\mathbf{x}_k,\mathbf{x}_l)$ to this pair, where smaller values indicate more similar microbial communities and larger values indicate stronger differences. Applying $d$ to all sample pairs yields an $n \times n$ dissimilarity matrix $\mathbf{D}=(d_{kl})$, with entries $d_{kl}=d(\mathbf{x}_k,\mathbf{x}_l)$. For the measures considered here, $\mathbf{D}$ is symmetric and has zeros on the diagonal.
 
-The matrix $D$ is a community-level summary because each entry aggregates information across all taxa in the two samples being compared. It retains information about which samples are similar to each other, whether samples form clusters, whether groups appear separated, and whether individual samples are unusually dissimilar from the rest of the cohort. This makes between-sample dissimilarities central to exploratory analyses of global community structure.
+The matrix $\mathbf{D}$ is a community-level summary because each entry aggregates information across all taxa in the two samples being compared. It retains information about which samples are similar to each other, whether samples form clusters, whether groups appear separated, and whether individual samples are unusually dissimilar from the rest of the cohort. This makes between-sample dissimilarities central to exploratory analyses of global community structure.
 
 \newpage
-Beta diversity is not a single uniquely defined quantity. The numerical value and interpretation of $d(x_k,x_l)$ depend on the chosen dissimilarity measure and on the data representation to which it is applied. Some measures emphasize differences in relative abundance profiles, whereas others compare samples in log-ratio coordinates. Some measures are dominated by abundant taxa, whereas others are more sensitive to changes among rare taxa or to presence--absence patterns. Consequently, different dissimilarities can highlight different aspects of the same count matrix. The choice of dissimilarity should therefore be guided by the scientific question, the preprocessing strategy, and the statistical properties of the data.
+Beta diversity is not a single uniquely defined quantity. The numerical value and interpretation of $d(\mathbf{x}_k,\mathbf{x}_l)$ depend on the chosen dissimilarity measure and on the data representation to which it is applied. Some measures emphasize differences in relative abundance profiles, whereas others compare samples in log-ratio coordinates. Some measures are dominated by abundant taxa, whereas others are more sensitive to changes among rare taxa or to presence--absence patterns. Consequently, different dissimilarities can highlight different aspects of the same count matrix. The choice of dissimilarity should therefore be guided by the scientific question, the preprocessing strategy, and the statistical properties of the data.
 
 For microbiome sequencing data, the compositional nature of the observations is particularly important. Since the total number of reads per sample is constrained by the sequencing process, raw counts and proportions do not represent unconstrained multivariate observations (cf. Section~\ref{sec:2micro:characteristics}). Applying Euclidean distance directly to raw counts or relative abundances may therefore lead to distances that partly reflect library size differences or closure-induced dependencies rather than meaningful biological differences. Distance-based summaries for microbiome data should thus either use dissimilarities whose interpretation is explicitly tied to relative abundance profiles or rely on transformations that embed the compositions into an appropriate Euclidean space.
 
@@ -212,13 +212,13 @@ In the following subsections, we focus on two distance-based summaries that repr
 \label{sec:3community:between:bray-curtis}
 %====================================
 
-The Bray--Curtis dissimilarity index, originally introduced by \citet{bray1957ordination}, is one of the most widely used measures for comparing ecological community profiles. For two samples $k$ and $l$ with taxon profiles $x_k=(x_{k1},\ldots,x_{kp})^\top$ and $x_l=(x_{l1},\ldots,x_{lp})^\top$, it is defined as
+The Bray--Curtis dissimilarity index, originally introduced by \citet{bray1957ordination}, is one of the most widely used measures for comparing ecological community profiles. For two samples $k$ and $l$ with taxon profiles $\mathbf{x}_k=(x_{k1},\ldots,x_{kp})^\top$ and $\mathbf{x}_l=(x_{l1},\ldots,x_{lp})^\top$, it is defined as
 \begin{equation}
-d_{\mathrm{BC}}(x_k,x_l)=\frac{\sum_{i=1}^p |x_{ki}-x_{li}|}{\sum_{i=1}^p (x_{ki}+x_{li})}.
+d_{\mathrm{BC}}(\mathbf{x}_k,\mathbf{x}_l)=\frac{\sum_{i=1}^p |x_{ki}-x_{li}|}{\sum_{i=1}^p (x_{ki}+x_{li})}.
 \end{equation}
-If $x_k$ and $x_l$ are relative abundance vectors with equal total sum, this expression can also be written as
+If $\mathbf{x}_k$ and $\mathbf{x}_l$ are relative abundance vectors with equal total sum, this expression can also be written as
 \begin{equation}
-d_{\mathrm{BC}}(x_k,x_l)=\frac{1}{2}\sum_{i=1}^p |x_{ki}-x_{li}|,
+d_{\mathrm{BC}}(\mathbf{x}_k,\mathbf{x}_l)=\frac{1}{2}\sum_{i=1}^p |x_{ki}-x_{li}|,
 \end{equation}
 which shows its close connection to the $L_1$ distance (Manhattan distance) between relative abundance profiles. The dissimilarity takes values between $0$ and $1$, where $0$ indicates identical profiles and increasing values indicate increasingly dissimilar communities.
 
@@ -235,19 +235,19 @@ From a compositional perspective, Bray--Curtis dissimilarity occupies an interme
 
 Euclidean distance is one of the most familiar ways to quantify differences between multivariate observations. For two samples $k$ and $l$, it measures the straight-line distance between their feature vectors in Euclidean space and is defined as
 \begin{equation}
-d_{\mathrm{E}}(x_k,x_l)=\left\| x_k - x_l\right\|_2=\sqrt{\sum_{i=1}^p (x_{ki}-x_{li})^2}.
+d_{\mathrm{E}}(\mathbf{x}_k,\mathbf{x}_l)=\left\| \mathbf{x}_k - \mathbf{x}_l\right\|_2=\sqrt{\sum_{i=1}^p (x_{ki}-x_{li})^2}.
 \label{eq:3community:euclidean_dist}
 \end{equation}
 For unconstrained real-valued data, this distance has a direct geometric interpretation. For microbiome sequencing data, however, direct application to raw counts or relative abundances is problematic because the observed profiles are constrained by library size and therefore carry primarily relative information. Distances computed on untransformed count or proportion vectors may thus reflect differences induced by closure or sequencing depth rather than interpretable differences in microbial community composition \citep{aitchison1982statistical,aitchison1986statistical,gloor2017microbiome}.
 
 A compositionally coherent way to use Euclidean geometry is to first represent the data in log-ratio coordinates. The classical example is the Aitchison distance, defined as the Euclidean distance between centered log-ratio (CLR) transformed compositions,
 \begin{equation}
-d_{\mathrm{Ait}}(x_k,x_l)=\left\|\operatorname{CLR}(x_k)-\operatorname{CLR}(x_l)\right\|_2.
+d_{\mathrm{Ait}}(\mathbf{x}_k,\mathbf{x}_l)=\left\|\operatorname{CLR}(\mathbf{x}_k)-\operatorname{CLR}(\mathbf{x}_l)\right\|_2.
 \label{eq:3community:aitchison_dist}
 \end{equation}
 As explained in Chapter~2, the CLR transformation maps compositional data from the simplex to a Euclidean subspace, so that Euclidean distances can be applied to the transformed profiles while retaining a log-ratio interpretation.
 
-The direct application of the standard CLR transformation is complicated by the prevalence of zeros in microbiome count data, because logarithms and geometric means are not defined for zero components. In the presence of zeros, the Aitchison distance in Equation~\eqref{eq:3community:aitchison_dist} is therefore not directly defined and requires a preceding zero-handling step. In this thesis, Aitchison distances for sparse microbiome data are computed using the preprocessing strategy described in Section~\ref{sec:2micro:preprocessing_choices_thesis}: count data are first brought to a common compositional scale, and zeros are then handled by multiplicative replacement unless another strategy is explicitly motivated by the analysis. Thus, $x_k$ and $x_l$ in Equation~\eqref{eq:3community:aitchison_dist} are replaced by their normalized and multiplicatively replaced versions $x_k^\ast$ and $x_l^\ast$. The resulting distance is conditional on the chosen filtering, normalization, and zero-replacement strategy. The use of multiplicative replacement is motivated by its preservation of ratios among originally non-zero components, which is important because differences between CLR coordinates are pairwise log-ratios. At the same time, this preprocessing does not eliminate the influence of zeros from the analysis. Instead, it provides a transparent way to obtain a strictly positive composition on which the CLR transformation can be evaluated while preserving ratios among originally non-zero components.
+The direct application of the standard CLR transformation is complicated by the prevalence of zeros in microbiome count data, because logarithms and geometric means are not defined for zero components. In the presence of zeros, the Aitchison distance in Equation~\eqref{eq:3community:aitchison_dist} is therefore not directly defined and requires a preceding zero-handling step. In this thesis, Aitchison distances for sparse microbiome data are computed using the preprocessing strategy described in Section~\ref{sec:2micro:preprocessing_choices_thesis}: count data are first brought to a common compositional scale, and zeros are then handled by multiplicative replacement unless another strategy is explicitly motivated by the analysis. Thus, $\mathbf{x}_k$ and $\mathbf{x}_l$ in Equation~\eqref{eq:3community:aitchison_dist} are replaced by their normalized and multiplicatively replaced versions $\mathbf{x}_k^\ast$ and $\mathbf{x}_l^\ast$. The resulting distance is conditional on the chosen filtering, normalization, and zero-replacement strategy. The use of multiplicative replacement is motivated by its preservation of ratios among originally non-zero components, which is important because differences between CLR coordinates are pairwise log-ratios. At the same time, this preprocessing does not eliminate the influence of zeros from the analysis. Instead, it provides a transparent way to obtain a strictly positive composition on which the CLR transformation can be evaluated while preserving ratios among originally non-zero components.
 
 Compared with Bray--Curtis dissimilarity, the Aitchison distance emphasizes relative differences on a log-ratio scale rather than absolute differences in relative abundance. Consequently, changes in low-abundance taxa can have a stronger influence than under Bray--Curtis if they affect the relative structure of the composition. The two distances therefore provide complementary summaries of between-sample variation: Bray--Curtis reflects ecological dissimilarity between relative abundance profiles, whereas the Aitchison distance provides a compositionally informed alternative based on log-ratio geometry.
 
@@ -259,14 +259,14 @@ Compared with Bray--Curtis dissimilarity, the Aitchison distance emphasizes rela
 Pairwise dissimilarities provide a complete summary of between-sample variation, but an $n\times n$ distance matrix is difficult to interpret directly. Ordination methods address this problem by representing samples in a low-dimensional coordinate system such that distances between points approximate the original dissimilarities as closely as possible. They are therefore primarily exploratory tools: they help visualize patterns of community variation, group separation, gradients, and potential outlying samples, but they do not by themselves provide formal evidence for group differences.
 
 \newpage
-A widely used ordination method for distance-based microbiome analysis is principal coordinates analysis (PCoA), also known as classical multidimensional scaling \citep{gower1966some,legendre2012numerical}. PCoA first converts the dissimilarity matrix into squared dissimilarities and then removes row and column means by double-centering. This yields a matrix that can be interpreted as an inner-product matrix whenever the dissimilarities are Euclidean distances. Let $D^{(2)}$ denote the matrix with entries $d_{kl}^2$. Double-centering can be written compactly as
+A widely used ordination method for distance-based microbiome analysis is principal coordinates analysis (PCoA), also known as classical multidimensional scaling \citep{gower1966some,legendre2012numerical}. PCoA first converts the dissimilarity matrix into squared dissimilarities and then removes row and column means by double-centering. This yields a matrix that can be interpreted as an inner-product matrix whenever the dissimilarities are Euclidean distances. Let $\mathbf{D}^{(2)}$ denote the matrix with entries $d_{kl}^2$. Double-centering can be written compactly as
 \begin{equation}
-B=-\frac{1}{2}HD^{(2)}H,
+\mathbf{B}=-\frac{1}{2}\mathbf{H}\mathbf{D}^{(2)}\mathbf{H},
 \end{equation}
-where $H=I_n-n^{-1}\mathbf{1}\mathbf{1}^\top$ is the centering matrix.
-An eigendecomposition of $B$ yields ordination axes and corresponding eigenvalues. If $\lambda_1\geq\lambda_2\geq\cdots$ denote the positive eigenvalues and $u_1,u_2,\ldots$ the associated eigenvectors, the coordinates of the samples on the first $q$ axes are given by
+where $\mathbf{H}=\mathbf{I}_n-n^{-1}\mathbf{1}\mathbf{1}^\top$ is the centering matrix.
+An eigendecomposition of $\mathbf{B}$ yields ordination axes and corresponding eigenvalues. If $\lambda_1\geq\lambda_2\geq\cdots$ denote the positive eigenvalues and $\mathbf{u}_1,\mathbf{u}_2,\ldots$ the associated eigenvectors, the coordinates of the samples on the first $q$ axes are given by
 \begin{equation}
-Y_q=(u_1,\ldots,u_q)\operatorname{diag}(\sqrt{\lambda_1},\ldots,\sqrt{\lambda_q}).
+\mathbf{Y}_q=(\mathbf{u}_1,\ldots,\mathbf{u}_q)\operatorname{diag}(\sqrt{\lambda_1},\ldots,\sqrt{\lambda_q}).
 \end{equation}
 The first two or three axes are typically used for visualization. The proportion of variation represented by an axis can be summarized by the corresponding eigenvalue relative to the sum of positive eigenvalues.
 
@@ -294,7 +294,7 @@ Ordination provides a visual summary of between-sample dissimilarities, but form
 Several distance-based tests have been proposed for ecological community data, including analysis of similarities (ANOSIM) \citep{clarke1993nonparametric}, the Mantel test \citep{mantel1967detection}, multi-response permutation procedures \citep{mielke2001permutation}, and PERMANOVA \citep{anderson2001new}. These methods differ in the hypotheses they target and in their sensitivity to the structure of the distance matrix. 
 PERMANOVA is widely used in microbiome studies because it can accommodate a broad class of dissimilarity measures, continuous and categorical covariates, and multi-factor study designs through a regression-type model formula \citep{kers2022power}. In contrast to purely rank-based or pairwise procedures, PERMANOVA partitions variation in the distance matrix into components attributable to explanatory variables and residual variation, yielding an $R^2$-type effect size in addition to a permutation-based $p$-value. For Euclidean distances, the group centroids correspond to arithmetic means of the sample coordinates. For general dissimilarities, the same idea is formulated through the distance-based representation underlying the sums-of-squares decomposition.
 
-Let $D=(d_{kl})$ denote the dissimilarity matrix between $n$ samples, and let $g_k\in\{1,\ldots,G\}$ denote the group assignment of sample $k$. PERMANOVA expresses the total variation represented by the dissimilarity matrix as a sum of squares and partitions this variation into between-group and within-group components \citep{anderson2001new}. In the one-way case, this yields a pseudo-$F$ statistic of the form
+Let $\mathbf{D}=(d_{kl})$ denote the dissimilarity matrix between $n$ samples, and let $g_k\in\{1,\ldots,G\}$ denote the group assignment of sample $k$. PERMANOVA expresses the total variation represented by the dissimilarity matrix as a sum of squares and partitions this variation into between-group and within-group components \citep{anderson2001new}. In the one-way case, this yields a pseudo-$F$ statistic of the form
 \begin{equation}
 F_{\mathrm{PERM}}=\frac{\mathrm{SS}_{\mathrm{b}}/(G-1)}{\mathrm{SS}_{\mathrm{w}}/(n-G)},
 \end{equation}
@@ -320,13 +320,13 @@ In R, PERMANOVA is widely applied using the \texttt{adonis2} function from the \
 
 The between-sample dissimilarities introduced above can be used not only to assess differences between groups, but also to quantify heterogeneity within groups. While PERMANOVA focuses on differences between group centroids in the space induced by a dissimilarity measure, community dispersion describes how strongly samples vary around their corresponding group centroid. It can therefore be interpreted as a multivariate analogue of within-group variance \citep{anderson2006distance}.
 
-Let $D=(d_{kl})$ denote a dissimilarity matrix between samples and let $g_k\in\{1,\ldots,G\}$ denote the group assignment of sample $k$. For a group $g$, let $z_k$ denote the coordinate representation of sample $k$ obtained from the chosen dissimilarity matrix, for example through principal coordinates analysis. The group centroid is then given by the average coordinate vector
+Let $\mathbf{D}=(d_{kl})$ denote a dissimilarity matrix between samples and let $g_k\in\{1,\ldots,G\}$ denote the group assignment of sample $k$. For a group $g$, let $\mathbf{z}_k$ denote the coordinate representation of sample $k$ obtained from the chosen dissimilarity matrix, for example through principal coordinates analysis. The group centroid is then given by the average coordinate vector
 \begin{equation}
-	\bar{z}_g=\frac{1}{n_g}\sum_{k:g_k=g} z_k.
+	\bar{\mathbf{z}}_g=\frac{1}{n_g}\sum_{k:g_k=g} \mathbf{z}_k.
 \end{equation}
 The dispersion of sample $k$ is defined as its distance to the centroid of its group in this coordinate representation,
 \begin{equation}
-	\delta_k=\left\|z_k-\bar{z}_{g_k}\right\|_2.
+	\delta_k=\left\|\mathbf{z}_k-\bar{\mathbf{z}}_{g_k}\right\|_2.
 \end{equation}
 where $n_g$ denotes the number of samples in group $g$. Larger values of $\Delta_g$ indicate greater within-group heterogeneity in microbial community composition, whereas smaller values indicate that samples within the group are more similar to each other.
 

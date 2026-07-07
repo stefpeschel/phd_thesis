@@ -37,6 +37,7 @@ Some chapter folders mainly store figures used in the thesis, while others also 
 │   ├── README.md                   → Chapter-specific notes
 │   ├── explorations/               → Exploratory analyses and method checks
 │   ├── functions/                  → Shared helper functions
+│   ├── overview_figures/           → Overview figures to summarize some approaches
 │   └── simulations/                → Simulation studies, outputs, and figures
 │
 └── ch07_application/             → Integrated analysis of the PASTURE cohort

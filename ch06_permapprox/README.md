@@ -44,6 +44,8 @@ The folder is part of the larger thesis repository and uses the project-level R 
 │   ├── permApprox_eps_fct/         → permApprox version (accepts eps functions)
 │   └── waddR                       → Own waddR implementation
 │
+├── overview_figures/             → Overview figures to summarize some approaches
+│
 └── simulations/                  → Full simulation studies evaluating method performance
     ├── gpd_fit/                    → GPD parameter estimation and robustness
     │   ├── 01_data_gen               → Data generation for GPD studies

@@ -126,7 +126,7 @@ Normalization strategies differ in their treatment of library size and compositi
 At the time of the original \texttt{NetCoMi} development, these methods were typically implemented in separate software packages and designed for specific components of the workflow rather than for integrated end-to-end analysis \citep{peschel2021netcomi}. Researchers therefore often had to assemble multiple methods in an ad hoc manner, limiting reproducibility and accessibility, especially for non-expert users.
 
 To address these issues, the first methodological contribution of this thesis is the development of a unified framework for microbial network analysis. 
-This framework is implemented in the \texttt{NetCoMi} \texttt{R} package \citep{peschel2025netcomi} and was introduced in \citet{peschel2021netcomi}. 
+This framework is implemented in the \texttt{NetCoMi} \texttt{R} package \citep{peschel2026netcomi} and was introduced in \citet{peschel2021netcomi}. 
 It provides an integrated workflow that guides the user from count data to a fully constructed and analyzed network by combining preprocessing, association estimation, sparsification, and network characterization within a single framework, while allowing flexible choices among established methods at each step. 
 In addition, the framework supports comparative analyses, enabling the construction and comparison of networks across groups within a common and reproducible analytical framework. 
 The \texttt{NetCoMi} framework is accompanied by comprehensive documentation and tutorials and has been integrated into the \emph{Orchestrating Microbiome Analysis} (OMA) workflow \citep{borman2024orchestrating}, where network-based methods are embedded into a broader microbiome analysis pipeline. 
@@ -139,12 +139,12 @@ However, in this setting, two fundamental challenges emerge.
 
 First, microbiome data are often high-dimensional, and network construction itself is computationally demanding. 
 As a consequence, only a limited number of permutations can be performed in practice. 
-This leads to empirical $p$-values that lie on a coarse discrete grid, resulting in limited resolution in the tail of the distribution \citep{north2002more, phipson2010permutation}. 
+This leads to empirical $p$-values that lie on a coarse discrete grid, resulting in limited resolution in the tail of the distribution \citep{north2002note, phipson2010permutation}. 
 After multiplicity adjustment, this limited resolution can prevent small effects from being distinguished and may render adjusted significance thresholds unattainable unless a substantially larger number of permutations is used \citep{phipson2010permutation, gilbert2005modified}..
 
 Second, while approaches based on extreme value theory, in particular generalized Pareto distribution (GPD) approximations, have been proposed to address this limitation \citep{knijnenburg2009fewer, winkler2016faster}, their practical application raises additional challenges. 
 In preliminary investigations, existing GPD-based methods could still produce zero $p$-values when a negative estimated shape parameter implied bounded fitted support and the observed test statistic lay at or beyond the resulting upper endpoint.
-Moreover, GPD-based approximation involves several methodological choices, including threshold selection and parameter estimation, for which a wide range of approaches has been proposed in extreme-value analysis \citep{scarrott2012review, langousis2016review, bader2018automated}, while guidance tailored specifically to permutation-based p-value approximation remains limited.
+Moreover, GPD-based approximation involves several methodological choices, including threshold selection and parameter estimation, for which a wide range of approaches has been proposed in extreme-value analysis \citep{scarrott2012review, langousis2016threshold, bader2018automated}, while guidance tailored specifically to permutation-based p-value approximation remains limited.
 
 The second methodological contribution of this thesis addresses these challenges by developing a robust framework for permutation $p$-value approximation. 
 This methodology is introduced in \citet{peschel2026permapprox} and implemented in the \texttt{permApprox} \texttt{R} package \citep{peschel2025permapprox}. 
