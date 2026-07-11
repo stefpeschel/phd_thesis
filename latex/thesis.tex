@@ -247,13 +247,13 @@
           anchor=east,
           fill=chaptertabgray,
           text=white,
-          minimum width=1.5cm, %1.3
+          minimum width=1.3cm, %1.3
           minimum height=1.5cm,
           font=\LARGE\bfseries,
           inner sep=0pt,
           text width=1.2cm,
           align=left
-        ] at ([xshift=0mm,yshift=-\tabshift cm]current page.north east) %-2mm
+        ] at ([xshift=-2mm,yshift=-\tabshift cm]current page.north east) %-2mm
         {\hspace{3mm}\thechapter};
 
       \end{tikzpicture}
@@ -364,12 +364,11 @@
 % \listoffigures
 % \listoftables
 
+\cleardoublepage
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Chapters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\pagenumbering{arabic}
-\setcounter{page}{1}
 
 \include{main_chapters/1_introduction}
 \include{main_chapters/2_microbiome_data}
