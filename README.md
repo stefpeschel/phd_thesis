@@ -2,7 +2,7 @@
 
 This repository contains code, generated outputs, and chapter figures for the PhD thesis *From network learning to improved permutation testing: addressing statistical challenges in microbial data analysis*. The repository is organized by thesis chapters: each `chXX_*` folder collects the material that belongs to the corresponding chapter.
 
-Some chapter folders mainly store figures used in the thesis, while others also contain reproducible R Markdown workflows, simulation code, intermediate data objects, and rendered reports.
+Some chapter folders mainly store figures used in the thesis, while others also contain reproducible R Markdown workflows, simulation code, intermediate data objects, and rendered reports. The LaTeX source files for the thesis are stored in the `latex/` folder.
 
 ## Repository Structure
 
@@ -13,6 +13,7 @@ Some chapter folders mainly store figures used in the thesis, while others also 
 ├── projthis_code.R               → Helper script for rendering projthis-style workflows
 ├── renv.lock                     → Lock file for renv environment
 ├── renv/                         → R environment for reproducibility
+├── latex/                        → LaTeX source files for the thesis
 │
 ├── ch01_introduction/            → Introduction
 │   └── figures/                    → Chapter figures
